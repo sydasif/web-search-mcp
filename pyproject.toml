@@ -1,5 +1,5 @@
 [project]
-name = "web-search"
+name = "web_search_mcp"
 version = "0.1.0"
 description = "FastMCP-based server that provides comprehensive web search functionality for LLM clients through the Model Context Protocol"
 readme = "README.md"
@@ -10,4 +10,8 @@ dependencies = [
 ]
 
 [project.scripts]
-web-search-mcp = "server:main"
+web-search-mcp = "web_search_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["web_search_mcp*"]

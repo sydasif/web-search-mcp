@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
 
-from main import search_engine
+from .main import search_engine
 
 mcp = FastMCP("Web Search Tools")
 
