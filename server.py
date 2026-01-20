@@ -6,11 +6,10 @@ from main import search  # Import the search functionality from main.py
 mcp = FastMCP("Web Search Tools")
 
 
-# Add the search functionality as an MCP tool
+# Tool for searching web pages
 @mcp.tool
-def web_search_tool(
+def search_web(
     query: str,
-    search_type: str = "text",
     max_results: int = 5,
     time_range: str | None = None,
     region: str | None = None,
@@ -18,50 +17,149 @@ def web_search_tool(
     filter_term: str | None = None,
 ) -> dict:
     """
-    Perform web searches across multiple content types using DuckDuckGo.
-
-    Choose the appropriate search type based on your needs:
-
-    **search_type options:**
-    - "text" (default): Web pages, articles, blogs, documentation, tutorials
-    - "news": Recent news articles, current events, breaking stories
-    - "image": Photos, diagrams, infographics, visual content
-    - "video": Video tutorials, demonstrations, talks, media content
-
-    **Examples:**
-    - Use "news" for: "latest AI developments", "current climate news"
-    - Use "image" for: "neural network diagrams", "robot photos"
-    - Use "video" for: "Python tutorials", "AI explanations"
-    - Use "text" for: general research, documentation, articles
+    Search for general web content including articles, documentation, tutorials, and blog posts.
 
     Args:
-        query: Search query string
-        search_type: Content type to search for ("text", "news", "image", "video")
-        max_results: Number of results to return (1-20, default: 5)
-        time_range: Time filter ("day", "week", "month", "year")
-        region: Region code ("us", "uk", "de", etc.)
-        sort_by: Sort method ("relevance", "date", "title")
-        filter_term: Only show results containing this word/phrase
+        query: The search query string
+        max_results: Number of results (1-20, default: 5)
+        time_range: Filter by time - "day", "week", "month", "year" (optional)
+        region: Region code like "us", "uk", "de" for localized results (optional)
+        sort_by: Sort results by "relevance", "date", or "title" (default: "relevance")
+        filter_term: Only include results containing this word/phrase (optional)
 
     Returns:
-        Dictionary with search results, including titles, URLs, and descriptions
+        Dictionary with web page results including title, href (URL), and body (description)
     """
     try:
-        # Call the search function from main.py (returns dict directly)
         result = search(
             query=query,
-            search_type=search_type,
+            search_type="text",
             max_results=max_results,
             time_range=time_range,
             region=region,
             sort_by=sort_by,
             filter_term=filter_term,
         )
-
         return result
-
     except Exception as e:
-        return {"error": str(e), "query": query, "search_type": search_type}
+        return {"error": str(e), "query": query, "search_type": "text"}
+
+
+# Tool for searching news
+@mcp.tool
+def search_news(
+    query: str,
+    max_results: int = 5,
+    time_range: str | None = None,
+    region: str | None = None,
+    sort_by: str = "relevance",
+    filter_term: str | None = None,
+) -> dict:
+    """
+    Search for recent news and current events with publication dates and sources.
+
+    Args:
+        query: The search query string
+        max_results: Number of results (1-20, default: 5)
+        time_range: Filter by time - "day", "week", "month", "year" (optional)
+        region: Region code like "us", "uk", "de" for localized results (optional)
+        sort_by: Sort results by "relevance", "date", or "title" (default: "relevance")
+        filter_term: Only include results containing this word/phrase (optional)
+
+    Returns:
+        Dictionary with news results including date, title, body, url, image, and source
+    """
+    try:
+        result = search(
+            query=query,
+            search_type="news",
+            max_results=max_results,
+            time_range=time_range,
+            region=region,
+            sort_by=sort_by,
+            filter_term=filter_term,
+        )
+        return result
+    except Exception as e:
+        return {"error": str(e), "query": query, "search_type": "news"}
+
+
+# Tool for searching images
+@mcp.tool
+def search_images(
+    query: str,
+    max_results: int = 5,
+    time_range: str | None = None,
+    region: str | None = None,
+    sort_by: str = "relevance",
+    filter_term: str | None = None,
+) -> dict:
+    """
+    Search for images including photos, diagrams, charts, and visual content.
+
+    Args:
+        query: The search query string
+        max_results: Number of results (1-20, default: 5)
+        time_range: Filter by time - "day", "week", "month", "year" (optional)
+        region: Region code like "us", "uk", "de" for localized results (optional)
+        sort_by: Sort results by "relevance", "date", or "title" (default: "relevance")
+        filter_term: Only include results containing this word/phrase (optional)
+
+    Returns:
+        Dictionary with image results including title, image URL, thumbnail, dimensions, and source
+    """
+    try:
+        result = search(
+            query=query,
+            search_type="image",
+            max_results=max_results,
+            time_range=time_range,
+            region=region,
+            sort_by=sort_by,
+            filter_term=filter_term,
+        )
+        return result
+    except Exception as e:
+        return {"error": str(e), "query": query, "search_type": "image"}
+
+
+# Tool for searching videos
+@mcp.tool
+def search_videos(
+    query: str,
+    max_results: int = 5,
+    time_range: str | None = None,
+    region: str | None = None,
+    sort_by: str = "relevance",
+    filter_term: str | None = None,
+) -> dict:
+    """
+    Search for videos including tutorials, demonstrations, lectures, and multimedia content.
+
+    Args:
+        query: The search query string
+        max_results: Number of results (1-20, default: 5)
+        time_range: Filter by time - "day", "week", "month", "year" (optional)
+        region: Region code like "us", "uk", "de" for localized results (optional)
+        sort_by: Sort results by "relevance", "date", or "title" (default: "relevance")
+        filter_term: Only include results containing this word/phrase (optional)
+
+    Returns:
+        Dictionary with video results including title, description, duration, images, statistics, and metadata
+    """
+    try:
+        result = search(
+            query=query,
+            search_type="video",
+            max_results=max_results,
+            time_range=time_range,
+            region=region,
+            sort_by=sort_by,
+            filter_term=filter_term,
+        )
+        return result
+    except Exception as e:
+        return {"error": str(e), "query": query, "search_type": "video"}
 
 
 if __name__ == "__main__":
