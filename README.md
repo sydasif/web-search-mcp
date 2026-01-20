@@ -119,6 +119,8 @@ Once configured, the search tools will be available to MCP-compatible clients:
 
 This server is compatible with multiple MCP-enabled platforms including Claude Code and Opencode.
 
+> **Note**: The server must be running from the project directory for the MCP integration to work properly.
+
 ### Claude Code Integration
 
 Integrate the web search server with Claude Code using the MCP (Model Context Protocol) configuration.
@@ -237,11 +239,14 @@ Once configured, you can use the web search tools in opencode by requesting sear
 - `search_images` - Image search
 - `search_videos` - Video search
 
-## Manual Testing
+## Running the Server
 
-Run the server directly:
+The server must be run from the project directory:
 
 ```bash
+# Navigate to the project directory
+cd /home/zulu/Documents/web-search
+
 # Run the server (it will listen on stdio)
 uv run python server.py
 ```
