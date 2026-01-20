@@ -8,3 +8,6 @@ dependencies = [
     "ddgs>=9.10.0",
     "fastmcp>=0.3.0",
 ]
+
+[project.scripts]
+web-search-mcp = "server:main"

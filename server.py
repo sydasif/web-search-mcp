@@ -77,5 +77,9 @@ def search_videos(
         return {"error": str(e), "query": query, "search_type": "video"}
 
 
-if __name__ == "__main__":
+def main():
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

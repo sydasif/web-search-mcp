@@ -133,12 +133,7 @@ To use the server globally across all projects, add it to Claude Code's global c
 {
   "mcpServers": {
     "web-search": {
-      "command": "uv",
-      "args": [
-        "run",
-        "python",
-        "/path/to/web-search/server.py"
-      ]
+      "command": "web-search-mcp"
     }
   }
 }
@@ -146,18 +141,13 @@ To use the server globally across all projects, add it to Claude Code's global c
 
 ##### Example Configuration
 
-Here's a practical example with the actual installation path:
+After installing with `uv develop`, the server can be run from anywhere:
 
 ```json
 {
   "mcpServers": {
     "web-search": {
-      "command": "uv",
-      "args": [
-        "run",
-        "python",
-        "/home/zulu/Documents/web-search/server.py"
-      ]
+      "command": "web-search-mcp"
     }
   }
 }
@@ -197,12 +187,7 @@ Add the web search server to your opencode configuration (`~/.config/opencode/op
   "mcp": {
     "web-search": {
       "type": "local",
-      "command": [
-        "uv",
-        "run",
-        "python",
-        "/path/to/web-search/server.py"
-      ],
+      "command": ["web-search-mcp"],
       "enabled": true
     }
   }
@@ -211,19 +196,14 @@ Add the web search server to your opencode configuration (`~/.config/opencode/op
 
 ##### Example Configuration
 
-Here's how the web-search MCP server is already configured in the default opencode setup:
+After installing with `uv develop`, the server can be run from anywhere:
 
 ```json
 {
   "mcp": {
     "web-search": {
       "type": "local",
-      "command": [
-        "uv",
-        "run",
-        "python",
-        "/home/zulu/Documents/web-search/server.py"
-      ],
+      "command": ["web-search-mcp"],
       "enabled": true
     }
   }
@@ -241,7 +221,26 @@ Once configured, you can use the web search tools in opencode by requesting sear
 
 ## Running the Server
 
-The server must be run from the project directory:
+### Install as a Command-Line Tool (Recommended)
+
+Install the server globally to use from any directory:
+
+```bash
+# Install in development mode (from project directory)
+cd /home/zulu/Documents/web-search
+uv develop
+```
+
+This creates a `web-search-mcp` command that can be run from any directory:
+
+```bash
+# Run from anywhere
+web-search-mcp
+```
+
+### Alternative: Run Directly
+
+You can also run the server directly from the project directory:
 
 ```bash
 # Navigate to the project directory
