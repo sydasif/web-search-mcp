@@ -85,15 +85,30 @@ Search for videos including tutorials and multimedia content.
 
 ### Setup
 
+#### Option 1: Clone and Install Locally
+
 ```bash
-# Clone or navigate to the project directory
-cd web-search
+# Clone the repository
+git clone https://github.com/sydasif/web-search-mcp.git
+cd web-search-mcp
 
 # Install dependencies
 uv sync
 
-# Activate virtual environment (optional)
-source .venv/bin/activate
+# Install as a command-line tool (so it can be run from any directory)
+uv develop
+```
+
+#### Option 2: Install Directly from GitHub
+
+You can also install directly from GitHub without cloning:
+
+```bash
+# Install directly from GitHub
+uv tool install git+https://github.com/sydasif/web-search-mcp.git
+
+# Or using the tarball
+uv tool install https://github.com/sydasif/web-search-mcp/archive/main.tar.gz
 ```
 
 If you don't have `uv` installed, install it first:
