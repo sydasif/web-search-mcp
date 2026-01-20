@@ -1,7 +1,7 @@
 [project]
 name = "web-search"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastMCP-based server that provides comprehensive web search functionality for LLM clients through the Model Context Protocol"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

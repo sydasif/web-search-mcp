@@ -15,9 +15,9 @@ A FastMCP-based server that provides comprehensive web search functionality for 
 
 The server provides four specialized search tools, each designed for a specific type of content:
 
-### `search_web_pages`
+### `search_web`
 
-Search for web pages and general content.
+Search for general web content.
 
 **Returns**: Web pages, articles, blogs, and general web content
 
@@ -40,7 +40,7 @@ Search for recent news and current events.
 
 ### `search_images`
 
-Search for images and visual content.
+Search for images including photos and visual content.
 
 **Returns**: Image data with dimensions and sources
 
@@ -53,7 +53,7 @@ Search for images and visual content.
 
 ### `search_videos`
 
-Search for videos and multimedia content.
+Search for videos including tutorials and multimedia content.
 
 **Returns**: Video content with rich metadata
 
@@ -96,32 +96,157 @@ uv sync
 source .venv/bin/activate
 ```
 
+If you don't have `uv` installed, install it first:
+
+```bash
+# On macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or using pip
+pip install uv
+```
+
 #### Available Tools
 
-Once configured, Claude Code will have access to all four search tools:
+Once configured, the search tools will be available to MCP-compatible clients:
 
-- `search_web_pages` - General web content
+- `search_web` - General web content
 - `search_news` - Current news
 - `search_images` - Visual content
 - `search_videos` - Video content
 
-### Manual Testing
+## Integration
 
-Test individual tools directly:
+This server is compatible with multiple MCP-enabled platforms including Claude Code and Opencode.
+
+### Claude Code Integration
+
+Integrate the web search server with Claude Code using the MCP (Model Context Protocol) configuration.
+
+#### Global Configuration
+
+To use the server globally across all projects, add it to Claude Code's global configuration (`~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "/path/to/web-search/server.py"
+      ]
+    }
+  }
+}
+```
+
+##### Example Configuration
+
+Here's a practical example with the actual installation path:
+
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "/home/zulu/Documents/web-search/server.py"
+      ]
+    }
+  }
+}
+```
+
+#### Project-Specific Configuration
+
+To enable the server for a specific project, navigate to your project directory and run:
 
 ```bash
-# Test web articles
-python3 -c "from main import search; print(search('artificial intelligence', 'text', 2))"
-
-# Test news articles
-python3 -c "from main import search; print(search('AI developments', 'news', 2))"
-
-# Test images
-python3 -c "from main import search; print(search('neural networks', 'image', 2))"
-
-# Test videos
-python3 -c "from main import search; print(search('Python tutorials', 'video', 2))"
+claude mcp add
 ```
+
+Then select the web-search server from the available options.
+
+#### Using the Tools in Claude
+
+Once configured, Claude will have access to four web search tools:
+
+- `search_web` - General web content search
+- `search_news` - News article search  
+- `search_images` - Image search
+- `search_videos` - Video search
+
+Simply mention your search query in your conversation with Claude, and it will automatically use the appropriate search tool based on your request.
+
+### Opencode Integration
+
+The web search server can also be integrated with Opencode using MCP configuration.
+
+#### Configuration
+
+Add the web search server to your opencode configuration (`~/.config/opencode/opencode.json`):
+
+```json
+{
+  "mcp": {
+    "web-search": {
+      "type": "local",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "/path/to/web-search/server.py"
+      ],
+      "enabled": true
+    }
+  }
+}
+```
+
+##### Example Configuration
+
+Here's how the web-search MCP server is already configured in the default opencode setup:
+
+```json
+{
+  "mcp": {
+    "web-search": {
+      "type": "local",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "/home/zulu/Documents/web-search/server.py"
+      ],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### Using the Tools in Opencode
+
+Once configured, you can use the web search tools in opencode by requesting searches in your conversations. The system will automatically provide access to:
+
+- `search_web` - General web content search
+- `search_news` - News article search
+- `search_images` - Image search
+- `search_videos` - Video search
+
+## Manual Testing
+
+Run the server directly:
+
+```bash
+# Run the server (it will listen on stdio)
+uv run python server.py
+```
+
+The server implements the Model Context Protocol and should be used with compatible MCP clients like Claude Code.
 
 ## Response Format
 
