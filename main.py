@@ -1,121 +1,113 @@
 from ddgs import DDGS
 
 
+class WebSearch:
+    """A class-based approach to web search functionality."""
+
+    def __init__(self):
+        """Initialize the WebSearch class."""
+        pass
+
+    @staticmethod
+    def _create_search_kwargs(max_results=5, time_range=None, region=None):
+        """Helper function to create consistent kwargs for all search types"""
+        kwargs = {"max_results": max_results}
+        if time_range is not None:
+            kwargs["timelimit"] = time_range
+        if region is not None:
+            kwargs["region"] = region
+        return kwargs
+
+    def text_search(self, query, max_results=5, time_range=None, region=None):
+        """Perform a text search using DuckDuckGo"""
+        ddgs = DDGS()
+        kwargs = self._create_search_kwargs(max_results, time_range, region)
+        return ddgs.text(query, **kwargs)
+
+    def image_search(self, query, max_results=5, time_range=None, region=None):
+        """Perform an image search using DuckDuckGo"""
+        ddgs = DDGS()
+        kwargs = self._create_search_kwargs(max_results, time_range, region)
+        return ddgs.images(query, **kwargs)
+
+    def news_search(self, query, max_results=5, time_range=None, region=None):
+        """Perform a news search using DuckDuckGo"""
+        ddgs = DDGS()
+        kwargs = self._create_search_kwargs(max_results, time_range, region)
+        return ddgs.news(query, **kwargs)
+
+    def video_search(self, query, max_results=5, time_range=None, region=None):
+        """Perform a video search using DuckDuckGo"""
+        ddgs = DDGS()
+        kwargs = self._create_search_kwargs(max_results, time_range, region)
+        return ddgs.videos(query, **kwargs)
+
+    def filter_and_sort_results(self, results, sort_by="relevance", filter_term=None):
+        """Filter and sort search results based on user preferences"""
+        filtered_results = results
+
+        # Apply filter if provided
+        if filter_term:
+            filter_term_lower = filter_term.lower()
+            filtered_results = [
+                result for result in results
+                if any(
+                    isinstance(value, str) and filter_term_lower in value.lower()
+                    for value in result.values()
+                )
+            ]
+
+        # Sort results based on sort_by parameter
+        if sort_by == "date":
+            filtered_results.sort(
+                key=lambda x: x.get("date", x.get("published", "")), reverse=True
+            )
+        elif sort_by == "title":
+            filtered_results.sort(key=lambda x: x.get("title", "").lower())
+
+        return filtered_results
+
+    def search(self, query, search_type="text", max_results=5, time_range=None, region=None, sort_by="relevance", filter_term=None):
+        """Main search function optimized for LLM consumption"""
+        search_methods = {
+            "text": self.text_search,
+            "image": self.image_search,
+            "news": self.news_search,
+            "video": self.video_search
+        }
+
+        search_method = search_methods.get(search_type, self.text_search)
+        results = search_method(query, max_results, time_range, region)
+        filtered_results = self.filter_and_sort_results(results, sort_by, filter_term)
+
+        return {
+            "query": query,
+            "search_type": search_type,
+            "total_results": len(filtered_results),
+            "results": filtered_results,
+        }
+
+
+# Create a global instance for backward compatibility
+search_engine = WebSearch()
+
+
+# Backward compatibility functions
 def text_search(query, max_results=5, time_range=None, region=None):
-    """Perform a text search using DuckDuckGo"""
-    ddgs = DDGS()
-    kwargs = {"max_results": max_results}
-    if time_range is not None:
-        kwargs["timelimit"] = time_range
-    if region is not None:
-        kwargs["region"] = region
-    results = ddgs.text(query, **kwargs)
-    return results
+    return search_engine.text_search(query, max_results, time_range, region)
 
 
 def image_search(query, max_results=5, time_range=None, region=None):
-    """Perform an image search using DuckDuckGo"""
-    ddgs = DDGS()
-    kwargs = {"max_results": max_results}
-    if time_range is not None:
-        kwargs["timelimit"] = time_range
-    if region is not None:
-        kwargs["region"] = region
-    results = ddgs.images(query, **kwargs)
-    return results
+    return search_engine.image_search(query, max_results, time_range, region)
 
 
 def news_search(query, max_results=5, time_range=None, region=None):
-    """Perform a news search using DuckDuckGo"""
-    ddgs = DDGS()
-    kwargs = {"max_results": max_results}
-    if time_range is not None:
-        kwargs["timelimit"] = time_range
-    if region is not None:
-        kwargs["region"] = region
-    results = ddgs.news(query, **kwargs)
-    return results
+    return search_engine.news_search(query, max_results, time_range, region)
 
 
 def video_search(query, max_results=5, time_range=None, region=None):
-    """Perform a video search using DuckDuckGo"""
-    ddgs = DDGS()
-    kwargs = {"max_results": max_results}
-    if time_range is not None:
-        kwargs["timelimit"] = time_range
-    if region is not None:
-        kwargs["region"] = region
-    results = ddgs.videos(query, **kwargs)
-    return results
+    return search_engine.video_search(query, max_results, time_range, region)
 
 
-def filter_and_sort_results(results, sort_by="relevance", filter_term=None):
-    """Filter and sort search results based on user preferences"""
-    filtered_results = results
-
-    # Apply filter if provided
-    if filter_term:
-        filter_term_lower = filter_term.lower()
-        filtered_results = []
-        for result in results:
-            # Check if filter term is in title, body, or other fields
-            match_found = False
-            for value in result.values():
-                if isinstance(value, str) and filter_term_lower in value.lower():
-                    match_found = True
-                    break
-            if match_found:
-                filtered_results.append(result)
-
-    # Sort results based on sort_by parameter
-    if sort_by == "date":
-        # For results that have date information
-        filtered_results.sort(
-            key=lambda x: x.get("date", x.get("published", "")), reverse=True
-        )
-    elif sort_by == "title":
-        # Sort by title
-        filtered_results.sort(key=lambda x: x.get("title", "").lower())
-    elif sort_by == "relevance":
-        # Keep original order (already ordered by relevance from the search engine)
-        pass
-
-    return filtered_results
-
-
-def search(
-    query,
-    search_type="text",
-    max_results=5,
-    time_range=None,
-    region=None,
-    sort_by="relevance",
-    filter_term=None,
-):
-    """
-    Main search function optimized for LLM consumption
-    Returns structured data as a dictionary
-    """
-    results = []
-
-    if search_type == "text":
-        results = text_search(query, max_results, time_range, region)
-    elif search_type == "image":
-        results = image_search(query, max_results, time_range, region)
-    elif search_type == "news":
-        results = news_search(query, max_results, time_range, region)
-    elif search_type == "video":
-        results = video_search(query, max_results, time_range, region)
-    else:
-        results = text_search(query, max_results, time_range, region)  # default to text
-
-    # Apply filtering and sorting
-    filtered_results = filter_and_sort_results(results, sort_by, filter_term)
-
-    # Return structured data optimized for LLM consumption
-    return {
-        "query": query,
-        "search_type": search_type,
-        "total_results": len(filtered_results),
-        "results": filtered_results,
-    }
+def search(query, search_type="text", max_results=5, time_range=None, region=None, sort_by="relevance", filter_term=None):
+    return search_engine.search(query, search_type, max_results, time_range, region, sort_by, filter_term)

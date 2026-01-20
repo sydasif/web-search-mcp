@@ -1,12 +1,13 @@
 from fastmcp import FastMCP
+from main import WebSearch
 
-from main import search  # Import the search functionality from main.py
+# Create search engine instance
+search_engine = WebSearch()
 
-# Create your MCP server
 mcp = FastMCP("Web Search Tools")
 
 
-# Tool for searching web pages
+# Define 4 separate tools with consistent implementation
 @mcp.tool
 def search_web(
     query: str,
@@ -31,7 +32,7 @@ def search_web(
         Dictionary with web page results including title, href (URL), and body (description)
     """
     try:
-        result = search(
+        result = search_engine.search(
             query=query,
             search_type="text",
             max_results=max_results,
@@ -45,7 +46,6 @@ def search_web(
         return {"error": str(e), "query": query, "search_type": "text"}
 
 
-# Tool for searching news
 @mcp.tool
 def search_news(
     query: str,
@@ -70,7 +70,7 @@ def search_news(
         Dictionary with news results including date, title, body, url, image, and source
     """
     try:
-        result = search(
+        result = search_engine.search(
             query=query,
             search_type="news",
             max_results=max_results,
@@ -84,7 +84,6 @@ def search_news(
         return {"error": str(e), "query": query, "search_type": "news"}
 
 
-# Tool for searching images
 @mcp.tool
 def search_images(
     query: str,
@@ -109,7 +108,7 @@ def search_images(
         Dictionary with image results including title, image URL, thumbnail, dimensions, and source
     """
     try:
-        result = search(
+        result = search_engine.search(
             query=query,
             search_type="image",
             max_results=max_results,
@@ -123,7 +122,6 @@ def search_images(
         return {"error": str(e), "query": query, "search_type": "image"}
 
 
-# Tool for searching videos
 @mcp.tool
 def search_videos(
     query: str,
@@ -148,7 +146,7 @@ def search_videos(
         Dictionary with video results including title, description, duration, images, statistics, and metadata
     """
     try:
-        result = search(
+        result = search_engine.search(
             query=query,
             search_type="video",
             max_results=max_results,
@@ -163,5 +161,4 @@ def search_videos(
 
 
 if __name__ == "__main__":
-    # Run with STDIO transport for Claude Code
     mcp.run(transport="stdio")
