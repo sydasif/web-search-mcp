@@ -1,0 +1,10 @@
+[project]
+name = "web-search"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ddgs>=9.10.0",
+    "fastmcp>=0.3.0",
+]

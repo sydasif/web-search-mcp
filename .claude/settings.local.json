@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv pip install fastapi uvicorn pydantic)",
+      "mcp__context7__query-docs"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "web-search"
+  ]
+}
