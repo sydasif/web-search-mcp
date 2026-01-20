@@ -53,10 +53,5 @@ class WebSearch:
         }
 
 
-# Create instance
+# Create instance for server tools
 search_engine = WebSearch()
-
-
-# Simple functions for backward compatibility
-def search(query, search_type="text", max_results=5, time_range=None, region=None, sort_by="relevance", filter_term=None):
-    return search_engine.search(query, search_type, max_results, time_range, region, sort_by, filter_term)

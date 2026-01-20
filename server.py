@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from main import search
+from main import search_engine
 
 mcp = FastMCP("Web Search Tools")
 
@@ -8,7 +8,7 @@ mcp = FastMCP("Web Search Tools")
 def search_web(query: str, max_results: int = 5, time_range: str | None = None, region: str | None = None, sort_by: str = "relevance", filter_term: str | None = None) -> dict:
     """Search for general web content."""
     try:
-        return search(query, "text", max_results, time_range, region, sort_by, filter_term)
+        return search_engine.search(query, "text", max_results, time_range, region, sort_by, filter_term)
     except Exception as e:
         return {"error": str(e), "query": query, "search_type": "text"}
 
@@ -17,7 +17,7 @@ def search_web(query: str, max_results: int = 5, time_range: str | None = None, 
 def search_news(query: str, max_results: int = 5, time_range: str | None = None, region: str | None = None, sort_by: str = "relevance", filter_term: str | None = None) -> dict:
     """Search for recent news and current events."""
     try:
-        return search(query, "news", max_results, time_range, region, sort_by, filter_term)
+        return search_engine.search(query, "news", max_results, time_range, region, sort_by, filter_term)
     except Exception as e:
         return {"error": str(e), "query": query, "search_type": "news"}
 
@@ -26,7 +26,7 @@ def search_news(query: str, max_results: int = 5, time_range: str | None = None,
 def search_images(query: str, max_results: int = 5, time_range: str | None = None, region: str | None = None, sort_by: str = "relevance", filter_term: str | None = None) -> dict:
     """Search for images including photos and visual content."""
     try:
-        return search(query, "image", max_results, time_range, region, sort_by, filter_term)
+        return search_engine.search(query, "image", max_results, time_range, region, sort_by, filter_term)
     except Exception as e:
         return {"error": str(e), "query": query, "search_type": "image"}
 
@@ -35,7 +35,7 @@ def search_images(query: str, max_results: int = 5, time_range: str | None = Non
 def search_videos(query: str, max_results: int = 5, time_range: str | None = None, region: str | None = None, sort_by: str = "relevance", filter_term: str | None = None) -> dict:
     """Search for videos including tutorials and multimedia content."""
     try:
-        return search(query, "video", max_results, time_range, region, sort_by, filter_term)
+        return search_engine.search(query, "video", max_results, time_range, region, sort_by, filter_term)
     except Exception as e:
         return {"error": str(e), "query": query, "search_type": "video"}
 
