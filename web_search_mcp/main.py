@@ -30,17 +30,21 @@ def ddg_search(
     ddgs = DDGS()
 
     # Prepare kwargs for search with parameters that DDGS actually supports
-    kwargs = {
-        "max_results": max_results,
-        "region": region,
-        "safesearch": safesearch,
-        "page": page,
-        "backend": backend
-    }
+    # Only add parameters that are not None to avoid issues with DDGS library
+    kwargs = {}
 
-    # timelimit is the actual parameter name for time_range in DDGS
-    if time_range:
-        kwargs["timelimit"] = time_range
+    if max_results is not None:
+        kwargs["max_results"] = max_results
+    if region is not None:
+        kwargs["region"] = region
+    if safesearch is not None:
+        kwargs["safesearch"] = safesearch
+    if page is not None:
+        kwargs["page"] = page
+    if backend is not None:
+        kwargs["backend"] = backend
+    if time_range is not None:
+        kwargs["timelimit"] = time_range  # timelimit is the actual parameter name for time_range in DDGS
 
     # Map search type to appropriate DDGS method
     search_methods = {
