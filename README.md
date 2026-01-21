@@ -33,11 +33,12 @@ The server provides four search tools:
 
 All tools support:
 - `query` (required): Search query string
-- `max_results`: Number of results (1-20, default: 5)
-- `time_range`: Filter by time ("day", "week", "month", "year")
-- `region`: Region code ("us", "uk", "de", etc.)
-- `sort_by`: Sort method ("relevance", "date", "title")
-- `filter_term`: Only show results containing this word/phrase
+- `max_results`: Number of results (default: 5)
+- `time_range`: Filter by time ("d", "w", "m", "y" for day, week, month, year)
+- `region`: Region code (e.g. "us-en", "uk-en", "de-de")
+- `safesearch`: Safe search level ("moderate", "off", "on")
+- `page`: Page number for pagination (default: 1)
+- `backend`: Backend engine ("auto", "legacy", "api")
 
 ## MCP Integration
 
@@ -70,17 +71,20 @@ Configure in Opencode (~/.config/opencode/opencode.json):
 ## Features
 
 - Multiple content types (text, images, news, videos)
-- Advanced filtering (time range, regions)
+- Advanced filtering (time range, regions, safe search)
+- Pagination support
+- Backend selection options
 - Privacy-focused (DuckDuckGo)
 - Optimized for LLMs with structured JSON responses
+- Direct integration without wrapper class for improved performance
 
 ## Testing
 
 All tools have been thoroughly tested with various parameters:
 
-- ✅ **search_web**: General web search with all parameters
-- ✅ **search_news**: News search with date sorting and time filtering
-- ✅ **search_images**: Image search with filtering capabilities
+- ✅ **search_web**: General web search with all DDGS-native parameters
+- ✅ **search_news**: News search with time filtering and regional options
+- ✅ **search_images**: Image search with comprehensive filtering
 - ✅ **search_videos**: Video search with rich metadata
 
 The server is fully functional and ready for production use.
