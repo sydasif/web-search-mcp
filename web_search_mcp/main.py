@@ -1,69 +1,61 @@
 from ddgs import DDGS
 
 
-class WebSearch:
-    def __init__(self):
-        pass
+def ddg_search(
+    query,
+    search_type="text",
+    max_results=5,
+    time_range=None,  # maps to timelimit in DDGS
+    region=None,
+    safesearch="moderate",
+    page=1,
+    backend="auto",
+):
+    """
+    Unified DuckDuckGo search function supporting text, images, news, and videos.
 
-    @staticmethod
-    def _create_search_kwargs(max_results=5, time_range=None, region=None):
-        kwargs = {"max_results": max_results}
-        if time_range:
-            kwargs["timelimit"] = time_range
-        if region:
-            kwargs["region"] = region
-        return kwargs
+    Args:
+        query: Search query string
+        search_type: Type of search ('text', 'image', 'news', 'video')
+        max_results: Max number of results to return (default 5)
+        time_range: Time filter ('d', 'w', 'm', 'y') or None
+        region: Geographic region (e.g. 'us-en', 'uk-en') or None
+        safesearch: Safe search level ('moderate', 'off', 'on')
+        page: Page number for pagination (default 1)
+        backend: Backend to use ('auto', 'legacy', 'api')
 
-    def search(
-        self,
-        query,
-        search_type="text",
-        max_results=5,
-        time_range=None,
-        region=None,
-        sort_by="relevance",
-        filter_term=None,
-    ):
-        ddgs = DDGS()
-        kwargs = self._create_search_kwargs(max_results, time_range, region)
+    Returns:
+        Dict with query, search_type, total_results, and results list
+    """
+    ddgs = DDGS()
 
-        search_methods = {
-            "text": ddgs.text,
-            "image": ddgs.images,
-            "news": ddgs.news,
-            "video": ddgs.videos,
-        }
+    # Prepare kwargs for search with parameters that DDGS actually supports
+    kwargs = {
+        "max_results": max_results,
+        "region": region,
+        "safesearch": safesearch,
+        "page": page,
+        "backend": backend
+    }
 
-        search_func = search_methods.get(search_type, ddgs.text)
-        results = search_func(query, **kwargs)
+    # timelimit is the actual parameter name for time_range in DDGS
+    if time_range:
+        kwargs["timelimit"] = time_range
 
-        # Filter results if filter_term provided
-        if filter_term:
-            filter_term_lower = filter_term.lower()
-            results = [
-                r
-                for r in results
-                if any(
-                    isinstance(v, str) and filter_term_lower in v.lower()
-                    for v in r.values()
-                )
-            ]
+    # Map search type to appropriate DDGS method
+    search_methods = {
+        "text": ddgs.text,
+        "image": ddgs.images,
+        "news": ddgs.news,
+        "video": ddgs.videos,
+    }
 
-        # Sort results
-        if sort_by == "date":
-            results.sort(
-                key=lambda x: x.get("date", x.get("published", "")), reverse=True
-            )
-        elif sort_by == "title":
-            results.sort(key=lambda x: x.get("title", "").lower())
+    search_func = search_methods.get(search_type, ddgs.text)
+    results = search_func(query, **kwargs)
 
-        return {
-            "query": query,
-            "search_type": search_type,
-            "total_results": len(results),
-            "results": results,
-        }
-
-
-# Create instance for server tools
-search_engine = WebSearch()
+    return {
+        "query": query,
+        "search_type": search_type,
+        "total_results": len(results),
+        "results": results,
+    }
