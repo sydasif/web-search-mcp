@@ -1,8 +1,41 @@
 from fastmcp import FastMCP
 
 from .main import ddg_search
+from .weather import get_current_weather as weather_current
+from .weather import get_forecast as weather_forecast
 
 mcp = FastMCP("Web Search Tools")
+
+
+@mcp.tool
+async def get_current_weather(latitude: float, longitude: float) -> dict:
+    """
+    Get current weather for a specific location.
+
+    Args:
+        latitude: Latitude of the location
+        longitude: Longitude of the location
+
+    Returns:
+        Dict containing current weather data or error message
+    """
+    return await weather_current(latitude, longitude)
+
+
+@mcp.tool
+async def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict:
+    """
+    Get daily weather forecast for a location.
+
+    Args:
+        latitude: Latitude of the location
+        longitude: Longitude of the location
+        days: Number of days for forecast (1-16, default 7)
+
+    Returns:
+        Dict containing forecast data or error message
+    """
+    return await weather_forecast(latitude, longitude, days)
 
 
 @mcp.tool

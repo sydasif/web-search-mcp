@@ -23,16 +23,18 @@ Requires Python 3.11+ and [uv](https://github.com/astral-sh/uv) package manager.
 
 ## Usage
 
-The server provides five search tools:
+The server provides seven search tools:
 - `search_web` - General web content
 - `search_news` - News articles
 - `search_images` - Images with advanced filtering
 - `search_videos` - Videos with quality filters
 - `search_books` - Books and publications
+- `get_current_weather` - Current weather conditions
+- `get_forecast` - Daily weather forecast
 
 ### Parameters
 
-#### Common Parameters (all tools)
+#### Common Parameters (search tools)
 - `query` (required): Search query string
 - `max_results`: Number of results (default 5)
 - `time_range`: Filter by time ("d", "w", "m", "y" for day, week, month, year)
@@ -40,6 +42,11 @@ The server provides five search tools:
 - `safesearch`: Safe search level ("moderate", "off", "on")
 - `page`: Page number for pagination (default 1)
 - `backend`: Backend engine ("auto", "legacy", "api")
+
+#### Weather Parameters (`get_current_weather`, `get_forecast`)
+- `latitude` (required): Latitude of the location
+- `longitude` (required): Longitude of the location
+- `days` (optional, `get_forecast` only): Number of forecast days (1-16, default 7)
 
 #### Image-Specific Parameters (`search_images`)
 - `size`: Image size ("Small", "Medium", "Large", "Wallpaper")
@@ -83,7 +90,8 @@ Configure in Opencode (~/.config/opencode/opencode.json):
 
 ## Features
 
-- Multiple content types (text, images, news, videos)
+- Multiple content types (text, images, news, videos, books)
+- Real-time weather data (current and forecast) via OpenMeteo
 - Advanced filtering (time range, regions, safe search)
 - Pagination support
 - Backend selection options
@@ -100,6 +108,8 @@ All tools have been thoroughly tested with various parameters:
 - ✅ **search_images**: Image search with comprehensive filtering
 - ✅ **search_videos**: Video search with rich metadata
 - ✅ **search_books**: Book search from various sources
+- ✅ **get_current_weather**: Current weather data with robust error handling
+- ✅ **get_forecast**: Daily forecast with customizable duration
 
 ### Running Tests
 
