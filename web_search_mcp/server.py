@@ -1,10 +1,58 @@
+import asyncio
+import logging
+import ssl
+from collections.abc import AsyncIterator
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
+
+import httpx
 from fastmcp import FastMCP
 
+from .config import settings
 from .search import ddg_search
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
 
-mcp = FastMCP("Web Search Tools")
+# Global HTTP client for weather API
+http_client = None
+executor = ThreadPoolExecutor(max_workers=4)
+
+# Set up logging
+logger = logging.getLogger("web-search-mcp")
+
+
+@asynccontextmanager
+async def app_lifespan(app) -> AsyncIterator[None]:
+    """Lifespan context manager to handle shared resources."""
+    global http_client
+    # Initialize shared resources
+    ssl_context = (
+        ssl.create_default_context()
+        if hasattr(ssl, "create_default_context")
+        else ssl._create_unverified_context()
+    )
+    http_client = httpx.AsyncClient(verify=ssl_context, timeout=30.0)
+    logger.info("Shared HTTP client initialized")
+
+    yield
+
+    # Cleanup
+    if http_client:
+        await http_client.aclose()
+    executor.shutdown(wait=True)
+    logger.info("Shared HTTP client closed")
+
+
+mcp = FastMCP("Web Search Tools", lifespan=app_lifespan)
+
+
+async def _search_handler(search_type: str, query: str, **kwargs):
+    """Centralized search handler to reduce code duplication."""
+    try:
+        return await ddg_search(query, search_type, **kwargs)
+    except Exception as e:
+        logger.error(f"Search failed: {e}")
+        return {"error": "Search failed", "details": str(e)}
 
 
 @mcp.tool
@@ -19,7 +67,8 @@ async def get_current_weather(latitude: float, longitude: float) -> dict:
     Returns:
         Dict containing current weather data or error message
     """
-    return await weather_current(latitude, longitude)
+    global http_client
+    return await weather_current(latitude, longitude, http_client=http_client)
 
 
 @mcp.tool
@@ -35,11 +84,12 @@ async def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict
     Returns:
         Dict containing forecast data or error message
     """
-    return await weather_forecast(latitude, longitude, days)
+    global http_client
+    return await weather_forecast(latitude, longitude, days, http_client=http_client)
 
 
 @mcp.tool
-def search_web(
+async def search_web(
     query: str,
     max_results: int = 5,
     time_range: str | None = None,
@@ -63,13 +113,20 @@ def search_web(
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable
     """
-    return ddg_search(
-        query, "text", max_results, time_range, region, safesearch, page, backend
+    return await _search_handler(
+        "text",
+        query,
+        max_results=max_results,
+        time_range=time_range,
+        region=region,
+        safesearch=safesearch,
+        page=page,
+        backend=backend,
     )
 
 
 @mcp.tool
-def search_news(
+async def search_news(
     query: str,
     max_results: int = 5,
     time_range: str | None = None,
@@ -93,13 +150,20 @@ def search_news(
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable
     """
-    return ddg_search(
-        query, "news", max_results, time_range, region, safesearch, page, backend
+    return await _search_handler(
+        "news",
+        query,
+        max_results=max_results,
+        time_range=time_range,
+        region=region,
+        safesearch=safesearch,
+        page=page,
+        backend=backend,
     )
 
 
 @mcp.tool
-def search_images(
+async def search_images(
     query: str,
     max_results: int = 5,
     time_range: str | None = None,
@@ -126,22 +190,22 @@ def search_images(
         backend: Backend to use ('auto', 'legacy', 'api')
         size: Image size ('Small', 'Medium', 'Large', 'Wallpaper') or None
         color: Color filter (color name or 'Monochrome') or None
-        type_image: Image type ('photo', 'clipart', 'gif', 'transparent', 'line') or None
+        type_image: Image type filter ('photo', 'clipart', 'gif', 'transparent', 'line') or None
         layout: Layout filter ('Square', 'Tall', 'Wide') or None
         license_image: License filter (Creative Commons types) or None
 
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable
     """
-    return ddg_search(
-        query,
+    return await _search_handler(
         "image",
-        max_results,
-        time_range,
-        region,
-        safesearch,
-        page,
-        backend,
+        query,
+        max_results=max_results,
+        time_range=time_range,
+        region=region,
+        safesearch=safesearch,
+        page=page,
+        backend=backend,
         size=size,
         color=color,
         type_image=type_image,
@@ -151,7 +215,7 @@ def search_images(
 
 
 @mcp.tool
-def search_videos(
+async def search_videos(
     query: str,
     max_results: int = 5,
     time_range: str | None = None,
@@ -181,15 +245,15 @@ def search_videos(
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable
     """
-    return ddg_search(
-        query,
+    return await _search_handler(
         "video",
-        max_results,
-        time_range,
-        region,
-        safesearch,
-        page,
-        backend,
+        query,
+        max_results=max_results,
+        time_range=time_range,
+        region=region,
+        safesearch=safesearch,
+        page=page,
+        backend=backend,
         resolution=resolution,
         duration=duration,
         license_videos=license_videos,
@@ -197,7 +261,7 @@ def search_videos(
 
 
 @mcp.tool
-def search_books(
+async def search_books(
     query: str,
     max_results: int = 5,
     page: int = 1,
@@ -215,8 +279,8 @@ def search_books(
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable
     """
-    return ddg_search(
-        query, "books", max_results, None, None, "moderate", page, backend
+    return await _search_handler(
+        "books", query, max_results=max_results, page=page, backend=backend
     )
 
 

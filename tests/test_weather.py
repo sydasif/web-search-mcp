@@ -1,8 +1,13 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
-from web_search_mcp.weather import get_current_weather, get_forecast
+from web_search_mcp.weather import (
+    get_current_weather,
+    get_forecast,
+    make_openmeteo_request,
+)
 
 
 @pytest.mark.asyncio
@@ -23,27 +28,22 @@ async def test_get_current_weather_success():
         },
     }
 
-    # Mock the context manager returned by httpx.AsyncClient
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-
-        mock_resp_obj = MagicMock()
-        mock_resp_obj.status_code = 200
-        mock_resp_obj.json.return_value = mock_response
-        mock_client.get.return_value = mock_resp_obj
+    # Mock the make_openmeteo_request function since that's where the API call happens
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = mock_response
 
         result = await get_current_weather(40.7128, -74.0060)
 
         assert result == mock_response
-        mock_client.get.assert_called_once()
-        # Verify URL contains correct parameters
-        call_args = mock_client.get.call_args
-        assert "latitude=40.7128" in call_args[0][0]
-        # Python float formatting might drop trailing zeros, so check for partial match
-        # or just check the value we passed
-        assert "longitude=-74.006" in call_args[0][0]
-        assert "current=" in call_args[0][0]
+        mock_make_request.assert_called_once()
+        # Check that it was called with the correct client and parameters
+        call_args = mock_make_request.call_args
+        # args[0] is client, args[1] is endpoint, args[2] is params
+        assert call_args[0][1] == "forecast"  # endpoint
+        params = call_args[0][2]  # params
+        assert params["latitude"] == 40.7128
+        assert params["longitude"] == -74.0060
+        assert "temperature_2m" in params["current"]
 
 
 @pytest.mark.asyncio
@@ -60,32 +60,24 @@ async def test_get_forecast_success():
         }
     }
 
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-
-        mock_resp_obj = MagicMock()
-        mock_resp_obj.status_code = 200
-        mock_resp_obj.json.return_value = mock_response
-        mock_client.get.return_value = mock_resp_obj
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = mock_response
 
         result = await get_forecast(40.7128, -74.0060, days=10)
 
         assert result == mock_response
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
-        assert "forecast_days=10" in call_args[0][0]
+        mock_make_request.assert_called_once()
+        call_args = mock_make_request.call_args
+        params = call_args[0][2]  # params
+        assert params["forecast_days"] == 10
 
 
 @pytest.mark.asyncio
 async def test_api_failure():
     """Test handling of API failure."""
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-
-        # Simulate an exception
-        mock_client.get.side_effect = Exception("Connection error")
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        # Simulate None return (failed API call)
+        mock_make_request.return_value = None
 
         result = await get_current_weather(40.7128, -74.0060)
 

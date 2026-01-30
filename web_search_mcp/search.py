@@ -1,7 +1,12 @@
-from ddgs import DDGS
+from .providers.async_wrapper import AsyncSearchProviderWrapper
+from .providers.duckduckgo import DDGProvider
+
+# Initialize the search provider
+_provider = DDGProvider()
+search_provider = AsyncSearchProviderWrapper(_provider)
 
 
-def ddg_search(
+async def ddg_search(
     query,
     search_type="text",
     max_results=5,
@@ -44,74 +49,33 @@ def ddg_search(
     Returns:
         Dict with query, search_type, total_results, and results list
     """
-    # Use context manager for proper resource cleanup
-    with DDGS() as ddgs:
-        # Prepare kwargs for search with parameters that DDGS actually supports
-        # Only add parameters that are not None to avoid issues with DDGS library
-        kwargs = {}
+    kwargs = {
+        "max_results": max_results,
+        "time_range": time_range,
+        "region": region,
+        "safesearch": safesearch,
+        "page": page,
+        "backend": backend,
+        "size": size,
+        "color": color,
+        "type_image": type_image,
+        "layout": layout,
+        "license_image": license_image,
+        "resolution": resolution,
+        "duration": duration,
+        "license_videos": license_videos,
+    }
 
-        # Common parameters for all search types
-        if max_results is not None:
-            kwargs["max_results"] = max_results
-        if region is not None:
-            kwargs["region"] = region
-        if safesearch is not None:
-            kwargs["safesearch"] = safesearch
-        if page is not None:
-            kwargs["page"] = page
-        if backend is not None:
-            kwargs["backend"] = backend
-        if time_range is not None:
-            kwargs["timelimit"] = (
-                time_range  # timelimit is the actual parameter name for time_range in DDGS
-            )
+    # Filter out None values
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
-        # Image-specific parameters
-        if search_type == "image":
-            if size is not None:
-                kwargs["size"] = size
-            if color is not None:
-                kwargs["color"] = color
-            if type_image is not None:
-                kwargs["type_image"] = type_image
-            if layout is not None:
-                kwargs["layout"] = layout
-            if license_image is not None:
-                kwargs["license_image"] = license_image
-
-        # Video-specific parameters
-        if search_type == "video":
-            if resolution is not None:
-                kwargs["resolution"] = resolution
-            if duration is not None:
-                kwargs["duration"] = duration
-            if license_videos is not None:
-                kwargs["license_videos"] = license_videos
-
-        # Map search type to appropriate DDGS method
-        search_methods = {
-            "text": ddgs.text,
-            "image": ddgs.images,
-            "news": ddgs.news,
-            "video": ddgs.videos,
-            "books": ddgs.books,
+    try:
+        return await search_provider.search(query, search_type, **kwargs)
+    except Exception as e:
+        return {
+            "query": query,
+            "search_type": search_type,
+            "total_results": 0,
+            "results": [],
+            "error": str(e),
         }
-
-        search_func = search_methods.get(search_type, ddgs.text)
-
-        try:
-            results = search_func(query, **kwargs)
-            return {
-                "query": query,
-                "search_type": search_type,
-                "total_results": len(results),
-                "results": results,
-            }
-        except Exception as e:
-            return {
-                "query": query,
-                "search_type": search_type,
-                "total_results": 0,
-                "results": [],
-                "error": str(e),
-            }
