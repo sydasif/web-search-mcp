@@ -99,6 +99,15 @@ Configure in Opencode (~/.config/opencode/opencode.json):
 - Optimized for LLMs with structured JSON responses
 - Direct integration without wrapper class for improved performance
 
+## Project Structure
+
+```
+web_search_mcp/
+├── __init__.py      # Package initialization
+├── search.py        # Core search logic
+└── server.py        # MCP server implementation
+```
+
 ## Testing
 
 All tools have been thoroughly tested with various parameters:

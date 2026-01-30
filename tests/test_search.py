@@ -2,13 +2,13 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from web_search_mcp.main import ddg_search
+from web_search_mcp.search import ddg_search
 
 
 class TestDDGSearch:
     """Test suite for DDG search functionality with mocked DDGS API calls."""
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_basic_text(self, mock_ddgs_class):
         """Test basic text search functionality."""
         mock_ddgs = MagicMock()
@@ -31,7 +31,7 @@ class TestDDGSearch:
             "test query", max_results=1, safesearch="moderate", page=1, backend="auto"
         )
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_with_time_filter(self, mock_ddgs_class):
         """Test search with time range filter."""
         mock_ddgs = MagicMock()
@@ -51,7 +51,7 @@ class TestDDGSearch:
             backend="auto",
         )
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_image_with_filters(self, mock_ddgs_class):
         """Test image search with advanced filters."""
         mock_ddgs = MagicMock()
@@ -90,7 +90,7 @@ class TestDDGSearch:
             color="Monochrome",
         )
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_videos_with_filters(self, mock_ddgs_class):
         """Test video search with quality filters."""
         mock_ddgs = MagicMock()
@@ -126,7 +126,7 @@ class TestDDGSearch:
             duration="medium",
         )
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_books(self, mock_ddgs_class):
         """Test books search functionality."""
         mock_ddgs = MagicMock()
@@ -156,7 +156,7 @@ class TestDDGSearch:
             backend="auto",
         )
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_with_all_common_params(self, mock_ddgs_class):
         """Test search with all common parameters."""
         mock_ddgs = MagicMock()
@@ -185,7 +185,7 @@ class TestDDGSearch:
             backend="api",
         )
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_error_handling(self, mock_ddgs_class):
         """Test error handling when DDGS API fails."""
         mock_ddgs = MagicMock()
@@ -201,7 +201,7 @@ class TestDDGSearch:
         assert "error" in result
         assert "Network error" in result["error"]
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_default_type(self, mock_ddgs_class):
         """Test that default search type is 'text'."""
         mock_ddgs = MagicMock()
@@ -213,7 +213,7 @@ class TestDDGSearch:
         assert result["search_type"] == "text"
         mock_ddgs.text.assert_called_once()
 
-    @patch("web_search_mcp.main.DDGS")
+    @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_none_params_not_passed(self, mock_ddgs_class):
         """Test that None parameters are not passed to DDGS."""
         mock_ddgs = MagicMock()

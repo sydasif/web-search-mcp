@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
 
-from .main import ddg_search
+from .search import ddg_search
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
 

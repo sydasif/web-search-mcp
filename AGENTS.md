@@ -93,7 +93,7 @@ from typing import Optional
 from fastmcp import FastMCP
 
 # Local imports
-from .main import ddg_search
+from .search import ddg_search
 ```
 
 ### Type Hints
@@ -151,7 +151,7 @@ except Exception as e:
 ```
 web_search_mcp/
 ├── __init__.py      # Package initialization
-├── main.py          # Core search logic
+├── search.py          # Core search logic
 └── server.py        # MCP server implementation
 ```
 
@@ -182,7 +182,7 @@ uv sync
 ### Test Structure
 ```python
 import pytest
-from web_search_mcp.main import ddg_search
+from web_search_mcp.search import ddg_search
 
 def test_ddg_search_basic():
     """Test basic search functionality."""
