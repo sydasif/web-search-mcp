@@ -16,7 +16,7 @@ A FastMCP-based server providing comprehensive web search functionality using Du
 
 - **Python**: 3.11+
 - **Package Manager**: uv
-- **Dependencies**: fastmcp, ddgs
+- **Dependencies**: fastmcp, ddgs, pydantic, pydantic-settings, httpx
 - **Framework**: Model Context Protocol (MCP)
 
 ## Build Commands
@@ -129,16 +129,39 @@ def search_web(
     """
 ```
 
-### Error Handling
-- Use try/except blocks for external API calls
-- Return error information in response dictionaries
-- Log errors appropriately (when logging is implemented)
+### Pydantic Models
+Use Pydantic models for structured data:
 
 ```python
+from pydantic import BaseModel
+
+class SearchResult(BaseModel):
+    title: str
+    url: str
+    description: str | None = None
+
+class SearchResponse(BaseModel):
+    query: str
+    search_type: str
+    total_results: int
+    results: list[SearchResult]
+```
+
+### Error Handling
+- Use try/except blocks for external API calls
+- Use structured logging with Python logging module
+- Return error information in response dictionaries
+
+```python
+import logging
+
+logger = logging.getLogger("web-search-mcp")
+
 try:
     return ddg_search(query, search_type, **kwargs)
 except Exception as e:
-    return {"error": str(e), "query": query, "search_type": search_type}
+    logger.error(f"Search failed: {e}")
+    return {"error": "Search failed", "details": str(e)}
 ```
 
 ### Code Structure
@@ -148,12 +171,20 @@ except Exception as e:
 - Prefer explicit over implicit
 
 ### File Organization
-```
+ ```
 web_search_mcp/
-├── __init__.py      # Package initialization
-├── search.py          # Core search logic
-└── server.py        # MCP server implementation
-```
+├── __init__.py              # Package initialization
+├── config.py               # Centralized configuration with Pydantic
+├── models.py               # Pydantic models for Search/Weather
+├── search.py               # Core search logic using provider pattern
+├── weather.py              # Weather API client with resource management
+├── server.py               # MCP server implementation with lifespan management
+└── providers/              # Search engine provider implementations
+    ├── __init__.py
+    ├── base.py             # Provider protocol definition
+    ├── duckduckgo.py       # DDGS provider implementation
+    └── async_wrapper.py    # Async wrapper for synchronous providers
+ ```
 
 ## Dependency Management
 
@@ -242,6 +273,9 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 ## Performance Considerations
 
 - The DDGS library handles rate limiting internally
+- Use async context managers and lifespan management for resource efficiency
+- Share httpx clients across requests using lifespan hooks
+- Use thread pools for synchronous DDGS calls to prevent event loop blocking
 - Consider caching for frequently requested searches (future enhancement)
 - Monitor memory usage with large result sets
 - Use async/await for concurrent operations if needed
@@ -274,9 +308,8 @@ uv run python -m web_search_mcp.server
 
 ## Future Enhancements
 
-- Add comprehensive test suite
 - Implement caching layer
 - Add rate limiting configuration
-- Support for additional search providers
-- Add metrics and monitoring</content>
+- Add metrics and monitoring
+- Add additional search providers (e.g. Tavily, Google, Brave Search)</content>
 <parameter name="filePath">/home/zulu/Documents/web-search-mcp/AGENTS.md

@@ -103,9 +103,17 @@ Configure in Opencode (~/.config/opencode/opencode.json):
 
 ```
 web_search_mcp/
-├── __init__.py      # Package initialization
-├── search.py        # Core search logic
-└── server.py        # MCP server implementation
+├── __init__.py              # Package initialization
+├── config.py               # Centralized configuration with Pydantic
+├── models.py               # Pydantic models for Search/Weather
+├── search.py               # Core search logic using provider pattern
+├── weather.py              # Weather API client with resource management
+├── server.py               # MCP server implementation with lifespan management
+└── providers/              # Search engine provider implementations
+    ├── __init__.py
+    ├── base.py             # Provider protocol definition
+    ├── duckduckgo.py       # DDGS provider implementation
+    └── async_wrapper.py    # Async wrapper for synchronous providers
 ```
 
 ## Testing
