@@ -6,6 +6,7 @@ This file contains development standards and commands for agentic coding assista
 
 A FastMCP-based server providing comprehensive web search functionality using DuckDuckGo's privacy-focused search engine. Supports text, news, images, videos, and books searches with advanced filtering options including:
 
+- **Unified Search**: Single tool supporting text, news, images, videos, and books with type-specific filters
 - **Text Search**: General web content with time and region filtering
 - **News Search**: Recent news articles with publication dates
 - **Image Search**: Visual content with size, color, type, layout, and license filters
@@ -111,21 +112,23 @@ from .search import ddg_search
 Use Google-style docstrings with Args and Returns sections:
 
 ```python
-def search_web(
+def search(
     query: str,
+    search_type: str = "text",
     max_results: int = 5,
-    time_range: str | None = None,
+    filters: dict | None = None,
 ) -> dict:
     """
-    Search for general web content using DuckDuckGo's text search.
+    Unified search tool for web content, news, images, videos, and books.
 
     Args:
         query: Search query string
+        search_type: Type of search ('text', 'image', 'news', 'video', 'books')
         max_results: Max number of results to return (default 5)
-        time_range: Time filter ('d', 'w', 'm', 'y') or None
+        filters: Additional type-specific filters (e.g., {"size": "Large"} for images)
 
     Returns:
-        Dict with query, search_type, total_results, and results list
+        Dict with query, search_type, total_results, results, and error if applicable
     """
 ```
 
@@ -134,6 +137,12 @@ Use Pydantic models for structured data:
 
 ```python
 from pydantic import BaseModel
+
+class SearchRequest(BaseModel):
+    query: str
+    search_type: str = "text"
+    max_results: int = 5
+    filters: dict = {}
 
 class SearchResult(BaseModel):
     title: str
@@ -213,18 +222,21 @@ uv sync
 ### Test Structure
 ```python
 import pytest
+from web_search_mcp.models import SearchRequest
 from web_search_mcp.search import ddg_search
 
 def test_ddg_search_basic():
     """Test basic search functionality."""
-    result = ddg_search("test query", max_results=1)
+    req = SearchRequest(query="test query", max_results=1)
+    result = ddg_search(req)
     assert "query" in result
     assert "results" in result
     assert len(result["results"]) <= 1
 
 def test_ddg_search_with_filters():
     """Test search with time range filter."""
-    result = ddg_search("test query", time_range="d", max_results=2)
+    req = SearchRequest(query="test query", time_range="d", max_results=2)
+    result = ddg_search(req)
     assert result["search_type"] == "text"
     assert len(result["results"]) <= 2
 ```

@@ -1,8 +1,9 @@
 import asyncio
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
+from web_search_mcp.models import SearchRequest
 from web_search_mcp.providers.duckduckgo import DDGProvider
 from web_search_mcp.search import ddg_search
 
@@ -26,7 +27,8 @@ class TestDDGSearch:
             ],
         }
 
-        result = asyncio.run(ddg_search("test query", max_results=1))
+        req = SearchRequest(query="test query", max_results=1)
+        result = asyncio.run(ddg_search(req))
 
         assert result["query"] == "test query"
         assert result["search_type"] == "text"
@@ -51,7 +53,8 @@ class TestDDGSearch:
             "results": [],
         }
 
-        result = asyncio.run(ddg_search("test query", time_range="d", max_results=2))
+        req = SearchRequest(query="test query", time_range="d", max_results=2)
+        result = asyncio.run(ddg_search(req))
 
         assert result["search_type"] == "text"
         assert len(result["results"]) == 0
@@ -86,15 +89,14 @@ class TestDDGSearch:
         }
         mock_provider_search.return_value = mock_result
 
-        result = asyncio.run(
-            ddg_search(
-                "sunset",
-                search_type="image",
-                max_results=1,
-                size="Large",
-                color="Monochrome",
-            )
+        filters = {"size": "Large", "color": "Monochrome"}
+        req = SearchRequest(
+            query="sunset",
+            search_type="image",
+            max_results=1,
+            filters=filters,
         )
+        result = asyncio.run(ddg_search(req))
 
         assert result["search_type"] == "image"
         assert len(result["results"]) == 1
@@ -131,15 +133,14 @@ class TestDDGSearch:
         }
         mock_provider_search.return_value = mock_result
 
-        result = asyncio.run(
-            ddg_search(
-                "python tutorial",
-                search_type="video",
-                max_results=1,
-                resolution="high",
-                duration="medium",
-            )
+        filters = {"resolution": "high", "duration": "medium"}
+        req = SearchRequest(
+            query="python tutorial",
+            search_type="video",
+            max_results=1,
+            filters=filters,
         )
+        result = asyncio.run(ddg_search(req))
 
         assert result["search_type"] == "video"
         assert len(result["results"]) == 1
@@ -174,9 +175,12 @@ class TestDDGSearch:
         }
         mock_provider_search.return_value = mock_result
 
-        result = asyncio.run(
-            ddg_search("python programming", search_type="books", max_results=1)
+        req = SearchRequest(
+            query="python programming",
+            search_type="books",
+            max_results=1,
         )
+        result = asyncio.run(ddg_search(req))
 
         assert result["search_type"] == "books"
         assert len(result["results"]) == 1
@@ -202,18 +206,17 @@ class TestDDGSearch:
         }
         mock_provider_search.return_value = mock_result
 
-        result = asyncio.run(
-            ddg_search(
-                "test query",
-                search_type="news",
-                max_results=5,
-                time_range="w",
-                region="us-en",
-                safesearch="off",
-                page=2,
-                backend="api",
-            )
+        req = SearchRequest(
+            query="test query",
+            search_type="news",
+            max_results=5,
+            time_range="w",
+            region="us-en",
+            safesearch="off",
+            page=2,
+            backend="api",
         )
+        result = asyncio.run(ddg_search(req))
 
         assert result["search_type"] == "news"
         mock_provider_search.assert_called_once_with(
@@ -232,7 +235,8 @@ class TestDDGSearch:
         """Test error handling when DDG API fails."""
         mock_provider_search.side_effect = Exception("Network error")
 
-        result = asyncio.run(ddg_search("test query", max_results=1))
+        req = SearchRequest(query="test query", max_results=1)
+        result = asyncio.run(ddg_search(req))
 
         assert result["query"] == "test query"
         assert result["search_type"] == "text"
@@ -252,7 +256,8 @@ class TestDDGSearch:
         }
         mock_provider_search.return_value = mock_result
 
-        result = asyncio.run(ddg_search("test"))
+        req = SearchRequest(query="test")
+        result = asyncio.run(ddg_search(req))
 
         assert result["search_type"] == "text"
         # Check that it was called with search_type="text"
@@ -270,9 +275,16 @@ class TestDDGSearch:
         }
         mock_provider_search.return_value = mock_result
 
-        result = asyncio.run(
-            ddg_search("test", max_results=5, time_range=None, region=None, page=1)
+        req = SearchRequest(
+            query="test",
+            max_results=5,
+            time_range=None,
+            region=None,
+            page=1,
         )
+        result = asyncio.run(ddg_search(req))
+        assert result["query"] == "test"
+        assert result["search_type"] == "text"
 
         # Verify that only non-None parameters are passed
         call_kwargs = mock_provider_search.call_args[1]
