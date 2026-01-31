@@ -8,14 +8,14 @@ logger = logging.getLogger("web-search-mcp")
 
 
 def download_media(
-    url: str, output_path: str = "downloads", timeout: int = 30
+    url: str, output_path: str = "~/Downloads", timeout: int = 30
 ) -> dict[str, Any]:
     """
     Download video/audio from URL using yt-dlp.
 
     Args:
         url: The URL to download content from.
-        output_path: The directory to save the downloaded file (default: "downloads").
+        output_path: The directory to save the downloaded file (default: "~/Downloads").
         timeout: Socket timeout in seconds (default: 30).
 
     Returns:
@@ -24,6 +24,9 @@ def download_media(
     Raises:
         Exception: If the download fails.
     """
+    # Expand user home directory
+    output_path = os.path.expanduser(output_path)
+
     # Ensure the output directory exists
     os.makedirs(output_path, exist_ok=True)
 

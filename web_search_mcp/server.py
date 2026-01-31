@@ -292,7 +292,7 @@ async def download_video(url: str, path: str | None = None, timeout: int = 30) -
 
     Args:
         url: The URL of the video to download
-        path: Optional custom path to save the video (default: ./downloads)
+        path: Optional custom path to save the video (default: ~/Downloads)
         timeout: Socket timeout in seconds for network operations (default: 30)
 
     Returns:
@@ -301,7 +301,7 @@ async def download_video(url: str, path: str | None = None, timeout: int = 30) -
     try:
         # Run in executor to avoid blocking the async event loop
         return await asyncio.to_thread(
-            download_media, url, path or "downloads", timeout
+            download_media, url, path or "~/Downloads", timeout
         )
     except Exception as e:
         logger.error(f"Download failed: {e}")
