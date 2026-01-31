@@ -58,15 +58,28 @@ class DDGProvider(SearchProvider):
                     search_kwargs["license_videos"] = kwargs["license_videos"]
 
             # Map search type to appropriate DDGS method
+            # Support both singular and plural for robustness
             search_methods = {
                 "text": ddgs.text,
+                "web": ddgs.text,
                 "image": ddgs.images,
+                "images": ddgs.images,
                 "news": ddgs.news,
                 "video": ddgs.videos,
+                "videos": ddgs.videos,
                 "books": ddgs.books,
             }
 
-            search_func = search_methods.get(search_type, ddgs.text)
+            if search_type not in search_methods:
+                return {
+                    "query": query,
+                    "search_type": search_type,
+                    "total_results": 0,
+                    "results": [],
+                    "error": f"Unsupported search type: {search_type}",
+                }
+
+            search_func = search_methods[search_type]
 
             try:
                 results = search_func(query, **search_kwargs)

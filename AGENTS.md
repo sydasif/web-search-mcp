@@ -116,7 +116,7 @@ def search(
     query: str,
     search_type: str = "text",
     max_results: int = 5,
-    filters: dict | None = None,
+    **kwargs
 ) -> dict:
     """
     Unified search tool for web content, news, images, videos, and books.
@@ -125,7 +125,7 @@ def search(
         query: Search query string
         search_type: Type of search ('text', 'image', 'news', 'video', 'books')
         max_results: Max number of results to return (default 5)
-        filters: Additional type-specific filters (e.g., {"size": "Large"} for images)
+        **kwargs: Additional filters (size, color, resolution, etc.)
 
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable

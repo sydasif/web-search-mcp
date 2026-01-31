@@ -17,16 +17,10 @@ async def ddg_search(request: SearchRequest):
     Returns:
         Dict with query, search_type, total_results, and results list
     """
-    kwargs = {
-        "max_results": request.max_results,
-        "time_range": request.time_range,
-        "region": request.region,
-        "safesearch": request.safesearch,
-        "page": request.page,
-        "backend": request.backend,
-    }
+    # Extract all parameters from the request model
+    kwargs = request.model_dump(exclude={"query", "search_type", "filters"})
 
-    # Merge filters if present
+    # Merge additional filters if present
     if request.filters:
         kwargs.update(request.filters)
 

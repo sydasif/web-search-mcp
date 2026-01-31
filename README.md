@@ -17,14 +17,14 @@ Unified tool for web, news, images, videos, and books.
 
 **Parameters:**
 - `query` (required): Search query
-- `search_type`: `text` (default), `news`, `image`, `video`, `books`
+- `search_type`: `text` (default), `news`, `image`, `video`, `books` (supports plural forms too)
 - `max_results`: Default 5
 - `time_range`: `d`, `w`, `m`, `y`
 - `region`: e.g., `us-en`, `uk-en`
 - `safesearch`: `moderate` (default), `off`, `on`
-- `filters`: Dict for type-specific options:
-  - **Images**: `size` (Small, Medium, Large, Wallpaper), `color`, `type_image`, `layout`, `license_image`
-  - **Videos**: `resolution` (high, standart), `duration` (short, medium, long), `license_videos`
+- **Image Filters**: `size` (Small, Medium, Large, Wallpaper), `color`, `type_image`, `layout`, `license_image`
+- **Video Filters**: `resolution` (high, standart), `duration` (short, medium, long), `license_videos`
+
 
 ### 2. `get_current_weather` / `get_forecast`
 **Parameters:**
