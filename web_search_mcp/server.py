@@ -15,11 +15,9 @@ mcp = FastMCP("Web Search Tools")
 
 
 @mcp.tool
-def search(
+def search_web(
     query: str,
-    search_type: Literal[
-        "text", "image", "images", "news", "video", "videos", "books"
-    ] = "text",
+    search_type: Literal["text", "image", "images", "news", "video", "videos", "books"] = "text",
     max_results: int = 5,
     time_range: str | None = None,
     region: str | None = None,
@@ -94,7 +92,7 @@ def search(
 
 
 @mcp.tool
-def get_current_weather(latitude: float, longitude: float) -> dict:
+def get_weather(latitude: float, longitude: float) -> dict:
     """
     Get current weather for a specific location.
 
