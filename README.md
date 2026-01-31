@@ -12,10 +12,12 @@ Requires Python 3.11+ and [uv](https://github.com/astral-sh/uv).
 
 ## Tools
 
-### 1. `search`
+### 1. `search_web`
+
 Unified tool for web, news, images, videos, and books.
 
 **Parameters:**
+
 - `query` (required): Search query
 - `search_type`: `text` (default), `news`, `image`, `video`, `books` (supports plural forms too)
 - `max_results`: Default 5
@@ -25,9 +27,10 @@ Unified tool for web, news, images, videos, and books.
 - **Image Filters**: `size` (Small, Medium, Large, Wallpaper), `color`, `type_image`, `layout`, `license_image`
 - **Video Filters**: `resolution` (high, standart), `duration` (short, medium, long), `license_videos`
 
+### 2. `get_weather` / `get_forecast`
 
-### 2. `get_current_weather` / `get_forecast`
 **Parameters:**
+
 - `latitude`, `longitude` (required)
 - `days` (forecast only, 1-16, default 7)
 
