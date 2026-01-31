@@ -1,351 +1,126 @@
-# AGENTS.md - Web Search MCP Server
+# AGENTS.md
 
-This file contains development standards and commands for agentic coding assistants working on the web-search-mcp project.
+This file provides guidelines for agentic coding agents operating in this repository.
 
 ## Project Overview
 
-A FastMCP-based server providing comprehensive web search functionality using DuckDuckGo's privacy-focused search engine. Supports text, news, images, videos, and books searches with advanced filtering options including:
-
-- **Unified Search**: Single tool supporting text, news, images, videos, and books with type-specific filters
-- **Text Search**: General web content with time and region filtering
-- **News Search**: Recent news articles with publication dates
-- **Image Search**: Visual content with size, color, type, layout, and license filters
-- **Video Search**: Multimedia content with resolution, duration, and license filters
-- **Books Search**: Publications and books from various sources
-
-## Development Environment
-
-- **Python**: 3.11+
-- **Package Manager**: uv
-- **Dependencies**: fastmcp, ddgs, pydantic, pydantic-settings, httpx
-- **Framework**: Model Context Protocol (MCP)
+**web-search-mcp** is a FastMCP server providing web search, content extraction, and research tools for LLM clients. Uses Python 3.11+ with uv for dependency management.
 
 ## Build Commands
 
-### Install Dependencies
-
 ```bash
+# Install dependencies
 uv sync
-```
 
-### Run Development Server
-
-```bash
-uv run web-search-mcp
-```
-
-### Build Distribution
-
-```bash
-uv build
-```
-
-## Testing Commands
-
-### Run All Tests
-
-```bash
+# Run all tests
 uv run pytest
-```
 
-### Run Single Test File
+# Run a single test file
+uv run pytest tests/test_search.py
 
-```bash
-uv run pytest tests/test_file.py
-```
+# Run a single test
+uv run pytest tests/test_search.py::TestDDGSearch::test_ddg_search_basic_text
 
-### Run Specific Test
+# Run with coverage
+uv run pytest --cov=web_search_mcp
 
-```bash
-uv run pytest tests/test_file.py::TestClass::test_method
-```
-
-### Run Tests with Coverage
-
-```bash
-uv run pytest --cov=web_search_mcp --cov-report=html
-```
-
-## Code Quality Commands
-
-### Lint Code (Recommended: Add ruff to dev dependencies)
-
-```bash
+# Lint check
 uv run ruff check .
-```
 
-### Auto-fix Linting Issues
+# Auto-fix linting issues
+uv run ruff check --fix
 
-```bash
-uv run ruff check . --fix
-```
-
-### Format Code
-
-```bash
-uv run ruff format .
-# Alternative: uv format (built-in uv formatter)
-```
-
-### Type Check (Recommended: Add mypy to dev dependencies)
-
-```bash
+# Type checking
 uv run mypy web_search_mcp/
+
+# Run server (stdio transport)
+uv run web-search-mcp
 ```
 
 ## Code Style Guidelines
 
-### Import Organization
+### Imports
+
+- Use absolute imports: `from web_search_mcp.models import SearchRequest`
+- Sort imports with ruff (configured in pyproject.toml)
+- Group imports: stdlib → third-party → local
+- Use `_alias` pattern for imports in server.py to avoid name collisions with tool functions:
 
 ```python
-# Standard library imports
-import os
-from typing import Optional
-
-# Third-party imports
-from fastmcp import FastMCP
-
-# Local imports
 from .search import ddg_search
+from .reader import fetch_page as _fetch_page
 ```
+
+### Formatting
+
+- Line length: 100 characters
+- No enforced brace style for conditionals (use best judgment)
+- Use trailing commas for multi-line calls
 
 ### Type Hints
 
-- Use modern union syntax: `str | None` instead of `Optional[str]`
-- Specify return types for all public functions
-- Use `dict` for simple dictionaries, `Dict[str, Any]` for complex ones
+- Use Python 3.11+ union syntax: `str | None` instead of `Optional[str]`
+- Use `typing.Literal` for enum-like parameters
+- Add return type annotations for all public functions
+- Use `dict` for simple dict returns, Pydantic models for structured data
 
 ### Naming Conventions
 
-- **Functions/Methods**: snake_case (`ddg_search`, `search_web`)
-- **Variables**: snake_case (`max_results`, `search_type`)
-- **Constants**: UPPER_SNAKE_CASE (`DEFAULT_TIMEOUT`)
-- **Classes**: PascalCase (not currently used in this project)
-
-### Docstrings
-
-Use Google-style docstrings with Args and Returns sections:
-
-```python
-def search(
-    query: str,
-    search_type: str = "text",
-    max_results: int = 5,
-    **kwargs
-) -> dict:
-    """
-    Unified search tool for web content, news, images, videos, and books.
-
-    Args:
-        query: Search query string
-        search_type: Type of search ('text', 'image', 'news', 'video', 'books')
-        max_results: Max number of results to return (default 5)
-        **kwargs: Additional filters (size, color, resolution, etc.)
-
-    Returns:
-        Dict with query, search_type, total_results, results, and error if applicable
-    """
-```
-
-### Pydantic Models
-
-Use Pydantic models for structured data:
-
-```python
-from pydantic import BaseModel
-
-class SearchRequest(BaseModel):
-    query: str
-    search_type: str = "text"
-    max_results: int = 5
-    filters: dict = {}
-
-class SearchResult(BaseModel):
-    title: str
-    url: str
-    description: str | None = None
-
-class SearchResponse(BaseModel):
-    query: str
-    search_type: str
-    total_results: int
-    results: list[SearchResult]
-```
+- **Functions**: `snake_case` for all functions
+- **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
+- **Constants**: `SCREAMING_SNAKE_CASE`
+- **MCP Tools**: Use `action_subject` pattern:
+  - `search_web`, `search_wiki`, `search_arxiv`, `search_docs` (discovery)
+  - `fetch_page`, `get_weather`, `get_forecast`, `get_finance` (retrieval)
+- **Private functions**: Leading underscore `_helper_function`
 
 ### Error Handling
 
-- Use try/except blocks for external API calls
-- Use structured logging with Python logging module
-- Return error information in response dictionaries
+- Log errors with the module logger: `logger = logging.getLogger("web-search-mcp")`
+- Return error dicts from tool functions: `{"error": "message", "details": str(e)}`
+- Handle `None` values before slicing: `(info.get("key") or "")[:1000]`
+- Avoid bare `except Exception`; catch specific exceptions when possible
+- Always include context in error messages
+
+### Module Structure
+
+- **server.py**: FastMCP server, tool definitions, and orchestration
+- **search.py**: DuckDuckGo search logic (`ddg_search` function)
+- **weather.py**: OpenMeteo API integration
+- **research.py**: Wikipedia and ArXiv search
+- **reader.py**: Web content extraction (trafilatura)
+- **finance.py**: Yahoo Finance integration
+- **models.py**: Pydantic models for request/response
+- **config.py**: Settings via pydantic-settings
+
+### MCP Tool Definition Pattern
 
 ```python
-import logging
+@mcp.tool
+def tool_name(param: type, optional: type = default) -> dict:
+    """
+    One-line description.
 
-logger = logging.getLogger("web-search-mcp")
+    Args:
+        param: Description
+        optional: Description
 
-try:
-    return ddg_search(query, search_type, **kwargs)
-except Exception as e:
-    logger.error(f"Search failed: {e}")
-    return {"error": "Search failed", "details": str(e)}
+    Returns:
+        Description of return dict
+    """
+    return _internal_function(param)
 ```
 
-### Code Structure
+### Testing
 
-- Keep functions focused on single responsibilities
-- Use descriptive variable names
-- Avoid magic numbers - use named constants
-- Prefer explicit over implicit
+- Use `unittest.mock.patch` for external API calls
+- Mock at the class level: `@patch("web_search_mcp.search.DDGS")`
+- Test classes inherit from `unittest.TestCase` (optional, pytest can run functions too)
+- Group related tests in classes with descriptive names: `TestDDGSearch`
+- Use `assert` for assertions (S101 allowed in tests per ruff config)
 
-### File Organization
+### Git Workflow
 
-```
-web_search_mcp/
-├── __init__.py              # Package initialization
-├── config.py               # Centralized configuration with Pydantic
-├── models.py               # Pydantic models for Search/Weather
-├── search.py               # Core search logic using DDGS directly
-├── weather.py              # Weather API client with synchronous HTTP
-└── server.py               # MCP server implementation
-```
-
-## Dependency Management
-
-### Adding Dependencies
-
-```bash
-uv add package-name
-```
-
-### Adding Development Dependencies
-
-```bash
-uv add --dev ruff mypy pytest pytest-cov
-```
-
-### Updating Dependencies
-
-```bash
-uv lock --upgrade
-uv sync
-```
-
-## Testing Standards
-
-### Test File Naming
-
-- `test_*.py` for test files
-- Place in `tests/` directory (create if needed)
-
-### Test Structure
-
-```python
-import pytest
-from web_search_mcp.models import SearchRequest
-from web_search_mcp.search import ddg_search
-
-def test_ddg_search_basic():
-    """Test basic search functionality."""
-    req = SearchRequest(query="test query", max_results=1)
-    result = ddg_search(req)
-    assert "query" in result
-    assert "results" in result
-    assert len(result["results"]) <= 1
-
-def test_ddg_search_with_filters():
-    """Test search with time range filter."""
-    req = SearchRequest(query="test query", time_range="d", max_results=2)
-    result = ddg_search(req)
-    assert result["search_type"] == "text"
-    assert len(result["results"]) <= 2
-```
-
-### Mocking External Dependencies
-
-Use pytest-mock or unittest.mock to mock DDGS calls for reliable testing. The project includes comprehensive mocks for all DDGS API calls to enable fast, reliable CI/CD testing without external API dependencies.
-
-### Advanced Search Testing
-
-When testing advanced filters, ensure to verify:
-
-- Image filters: size, color, type, layout, license
-- Video filters: resolution, duration, license
-- Common parameters: time_range, region, safesearch, page, backend
-
-## Commit Standards
-
-### Commit Message Format
-
-```
-type(scope): description
-
-[optional body]
-
-[optional footer]
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-### Before Committing
-
-1. Run tests: `uv run pytest`
-2. Run linting: `uv run ruff check .`
-3. Run formatting: `uv run ruff format .`
-4. Run type checking: `uv run mypy web_search_mcp/`
-
-## Security Guidelines
-
-- Never commit API keys, passwords, or sensitive credentials
-- Validate all user inputs to prevent injection attacks
-- Use HTTPS URLs for external requests
-- Keep dependencies updated to patch security vulnerabilities
-
-## Documentation
-
-- Update README.md for any user-facing changes
-- Add docstrings to all new public functions
-- Update this AGENTS.md when development practices change
-
-## Performance Considerations
-
-- The DDGS library handles rate limiting internally
-- Use context managers for resource cleanup (e.g., `with DDGS() as ddgs:`)
-- Use context managers for HTTP clients (e.g., `with httpx.Client() as client:`)
-- Consider caching for frequently requested searches (future enhancement)
-- Monitor memory usage with large result sets
-
-## Deployment
-
-### Local Development
-
-```bash
-uv sync
-uv run web-search-mcp
-```
-
-### Production Deployment
-
-```bash
-uv build
-pip install dist/web_search_mcp-*.whl
-```
-
-## Troubleshooting
-
-### Common Issues
-
-- **Import errors**: Ensure `uv sync` has been run
-- **DDGS connection issues**: Check network connectivity and DDGS service status
-- **MCP protocol errors**: Verify FastMCP version compatibility
-
-### Debug Mode
-
-```bash
-uv run python -m web_search_mcp.server
-```
-
-## Future Enhancements
-
-- Implement caching layer
-- Add rate limiting configuration
-- Add metrics and monitoring
+- Write descriptive commit messages: "feat: add X tool", "fix: handle Y error"
+- Run `uv run ruff check . && uv run pytest` before committing
+- Do not commit generated files (uv.lock is an exception)
