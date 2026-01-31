@@ -30,13 +30,13 @@ def download_media(
     # Configure yt-dlp options
     ydl_opts: dict[str, Any] = {
         "outtmpl": os.path.join(output_path, "%(title)s.%(ext)s"),
-        "format": "best",  # Download best quality available
+        "format": "bestvideo+bestaudio/best",  # Best quality, merging video+audio
+        "merge_output_format": "mp4",  # Ensure final output is MP4 (requires ffmpeg)
         "quiet": True,  # Suppress stdout
         "no_warnings": True,
         "logger": logger,  # Use our logger
         "socket_timeout": timeout,
         "retries": 3,
-        # We assume ffmpeg is available as per user confirmation
     }
 
     try:
@@ -44,9 +44,27 @@ def download_media(
             # extract_info with download=True performs the download
             info = ydl.extract_info(url, download=True)
 
-            # info is a dict with metadata
-            # prepare_filename returns the full path to the downloaded file
+            # prepare_filename returns the full path
+            # With merge_output_format, yt-dlp handles the extension update in info
             file_path = ydl.prepare_filename(info)
+
+            # Verification: If merged to mp4, ensure path reflects that
+            if info.get("requested_downloads"):
+                # If there were multiple downloads (video+audio) merged
+                for d in info["requested_downloads"]:
+                    if d.get("filepath"):
+                        file_path = d["filepath"]
+                        break
+
+            # Fallback manual fix for merge_output_format if needed
+            # (Sometimes prepare_filename still returns the unmerged ext)
+            if ydl_opts.get("merge_output_format") == "mp4" and not file_path.endswith(
+                ".mp4"
+            ):
+                base, _ = os.path.splitext(file_path)
+                potential_path = f"{base}.mp4"
+                if os.path.exists(potential_path):
+                    file_path = potential_path
 
             return {
                 "title": info.get("title", "Unknown"),
