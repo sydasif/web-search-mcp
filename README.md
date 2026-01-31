@@ -1,6 +1,14 @@
 # Web Search MCP Server
 
-A FastMCP server providing unified web search (via DuckDuckGo) and weather data (via OpenMeteo) for LLM clients.
+A FastMCP server providing comprehensive research capabilities for LLM clients:
+
+- **Web Search** (DuckDuckGo) - text, news, images, videos, books
+- **Web Content Extraction** (trafilatura) - read full articles
+- **Wikipedia Search** - factual summaries
+- **ArXiv Search** - scientific/technical papers
+- **Documentation Search** - site-specific tech docs
+- **Weather Data** (OpenMeteo) - current & forecast
+- **Market Data** (Yahoo Finance) - stock prices
 
 ## Installation
 
@@ -27,12 +35,49 @@ Unified tool for web, news, images, videos, and books.
 - **Image Filters**: `size` (Small, Medium, Large, Wallpaper), `color`, `type_image`, `layout`, `license_image`
 - **Video Filters**: `resolution` (high, standart), `duration` (short, medium, long), `license_videos`
 
-### 2. `get_weather` / `get_forecast`
+### 2. `fetch_page`
+
+Extracts clean text from a URL without ads/clutter.
+
+**Parameters:**
+- `url` (required): URL to extract content from
+
+### 3. `search_wiki`
+
+Searches Wikipedia for factual summaries.
+
+**Parameters:**
+- `query` (required): Search query
+
+### 4. `search_arxiv`
+
+Searches for scientific papers on ArXiv.
+
+**Parameters:**
+- `query` (required): Search query
+- `max_results`: Default 3
+
+### 5. `search_docs`
+
+Searches technical documentation sites.
+
+**Parameters:**
+- `query` (required): What you're looking for
+- `tech_stack`: `python` (default), `react`, `mcp`, `fastapi`, `httpx`
+
+### 6. `get_weather` / `get_forecast`
 
 **Parameters:**
 
 - `latitude`, `longitude` (required)
 - `days` (forecast only, 1-16, default 7)
+
+### 7. `get_finance`
+
+Gets stock price and company information.
+
+**Parameters:**
+- `symbol` (required): Stock ticker (e.g., `AAPL`, `TSLA`)
 
 ## MCP Configuration
 
