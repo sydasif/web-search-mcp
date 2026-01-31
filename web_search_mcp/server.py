@@ -7,6 +7,13 @@ from .models import SearchRequest
 from .search import ddg_search
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
+from .reader import fetch_page as _fetch_page
+from .research import (
+    search_wiki as _search_wiki,
+    search_arxiv as _search_arxiv,
+    search_docs as _search_docs,
+)
+from .finance import get_finance as _get_finance
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -120,6 +127,57 @@ def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict:
         Dict containing forecast data or error message
     """
     return weather_forecast(latitude, longitude, days)
+
+
+@mcp.tool
+def fetch_page(url: str) -> dict:
+    """
+    Extracts the full text content from a web page URL.
+    Use this to read the details of a specific result found via search_web.
+    """
+    return _fetch_page(url)
+
+
+@mcp.tool
+def search_wiki(query: str) -> dict:
+    """
+    Search Wikipedia for factual summaries and verified information.
+    Best for historical facts, famous people, or general concepts.
+    """
+    return _search_wiki(query)
+
+
+@mcp.tool
+def search_arxiv(query: str, max_results: int = 3) -> list:
+    """
+    Search ArXiv for scientific papers and technical research.
+    Best for deep-tech, AI, physics, or mathematical queries.
+    """
+    return _search_arxiv(query, max_results=max_results)
+
+
+@mcp.tool
+def get_finance(symbol: str) -> dict:
+    """
+    Get real-time stock price and business summaries for a ticker symbol.
+    Example: 'AAPL' for Apple, 'TSLA' for Tesla.
+    """
+    return _get_finance(symbol)
+
+
+@mcp.tool
+def search_docs(query: str, tech_stack: str = "python") -> dict:
+    """
+    Searches specifically for technical documentation.
+
+    Args:
+        query: What you're looking for in the docs
+        tech_stack: Which technology's docs to search (python, react, mcp)
+
+    Returns:
+        Search results from the specified documentation site
+    """
+    return _search_docs(query, tech_stack=tech_stack)
 
 
 def main():
