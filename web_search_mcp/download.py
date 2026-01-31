@@ -7,13 +7,16 @@ import yt_dlp
 logger = logging.getLogger("web-search-mcp")
 
 
-def download_media(url: str, output_path: str = "downloads") -> dict[str, Any]:
+def download_media(
+    url: str, output_path: str = "downloads", timeout: int = 30
+) -> dict[str, Any]:
     """
     Download video/audio from URL using yt-dlp.
 
     Args:
         url: The URL to download content from.
         output_path: The directory to save the downloaded file (default: "downloads").
+        timeout: Socket timeout in seconds (default: 30).
 
     Returns:
         Dict containing metadata about the downloaded file (title, file_path, duration, uploader).
@@ -31,6 +34,8 @@ def download_media(url: str, output_path: str = "downloads") -> dict[str, Any]:
         "quiet": True,  # Suppress stdout
         "no_warnings": True,
         "logger": logger,  # Use our logger
+        "socket_timeout": timeout,
+        "retries": 3,
         # We assume ffmpeg is available as per user confirmation
     }
 

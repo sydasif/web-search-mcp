@@ -22,7 +22,7 @@ def test_download_media_success(mock_ydl_cls):
     mock_ydl_instance.prepare_filename.return_value = "downloads/Test Video.mp4"
 
     # Execute
-    result = download_media("https://example.com/video", "downloads")
+    result = download_media("https://example.com/video", "downloads", timeout=30)
 
     # Verify
     assert result["title"] == "Test Video"

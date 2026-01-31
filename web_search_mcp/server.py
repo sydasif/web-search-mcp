@@ -286,20 +286,23 @@ async def search_books(
 
 
 @mcp.tool
-async def download_video(url: str, path: str | None = None) -> dict:
+async def download_video(url: str, path: str | None = None, timeout: int = 30) -> dict:
     """
     Download a video from a URL to the local server using yt-dlp.
 
     Args:
         url: The URL of the video to download
         path: Optional custom path to save the video (default: ./downloads)
+        timeout: Socket timeout in seconds for network operations (default: 30)
 
     Returns:
         Dict containing metadata about the downloaded file or error message
     """
     try:
         # Run in executor to avoid blocking the async event loop
-        return await asyncio.to_thread(download_media, url, path or "downloads")
+        return await asyncio.to_thread(
+            download_media, url, path or "downloads", timeout
+        )
     except Exception as e:
         logger.error(f"Download failed: {e}")
         return {"error": "Download failed", "details": str(e)}

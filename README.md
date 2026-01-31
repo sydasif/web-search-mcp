@@ -66,6 +66,7 @@ The server provides eight search tools:
 #### Video Download Parameters (`download_video`)
 - `url` (required): The URL of the video to download
 - `path` (optional): Custom path to save the video (default: `./downloads`)
+- `timeout` (optional): Socket timeout in seconds (default: 30)
 
 ## MCP Integration
 
