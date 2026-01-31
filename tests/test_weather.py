@@ -1,17 +1,12 @@
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import httpx
-import pytest
+from unittest.mock import patch
 
 from web_search_mcp.weather import (
     get_current_weather,
     get_forecast,
-    make_openmeteo_request,
 )
 
 
-@pytest.mark.asyncio
-async def test_get_current_weather_success():
+def test_get_current_weather_success():
     """Test successful current weather fetch."""
     mock_response = {
         "latitude": 40.71,
@@ -32,7 +27,7 @@ async def test_get_current_weather_success():
     with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
         mock_make_request.return_value = mock_response
 
-        result = await get_current_weather(40.7128, -74.0060)
+        result = get_current_weather(40.7128, -74.0060)
 
         assert result == mock_response
         mock_make_request.assert_called_once()
@@ -46,8 +41,7 @@ async def test_get_current_weather_success():
         assert "temperature_2m" in params["current"]
 
 
-@pytest.mark.asyncio
-async def test_get_forecast_success():
+def test_get_forecast_success():
     """Test successful forecast fetch."""
     mock_response = {
         "daily": {
@@ -63,7 +57,7 @@ async def test_get_forecast_success():
     with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
         mock_make_request.return_value = mock_response
 
-        result = await get_forecast(40.7128, -74.0060, days=10)
+        result = get_forecast(40.7128, -74.0060, days=10)
 
         assert result == mock_response
         mock_make_request.assert_called_once()
@@ -72,14 +66,13 @@ async def test_get_forecast_success():
         assert params["forecast_days"] == 10
 
 
-@pytest.mark.asyncio
-async def test_api_failure():
+def test_api_failure():
     """Test handling of API failure."""
     with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
         # Simulate None return (failed API call)
         mock_make_request.return_value = None
 
-        result = await get_current_weather(40.7128, -74.0060)
+        result = get_current_weather(40.7128, -74.0060)
 
         assert "error" in result
         assert result["error"] == "Unable to fetch weather data."

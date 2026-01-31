@@ -23,16 +23,19 @@ A FastMCP-based server providing comprehensive web search functionality using Du
 ## Build Commands
 
 ### Install Dependencies
+
 ```bash
 uv sync
 ```
 
 ### Run Development Server
+
 ```bash
 uv run web-search-mcp
 ```
 
 ### Build Distribution
+
 ```bash
 uv build
 ```
@@ -40,21 +43,25 @@ uv build
 ## Testing Commands
 
 ### Run All Tests
+
 ```bash
 uv run pytest
 ```
 
 ### Run Single Test File
+
 ```bash
 uv run pytest tests/test_file.py
 ```
 
 ### Run Specific Test
+
 ```bash
 uv run pytest tests/test_file.py::TestClass::test_method
 ```
 
 ### Run Tests with Coverage
+
 ```bash
 uv run pytest --cov=web_search_mcp --cov-report=html
 ```
@@ -62,22 +69,26 @@ uv run pytest --cov=web_search_mcp --cov-report=html
 ## Code Quality Commands
 
 ### Lint Code (Recommended: Add ruff to dev dependencies)
+
 ```bash
 uv run ruff check .
 ```
 
 ### Auto-fix Linting Issues
+
 ```bash
 uv run ruff check . --fix
 ```
 
 ### Format Code
+
 ```bash
 uv run ruff format .
 # Alternative: uv format (built-in uv formatter)
 ```
 
 ### Type Check (Recommended: Add mypy to dev dependencies)
+
 ```bash
 uv run mypy web_search_mcp/
 ```
@@ -85,6 +96,7 @@ uv run mypy web_search_mcp/
 ## Code Style Guidelines
 
 ### Import Organization
+
 ```python
 # Standard library imports
 import os
@@ -98,17 +110,20 @@ from .search import ddg_search
 ```
 
 ### Type Hints
+
 - Use modern union syntax: `str | None` instead of `Optional[str]`
 - Specify return types for all public functions
 - Use `dict` for simple dictionaries, `Dict[str, Any]` for complex ones
 
 ### Naming Conventions
+
 - **Functions/Methods**: snake_case (`ddg_search`, `search_web`)
 - **Variables**: snake_case (`max_results`, `search_type`)
 - **Constants**: UPPER_SNAKE_CASE (`DEFAULT_TIMEOUT`)
 - **Classes**: PascalCase (not currently used in this project)
 
 ### Docstrings
+
 Use Google-style docstrings with Args and Returns sections:
 
 ```python
@@ -133,6 +148,7 @@ def search(
 ```
 
 ### Pydantic Models
+
 Use Pydantic models for structured data:
 
 ```python
@@ -157,6 +173,7 @@ class SearchResponse(BaseModel):
 ```
 
 ### Error Handling
+
 - Use try/except blocks for external API calls
 - Use structured logging with Python logging module
 - Return error information in response dictionaries
@@ -174,40 +191,40 @@ except Exception as e:
 ```
 
 ### Code Structure
+
 - Keep functions focused on single responsibilities
 - Use descriptive variable names
 - Avoid magic numbers - use named constants
 - Prefer explicit over implicit
 
 ### File Organization
- ```
+
+```
 web_search_mcp/
 ├── __init__.py              # Package initialization
 ├── config.py               # Centralized configuration with Pydantic
 ├── models.py               # Pydantic models for Search/Weather
-├── search.py               # Core search logic using provider pattern
-├── weather.py              # Weather API client with resource management
-├── server.py               # MCP server implementation with lifespan management
-└── providers/              # Search engine provider implementations
-    ├── __init__.py
-    ├── base.py             # Provider protocol definition
-    ├── duckduckgo.py       # DDGS provider implementation
-    └── async_wrapper.py    # Async wrapper for synchronous providers
- ```
+├── search.py               # Core search logic using DDGS directly
+├── weather.py              # Weather API client with synchronous HTTP
+└── server.py               # MCP server implementation
+```
 
 ## Dependency Management
 
 ### Adding Dependencies
+
 ```bash
 uv add package-name
 ```
 
 ### Adding Development Dependencies
+
 ```bash
 uv add --dev ruff mypy pytest pytest-cov
 ```
 
 ### Updating Dependencies
+
 ```bash
 uv lock --upgrade
 uv sync
@@ -216,10 +233,12 @@ uv sync
 ## Testing Standards
 
 ### Test File Naming
+
 - `test_*.py` for test files
 - Place in `tests/` directory (create if needed)
 
 ### Test Structure
+
 ```python
 import pytest
 from web_search_mcp.models import SearchRequest
@@ -242,10 +261,13 @@ def test_ddg_search_with_filters():
 ```
 
 ### Mocking External Dependencies
+
 Use pytest-mock or unittest.mock to mock DDGS calls for reliable testing. The project includes comprehensive mocks for all DDGS API calls to enable fast, reliable CI/CD testing without external API dependencies.
 
 ### Advanced Search Testing
+
 When testing advanced filters, ensure to verify:
+
 - Image filters: size, color, type, layout, license
 - Video filters: resolution, duration, license
 - Common parameters: time_range, region, safesearch, page, backend
@@ -253,6 +275,7 @@ When testing advanced filters, ensure to verify:
 ## Commit Standards
 
 ### Commit Message Format
+
 ```
 type(scope): description
 
@@ -264,6 +287,7 @@ type(scope): description
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ### Before Committing
+
 1. Run tests: `uv run pytest`
 2. Run linting: `uv run ruff check .`
 3. Run formatting: `uv run ruff format .`
@@ -285,22 +309,22 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 ## Performance Considerations
 
 - The DDGS library handles rate limiting internally
-- Use async context managers and lifespan management for resource efficiency
-- Share httpx clients across requests using lifespan hooks
-- Use thread pools for synchronous DDGS calls to prevent event loop blocking
+- Use context managers for resource cleanup (e.g., `with DDGS() as ddgs:`)
+- Use context managers for HTTP clients (e.g., `with httpx.Client() as client:`)
 - Consider caching for frequently requested searches (future enhancement)
 - Monitor memory usage with large result sets
-- Use async/await for concurrent operations if needed
 
 ## Deployment
 
 ### Local Development
+
 ```bash
 uv sync
 uv run web-search-mcp
 ```
 
 ### Production Deployment
+
 ```bash
 uv build
 pip install dist/web_search_mcp-*.whl
@@ -309,11 +333,13 @@ pip install dist/web_search_mcp-*.whl
 ## Troubleshooting
 
 ### Common Issues
+
 - **Import errors**: Ensure `uv sync` has been run
 - **DDGS connection issues**: Check network connectivity and DDGS service status
 - **MCP protocol errors**: Verify FastMCP version compatibility
 
 ### Debug Mode
+
 ```bash
 uv run python -m web_search_mcp.server
 ```
@@ -323,5 +349,3 @@ uv run python -m web_search_mcp.server
 - Implement caching layer
 - Add rate limiting configuration
 - Add metrics and monitoring
-- Add additional search providers (e.g. Tavily, Google, Brave Search)</content>
-<parameter name="filePath">/home/zulu/Documents/web-search-mcp/AGENTS.md

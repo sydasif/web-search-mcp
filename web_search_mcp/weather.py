@@ -31,14 +31,14 @@ def _get_ssl_context():
 SSL_CONTEXT = _get_ssl_context()
 
 
-async def make_openmeteo_request(
-    client: httpx.AsyncClient, endpoint: str, params: dict
+def make_openmeteo_request(
+    client: httpx.Client, endpoint: str, params: dict
 ) -> dict[str, Any] | None:
     """
     Make request to OpenMeteo API with proper error handling.
 
     Args:
-        client: Shared httpx.AsyncClient instance
+        client: Shared httpx.Client instance
         endpoint: API endpoint to call
         params: Query parameters for the request
 
@@ -49,7 +49,7 @@ async def make_openmeteo_request(
     headers = {"User-Agent": settings.user_agent, "Accept": "application/json"}
 
     try:
-        response = await client.get(url, headers=headers, params=params)
+        response = client.get(url, headers=headers, params=params)
         response.raise_for_status()
         return response.json()
     except ssl.SSLError as e:
@@ -64,16 +64,13 @@ async def make_openmeteo_request(
         return None
 
 
-async def get_current_weather(
-    latitude: float, longitude: float, http_client: httpx.AsyncClient | None = None
-) -> dict[str, Any]:
+def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
     """
     Get current weather for a specific location.
 
     Args:
         latitude: Latitude of the location
         longitude: Longitude of the location
-        http_client: Shared httpx.AsyncClient instance (passed from server context)
 
     Returns:
         Dict containing current weather data or error message
@@ -93,29 +90,19 @@ async def get_current_weather(
         "current": ",".join(fields),
     }
 
-    # Use provided client or create temporary one for backward compatibility
-    client = http_client or httpx.AsyncClient(verify=SSL_CONTEXT, timeout=30.0)
-    should_close_client = http_client is None
-
-    try:
-        data = await make_openmeteo_request(client, "forecast", params)
+    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
+        data = make_openmeteo_request(client, "forecast", params)
 
         if not data:
             return {"error": "Unable to fetch weather data."}
 
-        # Return the raw structure which is already well-formatted JSON
-        # The LLM can interpret "temperature_2m": 15.5 easily.
         return data
-    finally:
-        if should_close_client:
-            await client.aclose()
 
 
-async def get_forecast(
+def get_forecast(
     latitude: float,
     longitude: float,
     days: int = 7,
-    http_client: httpx.AsyncClient | None = None,
 ) -> dict[str, Any]:
     """
     Get daily weather forecast for a location.
@@ -124,7 +111,6 @@ async def get_forecast(
         latitude: Latitude of the location
         longitude: Longitude of the location
         days: Number of days for forecast (1-16, default 7)
-        http_client: Shared httpx.AsyncClient instance (passed from server context)
 
     Returns:
         Dict containing forecast data or error message
@@ -148,17 +134,10 @@ async def get_forecast(
         "timezone": "auto",
     }
 
-    # Use provided client or create temporary one for backward compatibility
-    client = http_client or httpx.AsyncClient(verify=SSL_CONTEXT, timeout=30.0)
-    should_close_client = http_client is None
-
-    try:
-        data = await make_openmeteo_request(client, "forecast", params)
+    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
+        data = make_openmeteo_request(client, "forecast", params)
 
         if not data:
             return {"error": "Unable to fetch forecast data."}
 
         return data
-    finally:
-        if should_close_client:
-            await client.aclose()

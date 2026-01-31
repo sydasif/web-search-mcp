@@ -1,55 +1,21 @@
-import asyncio
 import logging
-import ssl
-from collections.abc import AsyncIterator
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager
 from typing import Literal
 
-import httpx
 from fastmcp import FastMCP
 
-from .config import settings
 from .models import SearchRequest
 from .search import ddg_search
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
 
-# Global HTTP client for weather API
-http_client = None
-executor = ThreadPoolExecutor(max_workers=4)
-
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
 
-
-@asynccontextmanager
-async def app_lifespan(app) -> AsyncIterator[None]:
-    """Lifespan context manager to handle shared resources."""
-    global http_client
-    # Initialize shared resources
-    ssl_context = (
-        ssl.create_default_context()
-        if hasattr(ssl, "create_default_context")
-        else ssl._create_unverified_context()
-    )
-    http_client = httpx.AsyncClient(verify=ssl_context, timeout=30.0)
-    logger.info("Shared HTTP client initialized")
-
-    yield
-
-    # Cleanup
-    if http_client:
-        await http_client.aclose()
-    executor.shutdown(wait=True)
-    logger.info("Shared HTTP client closed")
-
-
-mcp = FastMCP("Web Search Tools", lifespan=app_lifespan)
+mcp = FastMCP("Web Search Tools")
 
 
 @mcp.tool
-async def search(
+def search(
     query: str,
     search_type: Literal[
         "text", "image", "images", "news", "video", "videos", "books"
@@ -121,14 +87,14 @@ async def search(
             license_videos=license_videos,
             filters=filters,
         )
-        return await ddg_search(req)
+        return ddg_search(req)
     except Exception as e:
         logger.error(f"Search failed: {e}")
         return {"error": "Search failed", "details": str(e)}
 
 
 @mcp.tool
-async def get_current_weather(latitude: float, longitude: float) -> dict:
+def get_current_weather(latitude: float, longitude: float) -> dict:
     """
     Get current weather for a specific location.
 
@@ -139,12 +105,11 @@ async def get_current_weather(latitude: float, longitude: float) -> dict:
     Returns:
         Dict containing current weather data or error message
     """
-    global http_client
-    return await weather_current(latitude, longitude, http_client=http_client)
+    return weather_current(latitude, longitude)
 
 
 @mcp.tool
-async def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict:
+def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict:
     """
     Get daily weather forecast for a location.
 
@@ -156,8 +121,7 @@ async def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict
     Returns:
         Dict containing forecast data or error message
     """
-    global http_client
-    return await weather_forecast(latitude, longitude, days, http_client=http_client)
+    return weather_forecast(latitude, longitude, days)
 
 
 def main():
