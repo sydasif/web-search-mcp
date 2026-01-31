@@ -9,6 +9,7 @@ import httpx
 from fastmcp import FastMCP
 
 from .config import settings
+from .download import download_media
 from .search import ddg_search
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
@@ -282,6 +283,26 @@ async def search_books(
     return await _search_handler(
         "books", query, max_results=max_results, page=page, backend=backend
     )
+
+
+@mcp.tool
+async def download_video(url: str, path: str | None = None) -> dict:
+    """
+    Download a video from a URL to the local server using yt-dlp.
+
+    Args:
+        url: The URL of the video to download
+        path: Optional custom path to save the video (default: ./downloads)
+
+    Returns:
+        Dict containing metadata about the downloaded file or error message
+    """
+    try:
+        # Run in executor to avoid blocking the async event loop
+        return await asyncio.to_thread(download_media, url, path or "downloads")
+    except Exception as e:
+        logger.error(f"Download failed: {e}")
+        return {"error": "Download failed", "details": str(e)}
 
 
 def main():

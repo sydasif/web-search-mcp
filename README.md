@@ -21,9 +21,11 @@ uv develop
 
 Requires Python 3.11+ and [uv](https://github.com/astral-sh/uv) package manager.
 
+**Note:** `ffmpeg` is required for video downloading functionality. Please ensure it is installed on your system.
+
 ## Usage
 
-The server provides seven search tools:
+The server provides eight search tools:
 - `search_web` - General web content
 - `search_news` - News articles
 - `search_images` - Images with advanced filtering
@@ -31,6 +33,7 @@ The server provides seven search tools:
 - `search_books` - Books and publications
 - `get_current_weather` - Current weather conditions
 - `get_forecast` - Daily weather forecast
+- `download_video` - Download videos from URLs
 
 ### Parameters
 
@@ -59,6 +62,10 @@ The server provides seven search tools:
 - `resolution`: Video resolution ("high", "standart")
 - `duration`: Video duration ("short", "medium", "long")
 - `license_videos`: License filter ("creativeCommon", "youtube")
+
+#### Video Download Parameters (`download_video`)
+- `url` (required): The URL of the video to download
+- `path` (optional): Custom path to save the video (default: `./downloads`)
 
 ## MCP Integration
 
@@ -92,6 +99,7 @@ Configure in Opencode (~/.config/opencode/opencode.json):
 
 - Multiple content types (text, images, news, videos, books)
 - Real-time weather data (current and forecast) via OpenMeteo
+- Video downloading capabilities (requires ffmpeg)
 - Advanced filtering (time range, regions, safe search)
 - Pagination support
 - Backend selection options
@@ -127,6 +135,7 @@ All tools have been thoroughly tested with various parameters:
 - ✅ **search_books**: Book search from various sources
 - ✅ **get_current_weather**: Current weather data with robust error handling
 - ✅ **get_forecast**: Daily forecast with customizable duration
+- ✅ **download_video**: Video downloading with metadata extraction
 
 ### Running Tests
 
