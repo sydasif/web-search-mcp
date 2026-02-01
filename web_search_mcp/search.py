@@ -5,7 +5,7 @@ from .models import SearchRequest
 
 def ddg_search(request: SearchRequest):
     """
-    Unified DuckDuckGo search function supporting text, images, news, videos, and books.
+    Unified DuckDuckGo search function supporting text and news search.
 
     Args:
         request: SearchRequest object containing all search parameters
@@ -38,12 +38,7 @@ def ddg_search(request: SearchRequest):
             search_methods = {
                 "text": ddgs.text,
                 "web": ddgs.text,
-                "image": ddgs.images,
-                "images": ddgs.images,
                 "news": ddgs.news,
-                "video": ddgs.videos,
-                "videos": ddgs.videos,
-                "books": ddgs.books,
             }
 
             if request.search_type not in search_methods:
@@ -71,28 +66,6 @@ def ddg_search(request: SearchRequest):
                 search_kwargs["backend"] = kwargs["backend"]
             if kwargs.get("time_range") is not None:
                 search_kwargs["timelimit"] = kwargs["time_range"]
-
-            # Image-specific parameters
-            if request.search_type == "image":
-                if kwargs.get("size") is not None:
-                    search_kwargs["size"] = kwargs["size"]
-                if kwargs.get("color") is not None:
-                    search_kwargs["color"] = kwargs["color"]
-                if kwargs.get("type_image") is not None:
-                    search_kwargs["type_image"] = kwargs["type_image"]
-                if kwargs.get("layout") is not None:
-                    search_kwargs["layout"] = kwargs["layout"]
-                if kwargs.get("license_image") is not None:
-                    search_kwargs["license_image"] = kwargs["license_image"]
-
-            # Video-specific parameters
-            if request.search_type == "video":
-                if kwargs.get("resolution") is not None:
-                    search_kwargs["resolution"] = kwargs["resolution"]
-                if kwargs.get("duration") is not None:
-                    search_kwargs["duration"] = kwargs["duration"]
-                if kwargs.get("license_videos") is not None:
-                    search_kwargs["license_videos"] = kwargs["license_videos"]
 
             results = search_func(request.query, **search_kwargs)
             return {

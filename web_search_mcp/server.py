@@ -19,54 +19,30 @@ mcp = FastMCP("Web Search Tools")
 @mcp.tool
 def search_web(
     query: str,
-    search_type: Literal["text", "image", "images", "news", "video", "videos", "books"] = "text",
+    search_type: Literal["text", "news"] = "text",
     max_results: int = 5,
     time_range: str | None = None,
     region: str | None = None,
     safesearch: str = "moderate",
     page: int = 1,
     backend: str = "auto",
-    # Image specific
-    size: str | None = None,
-    color: str | None = None,
-    type_image: str | None = None,
-    layout: str | None = None,
-    license_image: str | None = None,
-    # Video specific
-    resolution: str | None = None,
-    duration: str | None = None,
-    license_videos: str | None = None,
-    # Compatibility
-    filters: dict | None = None,
 ) -> dict:
     """
-    Unified search tool for web content, news, images, videos, and books.
+    Unified search tool for web content and news.
 
     Args:
         query: Search query string
-        search_type: Type of search ('text', 'image', 'news', 'video', 'books')
+        search_type: Type of search ('text' or 'news')
         max_results: Max number of results to return (default 5)
         time_range: Time filter ('d', 'w', 'm', 'y') or None
         region: Geographic region (e.g. 'us-en', 'uk-en') or None
         safesearch: Safe search level ('moderate', 'off', 'on')
         page: Page number for pagination (default 1)
         backend: Backend to use ('auto', 'legacy', 'api')
-        size: Image size filter ('Small', 'Medium', 'Large', 'Wallpaper')
-        color: Image color filter
-        type_image: Image type filter ('photo', 'clipart', 'gif', 'transparent', 'line')
-        layout: Image layout filter ('Square', 'Tall', 'Wide')
-        license_image: Image license filter
-        resolution: Video resolution filter ('high', 'standart')
-        duration: Video duration filter ('short', 'medium', 'long')
-        license_videos: Video license filter ('creativeCommon', 'youtube')
-        filters: Additional type-specific filters (backward compatibility)
 
     Returns:
         Dict with query, search_type, total_results, results, and error if applicable
     """
-    if filters is None:
-        filters = {}
-
     try:
         req = SearchRequest(
             query=query,
@@ -77,15 +53,6 @@ def search_web(
             safesearch=safesearch,
             page=page,
             backend=backend,
-            size=size,
-            color=color,
-            type_image=type_image,
-            layout=layout,
-            license_image=license_image,
-            resolution=resolution,
-            duration=duration,
-            license_videos=license_videos,
-            filters=filters,
         )
         return ddg_search(req)
     except Exception as e:
