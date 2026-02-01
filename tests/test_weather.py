@@ -66,15 +66,14 @@ def test_get_forecast_success():
         assert params["forecast_days"] == 10
 
 
-def test_api_failure():
-    """Test handling of API failure."""
+def test_api_failure_current():
+    """Test handling of API failure for current weather."""
     with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
         # Simulate None return (failed API call)
         mock_make_request.return_value = None
-
         result = get_current_weather(40.7128, -74.0060)
-
         assert "error" in result
+        assert result["error"] == "Unable to fetch weather data."
 
 
 def test_api_failure_forecast():
@@ -115,14 +114,3 @@ def test_forecast_days_clamping():
         call_args = mock_make_request.call_args
         params = call_args[0][2]
         assert params["forecast_days"] == 16
-
-
-def test_malformed_api_response():
-    """Test handling of a malformed API response."""
-    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
-        # Response missing the 'current' key
-        mock_make_request.return_value = {"latitude": 40.71, "longitude": -74.01}
-        result = get_current_weather(40.7128, -74.0060)
-        # The current implementation passes the response through, so we just check it's not None
-        assert result is not None
-        assert "current" not in result

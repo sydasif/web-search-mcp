@@ -64,6 +64,32 @@ def make_openmeteo_request(
         return None
 
 
+def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
+    """
+    Execute weather API request using shared client configuration.
+
+    Args:
+        params: Query parameters for the request
+
+    Returns:
+        Dict containing weather data or error message
+    """
+    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
+        data = make_openmeteo_request(client, "forecast", params)
+
+        if not data:
+            return {"error": "Unable to fetch weather data."}
+
+        # Validate expected top-level keys exist in the response
+        # Current weather requests expect 'current', forecasts expect 'daily'
+        # Allow API-level errors to pass through
+        if "current" not in data and "daily" not in data and "error" not in data:
+            logger.warning(f"Weather API response missing expected keys: {list(data.keys())}")
+            return {"error": "Weather API returned unexpected response format."}
+
+        return data
+
+
 def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
     """
     Get current weather for a specific location.
@@ -90,13 +116,7 @@ def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
         "current": ",".join(fields),
     }
 
-    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
-        data = make_openmeteo_request(client, "forecast", params)
-
-        if not data:
-            return {"error": "Unable to fetch weather data."}
-
-        return data
+    return _fetch_weather_data(params)
 
 
 def get_forecast(
@@ -134,10 +154,4 @@ def get_forecast(
         "timezone": "auto",
     }
 
-    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
-        data = make_openmeteo_request(client, "forecast", params)
-
-        if not data:
-            return {"error": "Unable to fetch weather data."}
-
-        return data
+    return _fetch_weather_data(params)
