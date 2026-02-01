@@ -9,7 +9,7 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 ## ✨ Features
 
 - **🌐 Deep Web Search**: Text and news search via DuckDuckGo.
-- **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`.
+- **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
 - **🌤️ Weather Data**: Current conditions and forecasts via OpenMeteo.
 
@@ -42,7 +42,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `search_web` | Universal search (Web, News) | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `filters` |
-| `fetch_page` | Extract clean article text from a URL | `url` |
+| `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("text", "markdown", "json"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
 | `search_docs` | Search specific tech documentation | `query`, `tech_stack` ("python", "react", "fastapi", "mcp", "httpx") |
 | `get_weather` | Current conditions or forecast (defaults to 7-day forecast) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
 

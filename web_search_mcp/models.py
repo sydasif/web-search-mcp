@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class SearchRequest(BaseModel):
@@ -14,3 +14,15 @@ class SearchRequest(BaseModel):
     backend: str = "auto"
     # Catch-all for extra filters
     filters: dict[str, Any] = {}
+
+
+class FetchPageRequest(BaseModel):
+    url: HttpUrl
+    output_format: Literal["text", "markdown", "json"] = "text"
+    include_metadata: bool = False
+    include_tables: bool = False
+    include_comments: bool = False
+    include_images: bool = False
+    deduplicate: bool = True
+    max_length: int = Field(default=15000, ge=100, le=50000)
+    timeout: int = Field(default=30, ge=5, le=120)

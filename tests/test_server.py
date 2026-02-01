@@ -66,7 +66,17 @@ async def test_fetch_page_tool(client):
     with patch("web_search_mcp.server._fetch_page") as mock_fetch_page:
         mock_fetch_page.return_value = {"content": "..."}
         await client.call_tool("fetch_page", {"url": "https://example.com"})
-        mock_fetch_page.assert_called_once_with("https://example.com")
+        mock_fetch_page.assert_called_once_with(
+            url="https://example.com",
+            output_format="text",
+            include_metadata=False,
+            include_tables=False,
+            include_comments=False,
+            include_images=False,
+            deduplicate=True,
+            max_length=15000,
+            timeout=30,
+        )
 
 
 @pytest.mark.asyncio

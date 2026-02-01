@@ -86,12 +86,43 @@ def get_weather(
 
 
 @mcp.tool
-def fetch_page(url: str) -> dict:
+def fetch_page(
+    url: str,
+    output_format: Literal["text", "markdown", "json"] = "text",
+    include_metadata: bool = False,
+    include_tables: bool = False,
+    include_comments: bool = False,
+    include_images: bool = False,
+    deduplicate: bool = True,
+    max_length: int = 15000,
+    timeout: int = 30,
+) -> dict:
     """
     Extracts the full text content from a web page URL.
     Use this to read the details of a specific result found via search_web.
+
+    Args:
+        url: The URL to fetch and extract content from
+        output_format: Format for extracted content ('text', 'markdown', 'json')
+        include_metadata: Whether to include document metadata (title, author, date, etc.)
+        include_tables: Whether to include table content in extraction
+        include_comments: Whether to include comment content in extraction
+        include_images: Whether to include image descriptions in extraction
+        deduplicate: Whether to remove duplicated content
+        max_length: Maximum length of content to return (default 15000)
+        timeout: Request timeout in seconds (default 30)
     """
-    return _fetch_page(url)
+    return _fetch_page(
+        url=url,
+        output_format=output_format,
+        include_metadata=include_metadata,
+        include_tables=include_tables,
+        include_comments=include_comments,
+        include_images=include_images,
+        deduplicate=deduplicate,
+        max_length=max_length,
+        timeout=timeout,
+    )
 
 
 @mcp.tool
