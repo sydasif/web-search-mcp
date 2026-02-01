@@ -1,19 +1,39 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.pyc
 build/
 dist/
 wheels/
 *.egg-info
+*.egg-info/
+.eggs/
 
 # Virtual environments
 .venv/
+venv/
+env/
+
+# Coverage reports
+.coverage
+htmlcov/
+.coverage.*
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.coverage/
 
 # IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
+*~
 
 # OS files
 .DS_Store
@@ -26,6 +46,18 @@ server.log
 # Environment files
 .env
 .env.local
+.env.*
+!.env.example
 
 # MCP configuration (project-specific)
 mcp.json
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+.cython_debug/
+
+# Local development
+local/
+debug.log
