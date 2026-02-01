@@ -5,14 +5,16 @@ from web_search_mcp.reader import fetch_page
 def test_fetch_page_success():
     """Test successful page fetching and content extraction."""
     with (
-        patch("web_search_mcp.reader.httpx.get") as mock_get,
+        patch("web_search_mcp.reader.httpx.Client") as mock_client_class,
         patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
     ):
-        # Mock HTTP response
+        # Mock HTTP client
+        mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = "<html><body><h1>Test</h1><p>Content</p></body></html>"
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__enter__.return_value = mock_client
 
         # Mock trafilatura
         mock_trafilatura.extract.return_value = "Test Content"
@@ -23,17 +25,19 @@ def test_fetch_page_success():
         assert result["url"] == url
         assert "Test Content" in result["content"]
         assert result["length"] == len("Test Content")
-        mock_get.assert_called_once()
+        mock_client.get.assert_called_once()
         mock_trafilatura.extract.assert_called_once()
 
 
 def test_fetch_page_download_fails():
     """Test when the page download returns empty content."""
-    with patch("web_search_mcp.reader.httpx.get") as mock_get:
+    with patch("web_search_mcp.reader.httpx.Client") as mock_client_class:
+        mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = ""
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__enter__.return_value = mock_client
 
         url = "https://example.com/empty"
         result = fetch_page(url)
@@ -45,13 +49,15 @@ def test_fetch_page_download_fails():
 def test_fetch_page_extraction_fails():
     """Test when content extraction returns None."""
     with (
-        patch("web_search_mcp.reader.httpx.get") as mock_get,
+        patch("web_search_mcp.reader.httpx.Client") as mock_client_class,
         patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
     ):
+        mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = "<html><body></body></html>"
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__enter__.return_value = mock_client
 
         mock_trafilatura.extract.return_value = None
 
@@ -64,8 +70,10 @@ def test_fetch_page_extraction_fails():
 
 def test_fetch_page_generic_exception():
     """Test handling of a generic exception during fetching."""
-    with patch("web_search_mcp.reader.httpx.get") as mock_get:
-        mock_get.side_effect = Exception("Network timeout")
+    with patch("web_search_mcp.reader.httpx.Client") as mock_client_class:
+        mock_client = MagicMock()
+        mock_client.get.side_effect = Exception("Network timeout")
+        mock_client_class.return_value.__enter__.return_value = mock_client
 
         url = "https://example.com/timeout"
         result = fetch_page(url)
@@ -77,14 +85,16 @@ def test_fetch_page_generic_exception():
 def test_fetch_page_with_metadata():
     """Test successful page fetching with metadata extraction."""
     with (
-        patch("web_search_mcp.reader.httpx.get") as mock_get,
+        patch("web_search_mcp.reader.httpx.Client") as mock_client_class,
         patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
     ):
-        # Mock HTTP response
+        # Mock HTTP client
+        mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Test Title</title></head><body><h1>Test</h1><p>Content</p></body></html>"
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__enter__.return_value = mock_client
 
         # Mock metadata
         mock_metadata = MagicMock()
@@ -106,7 +116,7 @@ def test_fetch_page_with_metadata():
         assert "metadata" in result
         assert result["metadata"]["title"] == "Test Title"
         assert result["metadata"]["author"] == "Test Author"
-        mock_get.assert_called_once()
+        mock_client.get.assert_called_once()
         mock_trafilatura.extract.assert_called_once()
 
 

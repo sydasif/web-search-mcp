@@ -19,9 +19,10 @@ def fetch_page(
 ) -> dict:
     """Extracts clean text from a URL without ads/clutter."""
     try:
-        # Download the content with timeout control
-        response = httpx.get(url, headers={"User-Agent": "web-search-mcp/1.0"}, timeout=timeout)
-        response.raise_for_status()
+        # Download the content with timeout control using proper client management
+        with httpx.Client(timeout=timeout) as client:
+            response = client.get(url, headers={"User-Agent": "web-search-mcp/1.0"})
+            response.raise_for_status()
 
         html_content = response.text
 

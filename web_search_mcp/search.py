@@ -67,7 +67,7 @@ def ddg_search(request: SearchRequest):
             if kwargs.get("time_range") is not None:
                 search_kwargs["timelimit"] = kwargs["time_range"]
 
-            results = search_func(request.query, **search_kwargs)
+            results = list(search_func(request.query, **search_kwargs))
             return {
                 "query": request.query,
                 "search_type": request.search_type,

@@ -1,0 +1,1652 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: **/__pycache__/**, **/.mypy_cache/**, **/.pytest_cache/**, **/.ruff_cache/**, **/.venv/**, **/.git/**, **/*.egg-info/**, .coverage, uv.lock
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+tests/
+  test_reader.py
+  test_research.py
+  test_search.py
+  test_server.py
+  test_weather.py
+web_search_mcp/
+  __init__.py
+  config.py
+  models.py
+  reader.py
+  research.py
+  search.py
+  server.py
+  weather.py
+.gitignore
+.python-version
+AGENTS.md
+pyproject.toml
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="web_search_mcp/__init__.py">
+
+</file>
+
+<file path=".python-version">
+3.11
+</file>
+
+<file path=".gitignore">
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.pyc
+build/
+dist/
+wheels/
+*.egg-info
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Coverage reports
+.coverage
+htmlcov/
+.coverage.*
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.coverage/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+server.log
+
+# Environment files
+.env
+.env.local
+.env.*
+!.env.example
+
+# MCP configuration (project-specific)
+mcp.json
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+.cython_debug/
+
+# Local development
+local/
+debug.log
+</file>
+
+<file path="tests/test_reader.py">
+from unittest.mock import patch, MagicMock
+from web_search_mcp.reader import fetch_page
+
+
+def test_fetch_page_success():
+    """Test successful page fetching and content extraction."""
+    with (
+        patch("web_search_mcp.reader.httpx.get") as mock_get,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        # Mock HTTP response
+        mock_response = MagicMock()
+        mock_response.text = "<html><body><h1>Test</h1><p>Content</p></body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        # Mock trafilatura
+        mock_trafilatura.extract.return_value = "Test Content"
+
+        url = "https://example.com"
+        result = fetch_page(url)
+
+        assert result["url"] == url
+        assert "Test Content" in result["content"]
+        assert result["length"] == len("Test Content")
+        mock_get.assert_called_once()
+        mock_trafilatura.extract.assert_called_once()
+
+
+def test_fetch_page_download_fails():
+    """Test when the page download returns empty content."""
+    with patch("web_search_mcp.reader.httpx.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.text = ""
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        url = "https://example.com/empty"
+        result = fetch_page(url)
+
+        assert "error" in result
+        assert "Could not download content" in result["error"]
+
+
+def test_fetch_page_extraction_fails():
+    """Test when content extraction returns None."""
+    with (
+        patch("web_search_mcp.reader.httpx.get") as mock_get,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        mock_response = MagicMock()
+        mock_response.text = "<html><body></body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        mock_trafilatura.extract.return_value = None
+
+        url = "https://example.com/empty"
+        result = fetch_page(url)
+
+        assert "error" in result
+        assert "No readable text found" in result["error"]
+
+
+def test_fetch_page_generic_exception():
+    """Test handling of a generic exception during fetching."""
+    with patch("web_search_mcp.reader.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("Network timeout")
+
+        url = "https://example.com/timeout"
+        result = fetch_page(url)
+
+        assert "error" in result
+        assert "Network timeout" in result["error"]
+
+
+def test_fetch_page_with_metadata():
+    """Test successful page fetching with metadata extraction."""
+    with (
+        patch("web_search_mcp.reader.httpx.get") as mock_get,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        # Mock HTTP response
+        mock_response = MagicMock()
+        mock_response.text = "<html><head><title>Test Title</title></head><body><h1>Test</h1><p>Content</p></body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        # Mock metadata
+        mock_metadata = MagicMock()
+        mock_metadata.title = "Test Title"
+        mock_metadata.author = "Test Author"
+        mock_metadata.date = "2023-01-01"
+        mock_metadata.description = "Test Description"
+        mock_metadata.keywords = "test, keywords"
+        mock_metadata.fingerprint = "abc123"
+
+        # Mock trafilatura to return content and metadata
+        mock_trafilatura.extract.return_value = ("Test Content", mock_metadata)
+
+        url = "https://example.com"
+        result = fetch_page(url, include_metadata=True)
+
+        assert result["url"] == url
+        assert "Test Content" in result["content"]
+        assert "metadata" in result
+        assert result["metadata"]["title"] == "Test Title"
+        assert result["metadata"]["author"] == "Test Author"
+        mock_get.assert_called_once()
+        mock_trafilatura.extract.assert_called_once()
+
+
+def test_fetch_page_with_different_formats():
+    """Test page fetching with different output formats."""
+    with (
+        patch("web_search_mcp.reader.httpx.Client") as mock_client_class,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        # Mock HTTP client
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "<html><body><h1>Test</h1><p>Content</p></body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        # Test markdown format
+        mock_trafilatura.extract.return_value = "# Test\nContent"
+
+        url = "https://example.com"
+        result = fetch_page(url, output_format="markdown")
+
+        assert result["url"] == url
+        assert "# Test" in result["content"]
+        mock_trafilatura.extract.assert_called_once()
+
+
+def test_fetch_page_with_content_options():
+    """Test page fetching with different content inclusion options."""
+    with (
+        patch("web_search_mcp.reader.httpx.Client") as mock_client_class,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        # Mock HTTP client
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = (
+            "<html><body><table><tr><td>Table</td></tr></table><p>Content</p></body></html>"
+        )
+        mock_response.raise_for_status.return_value = None
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        # Mock trafilatura
+        mock_trafilatura.extract.return_value = "Content with tables and comments"
+
+        url = "https://example.com"
+        result = fetch_page(url, include_tables=True, include_comments=True)
+
+        assert result["url"] == url
+        assert "Content with tables and comments" in result["content"]
+        mock_trafilatura.extract.assert_called_once()
+
+
+def test_fetch_page_with_max_length():
+    """Test page fetching with length limitation."""
+    with (
+        patch("web_search_mcp.reader.httpx.Client") as mock_client_class,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        # Mock HTTP client
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "<html><body><p>" + "Content " * 1000 + "</p></body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        # Mock trafilatura
+        long_content = "Content " * 1000
+        mock_trafilatura.extract.return_value = long_content
+
+        url = "https://example.com"
+        result = fetch_page(url, max_length=100)
+
+        assert result["url"] == url
+        assert len(result["content"]) <= 100  # Should be truncated
+        assert result["length"] == len(long_content)  # Original length preserved in metadata
+        mock_trafilatura.extract.assert_called_once()
+</file>
+
+<file path="tests/test_research.py">
+from unittest.mock import patch
+
+from web_search_mcp.research import search_domain
+
+
+def test_search_domain_success():
+    """Test successful documentation search with explicit domain."""
+    with patch("web_search_mcp.research.ddg_search") as mock_ddg_search:
+        mock_ddg_search.return_value = {
+            "results": [{"title": "Official Python Docs"}],
+            "total_results": 1,
+        }
+
+        # User must now provide the full domain
+        result = search_domain("test query", domain="docs.python.org")
+
+        assert result["total_results"] == 1
+        assert "Official Python Docs" in result["results"][0]["title"]
+        mock_ddg_search.assert_called_once()
+        call_args = mock_ddg_search.call_args[0][0]
+        # Verify the site: operator uses the domain exactly as provided
+        assert "site:docs.python.org" in call_args.query
+
+
+def test_search_domain_default():
+    """Test documentation search uses default domain when none provided."""
+    with patch("web_search_mcp.research.ddg_search") as mock_ddg_search:
+        mock_ddg_search.return_value = {}
+
+        search_domain("test query")
+
+        mock_ddg_search.assert_called_once()
+        call_args = mock_ddg_search.call_args[0][0]
+        assert "site:docs.python.org" in call_args.query
+
+
+def test_search_domain_dynamic_domain():
+    """Test documentation search with a dynamic domain (e.g. github)."""
+    with patch("web_search_mcp.research.ddg_search") as mock_ddg_search:
+        mock_ddg_search.return_value = {}
+
+        search_domain("test query", domain="github.com")
+
+        mock_ddg_search.assert_called_once()
+        call_args = mock_ddg_search.call_args[0][0]
+        assert "site:github.com" in call_args.query
+
+
+def test_search_domain_failure():
+    """Test handling of a failure in the underlying search function."""
+    with patch("web_search_mcp.research.ddg_search") as mock_ddg_search:
+        mock_ddg_search.side_effect = Exception("DDG is down")
+
+        result = search_domain("test query", domain="react.dev")
+
+        assert "error" in result
+        assert "Search failed" in result["error"]
+        assert "DDG is down" in result["details"]
+</file>
+
+<file path="web_search_mcp/config.py">
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="SEARCH_MCP_")
+
+    weather_api_base: str = "https://api.open-meteo.com/v1"
+    user_agent: str = "web-search-mcp/1.0"
+
+
+settings = Settings()
+</file>
+
+<file path="web_search_mcp/reader.py">
+import trafilatura
+import logging
+import httpx
+from typing import Literal
+
+logger = logging.getLogger("web-search-mcp")
+
+
+def fetch_page(
+    url: str,
+    output_format: Literal["text", "markdown", "json"] = "text",
+    include_metadata: bool = False,
+    include_tables: bool = False,
+    include_comments: bool = False,
+    include_images: bool = False,
+    deduplicate: bool = True,
+    max_length: int = 15000,
+    timeout: int = 30,
+) -> dict:
+    """Extracts clean text from a URL without ads/clutter."""
+    try:
+        # Download the content with timeout control
+        response = httpx.get(url, headers={"User-Agent": "web-search-mcp/1.0"}, timeout=timeout)
+        response.raise_for_status()
+
+        html_content = response.text
+
+        if not html_content:
+            return {"error": "Could not download content."}
+
+        # Perform extraction with specified parameters
+        extracted_data = trafilatura.extract(
+            html_content,
+            output_format=output_format,
+            with_metadata=include_metadata,
+            include_tables=include_tables,
+            include_comments=include_comments,
+            include_links=True,
+            include_images=include_images,
+            deduplicate=deduplicate,
+        )
+
+        content = None
+        metadata = None
+
+        if include_metadata:
+            if isinstance(extracted_data, tuple):
+                content, metadata = extracted_data
+            else:  # It's a string or None
+                content = extracted_data
+        else:
+            content = extracted_data
+
+        if not content:
+            return {"error": "No readable text found."}
+
+        # Determine the actual length before truncation
+        actual_length = len(str(content))
+
+        # Structure the response based on format
+        response_data = {"url": url, "length": actual_length}
+
+        # Handle content truncation
+        response_data["content"] = str(content)[:max_length]
+
+        # Add metadata if requested and available
+        if include_metadata:
+            if metadata:
+                response_data["metadata"] = {
+                    "title": getattr(metadata, "title", None),
+                    "author": getattr(metadata, "author", None),
+                    "date": getattr(metadata, "date", None),
+                    "description": getattr(metadata, "description", None),
+                    "fingerprint": getattr(metadata, "fingerprint", None),
+                }
+            else:
+                response_data["warning"] = "Could not extract metadata."
+
+        return response_data
+
+    except httpx.TimeoutException as e:
+        logger.error(f"Timeout during fetch: {e}")
+        return {"error": f"Request timed out after {timeout}s: {str(e)}"}
+    except httpx.RequestError as e:
+        logger.error(f"HTTP error during fetch: {e}")
+        return {"error": f"HTTP request failed: {str(e)}"}
+    except Exception as e:
+        logger.error(f"Reader error: {e}")
+        return {"error": str(e)}
+</file>
+
+<file path="web_search_mcp/research.py">
+from .search import ddg_search
+from .models import SearchRequest
+
+
+def search_domain(query: str, domain: str = "docs.python.org") -> dict:
+    """
+    Searches specifically for technical documentation on a specific domain.
+
+    Args:
+        query: What you're looking for in the docs
+        domain: The domain to search (e.g., 'docs.python.org', 'github.com')
+
+    Returns:
+        Search results from the specified domain
+    """
+    enhanced_query = f"site:{domain} {query}"
+
+    try:
+        req = SearchRequest(
+            query=enhanced_query,
+            search_type="text",
+            max_results=5,
+        )
+        return ddg_search(req)
+    except Exception as e:
+        return {"error": "Search failed", "details": str(e)}
+</file>
+
+<file path="tests/test_server.py">
+from unittest.mock import patch
+import pytest
+import pytest_asyncio
+from fastmcp.client import Client
+from fastmcp.client.transports import FastMCPTransport
+
+# Import the server instance
+from web_search_mcp.server import mcp, main
+
+
+@pytest_asyncio.fixture
+async def client():
+    """Fixture to create an in-memory client for the server."""
+    transport = FastMCPTransport(mcp)
+    async with Client(transport) as client:
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_search_web_tool(client):
+    """Test that the search_web tool calls ddg_search correctly."""
+    with patch("web_search_mcp.server.ddg_search") as mock_ddg_search:
+        mock_ddg_search.return_value = {"results": []}
+        await client.call_tool("search_web", {"query": "test", "max_results": 10})
+
+        mock_ddg_search.assert_called_once()
+        call_args = mock_ddg_search.call_args[0][0]
+        assert call_args.query == "test"
+        assert call_args.max_results == 10
+
+
+@pytest.mark.asyncio
+async def test_get_weather_tool_current_mode(client):
+    """Test the get_weather tool in current mode."""
+    with patch("web_search_mcp.server.weather_current") as mock_weather_current:
+        mock_weather_current.return_value = {"temp": 15}
+        await client.call_tool(
+            "get_weather", {"latitude": 40.0, "longitude": -70.0, "mode": "current"}
+        )
+        mock_weather_current.assert_called_once_with(40.0, -70.0)
+
+
+@pytest.mark.asyncio
+async def test_get_weather_tool_forecast_mode(client):
+    """Test the get_weather tool in forecast mode (default)."""
+    with patch("web_search_mcp.server.weather_forecast") as mock_weather_forecast:
+        mock_weather_forecast.return_value = {"forecast": []}
+        await client.call_tool(
+            "get_weather", {"latitude": 40.0, "longitude": -70.0, "mode": "forecast", "days": 5}
+        )
+        mock_weather_forecast.assert_called_once_with(40.0, -70.0, 5)
+
+
+@pytest.mark.asyncio
+async def test_get_weather_tool_forecast_default_days(client):
+    """Test the get_weather tool uses default days=7 in forecast mode."""
+    with patch("web_search_mcp.server.weather_forecast") as mock_weather_forecast:
+        mock_weather_forecast.return_value = {"forecast": []}
+        await client.call_tool("get_weather", {"latitude": 40.0, "longitude": -70.0})
+        mock_weather_forecast.assert_called_once_with(40.0, -70.0, 7)
+
+
+@pytest.mark.asyncio
+async def test_fetch_page_tool(client):
+    """Test the fetch_page tool."""
+    with patch("web_search_mcp.server._fetch_page") as mock_fetch_page:
+        mock_fetch_page.return_value = {"content": "..."}
+        await client.call_tool("fetch_page", {"url": "https://example.com"})
+        mock_fetch_page.assert_called_once_with(
+            url="https://example.com",
+            output_format="text",
+            include_metadata=False,
+            include_tables=False,
+            include_comments=False,
+            include_images=False,
+            deduplicate=True,
+            max_length=15000,
+            timeout=30,
+        )
+
+
+@pytest.mark.asyncio
+async def test_search_domain_tool(client):
+    """Test the search_domain tool."""
+    with patch("web_search_mcp.server._search_domain") as mock_search_domain:
+        mock_search_domain.return_value = {"results": []}
+        await client.call_tool("search_domain", {"query": "testing", "domain": "react.dev"})
+        mock_search_domain.assert_called_once_with("testing", domain="react.dev")
+
+
+@patch("web_search_mcp.server.mcp")
+def test_main_function(mock_mcp_instance):
+    """Test that the main function calls mcp.run()."""
+    main()
+    mock_mcp_instance.run.assert_called_once_with(transport="stdio")
+</file>
+
+<file path="tests/test_weather.py">
+from unittest.mock import patch
+
+from web_search_mcp.weather import (
+    get_current_weather,
+    get_forecast,
+)
+
+
+def test_get_current_weather_success():
+    """Test successful current weather fetch."""
+    mock_response = {
+        "latitude": 40.71,
+        "longitude": -74.01,
+        "current": {
+            "time": "2023-10-27T12:00",
+            "interval": 900,
+            "temperature_2m": 15.5,
+            "relative_humidity_2m": 60,
+            "apparent_temperature": 14.2,
+            "precipitation": 0.0,
+            "weather_code": 1,
+            "wind_speed_10m": 12.5,
+        },
+    }
+
+    # Mock the make_openmeteo_request function since that's where the API call happens
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = mock_response
+
+        result = get_current_weather(40.7128, -74.0060)
+
+        assert result == mock_response
+        mock_make_request.assert_called_once()
+        # Check that it was called with the correct client and parameters
+        call_args = mock_make_request.call_args
+        # args[0] is client, args[1] is endpoint, args[2] is params
+        assert call_args[0][1] == "forecast"  # endpoint
+        params = call_args[0][2]  # params
+        assert params["latitude"] == 40.7128
+        assert params["longitude"] == -74.0060
+        assert "temperature_2m" in params["current"]
+
+
+def test_get_forecast_success():
+    """Test successful forecast fetch."""
+    mock_response = {
+        "daily": {
+            "time": ["2023-10-27"],
+            "temperature_2m_max": [18.0],
+            "temperature_2m_min": [10.0],
+            "precipitation_sum": [0.0],
+            "weather_code": [1],
+            "uv_index_max": [4.5],
+        }
+    }
+
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = mock_response
+
+        result = get_forecast(40.7128, -74.0060, days=10)
+
+        assert result == mock_response
+        mock_make_request.assert_called_once()
+        call_args = mock_make_request.call_args
+        params = call_args[0][2]  # params
+        assert params["forecast_days"] == 10
+
+
+def test_api_failure_current():
+    """Test handling of API failure for current weather."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        # Simulate None return (failed API call)
+        mock_make_request.return_value = None
+        result = get_current_weather(40.7128, -74.0060)
+        assert "error" in result
+        assert result["error"] == "Unable to fetch weather data."
+
+
+def test_api_failure_forecast():
+    """Test handling of API failure for forecast."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = None
+        result = get_forecast(40.7128, -74.0060)
+        assert "error" in result
+        assert result["error"] == "Unable to fetch weather data."
+
+
+def test_invalid_coordinates():
+    """Test API error with invalid coordinates."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        # Simulate the API returning an error for invalid coordinates
+        mock_make_request.return_value = {
+            "error": True,
+            "reason": "Invalid latitude",
+        }
+        result = get_current_weather(100, -74)
+        assert result["error"]
+        assert "Invalid latitude" in result["reason"]
+
+
+def test_forecast_days_clamping():
+    """Test that the `days` parameter is clamped correctly."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = {"daily": {}}
+
+        # Test days < 1
+        get_forecast(40.7128, -74.0060, days=0)
+        call_args = mock_make_request.call_args
+        params = call_args[0][2]
+        assert params["forecast_days"] == 1
+
+        # Test days > 16
+        get_forecast(40.7128, -74.0060, days=20)
+        call_args = mock_make_request.call_args
+        params = call_args[0][2]
+        assert params["forecast_days"] == 16
+</file>
+
+<file path="web_search_mcp/weather.py">
+import logging
+import ssl
+from typing import Any
+
+import httpx
+
+from .config import settings
+
+logger = logging.getLogger("web-search-mcp")
+
+
+# SSL context for secure connections
+def _get_ssl_context():
+    """Get SSL context, with safe fallback for development environments."""
+    try:
+        return ssl.create_default_context()
+    except Exception:
+        # Fallback if default creation fails - only for development
+        # This creates an unverified context for development purposes only
+        # In production, SSL verification should always be enforced
+        import warnings
+
+        warnings.warn(
+            "Using unverified SSL context - not suitable for production",
+            UserWarning,
+            stacklevel=2,
+        )
+        return ssl._create_unverified_context()
+
+
+SSL_CONTEXT = _get_ssl_context()
+
+
+def make_openmeteo_request(
+    client: httpx.Client, endpoint: str, params: dict
+) -> dict[str, Any] | None:
+    """
+    Make request to OpenMeteo API with proper error handling.
+
+    Args:
+        client: Shared httpx.Client instance
+        endpoint: API endpoint to call
+        params: Query parameters for the request
+
+    Returns:
+        JSON response as dict or None if request fails
+    """
+    url = f"{settings.weather_api_base}/{endpoint}"
+    headers = {"User-Agent": settings.user_agent, "Accept": "application/json"}
+
+    try:
+        response = client.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json()
+    except ssl.SSLError as e:
+        # This is often the specific error in corporate environments
+        logger.error(f"Weather API SSL error: {e}")
+        return None
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Weather API HTTP error {e.response.status_code}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Weather API Request failed: {e}")
+        return None
+
+
+def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
+    """
+    Execute weather API request using shared client configuration.
+
+    Args:
+        params: Query parameters for the request
+
+    Returns:
+        Dict containing weather data or error message
+    """
+    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
+        data = make_openmeteo_request(client, "forecast", params)
+
+        if not data:
+            return {"error": "Unable to fetch weather data."}
+
+        # Validate expected top-level keys exist in the response
+        # Current weather requests expect 'current', forecasts expect 'daily'
+        # Allow API-level errors to pass through
+        if "current" not in data and "daily" not in data and "error" not in data:
+            logger.warning(f"Weather API response missing expected keys: {list(data.keys())}")
+            return {"error": "Weather API returned unexpected response format."}
+
+        return data
+
+
+def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
+    """
+    Get current weather for a specific location.
+
+    Args:
+        latitude: Latitude of the location
+        longitude: Longitude of the location
+
+    Returns:
+        Dict containing current weather data or error message
+    """
+    fields = [
+        "temperature_2m",
+        "relative_humidity_2m",
+        "apparent_temperature",
+        "precipitation",
+        "weather_code",
+        "wind_speed_10m",
+    ]
+
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": ",".join(fields),
+    }
+
+    return _fetch_weather_data(params)
+
+
+def get_forecast(
+    latitude: float,
+    longitude: float,
+    days: int = 7,
+) -> dict[str, Any]:
+    """
+    Get daily weather forecast for a location.
+
+    Args:
+        latitude: Latitude of the location
+        longitude: Longitude of the location
+        days: Number of days for forecast (1-16, default 7)
+
+    Returns:
+        Dict containing forecast data or error message
+    """
+    # Enforce API limits
+    days = max(1, min(16, days))
+
+    fields = [
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_sum",
+        "weather_code",
+        "uv_index_max",
+    ]
+
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": ",".join(fields),
+        "forecast_days": days,
+        "timezone": "auto",
+    }
+
+    return _fetch_weather_data(params)
+</file>
+
+<file path="web_search_mcp/models.py">
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, HttpUrl
+
+
+class SearchRequest(BaseModel):
+    query: str
+    search_type: Literal["text", "news"] = "text"
+    max_results: int = Field(default=5, ge=1)
+    time_range: str | None = None
+    region: str | None = None
+    safesearch: str = "moderate"
+    page: int = 1
+    backend: str = "auto"
+    # Catch-all for extra filters
+    filters: dict[str, Any] = {}
+
+
+class FetchPageRequest(BaseModel):
+    url: HttpUrl
+    output_format: Literal["text", "markdown", "json"] = "text"
+    include_metadata: bool = False
+    include_tables: bool = False
+    include_comments: bool = False
+    include_images: bool = False
+    deduplicate: bool = True
+    max_length: int = Field(default=15000, ge=100, le=50000)
+    timeout: int = Field(default=30, ge=5, le=120)
+</file>
+
+<file path="web_search_mcp/search.py">
+from ddgs import DDGS
+
+from .models import SearchRequest
+
+
+def ddg_search(request: SearchRequest):
+    """
+    Unified DuckDuckGo search function supporting text and news search.
+
+    Args:
+        request: SearchRequest object containing all search parameters
+
+    Returns:
+        Dict with query, search_type, total_results, and results list
+    """
+    if not request.query:
+        return {
+            "query": "",
+            "search_type": request.search_type,
+            "total_results": 0,
+            "results": [],
+            "error": "Query cannot be empty",
+        }
+
+    # Extract all parameters from the request model
+    kwargs = request.model_dump(exclude={"query", "search_type", "filters"})
+
+    # Merge additional filters if present
+    if request.filters:
+        kwargs.update(request.filters)
+
+    # Filter out None values
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
+    try:
+        with DDGS() as ddgs:
+            # Map search type to DDGS method
+            search_methods = {
+                "text": ddgs.text,
+                "web": ddgs.text,
+                "news": ddgs.news,
+            }
+
+            if request.search_type not in search_methods:
+                return {
+                    "query": request.query,
+                    "search_type": request.search_type,
+                    "total_results": 0,
+                    "results": [],
+                    "error": f"Unsupported search type: {request.search_type}",
+                }
+
+            search_func = search_methods[request.search_type]
+
+            # Prepare kwargs for DDGS
+            search_kwargs = {}
+            if kwargs.get("max_results") is not None:
+                search_kwargs["max_results"] = kwargs["max_results"]
+            if kwargs.get("region") is not None:
+                search_kwargs["region"] = kwargs["region"]
+            if kwargs.get("safesearch") is not None:
+                search_kwargs["safesearch"] = kwargs["safesearch"]
+            if kwargs.get("page") is not None:
+                search_kwargs["page"] = kwargs["page"]
+            if kwargs.get("backend") is not None:
+                search_kwargs["backend"] = kwargs["backend"]
+            if kwargs.get("time_range") is not None:
+                search_kwargs["timelimit"] = kwargs["time_range"]
+
+            results = search_func(request.query, **search_kwargs)
+            return {
+                "query": request.query,
+                "search_type": request.search_type,
+                "total_results": len(results),
+                "results": results,
+            }
+    except Exception as e:
+        return {
+            "query": request.query,
+            "search_type": request.search_type,
+            "total_results": 0,
+            "results": [],
+            "error": str(e),
+        }
+</file>
+
+<file path="tests/test_search.py">
+from unittest.mock import patch
+
+from web_search_mcp.models import SearchRequest
+from web_search_mcp.search import ddg_search
+
+
+class TestDDGSearch:
+    """Test suite for DDG search functionality with mocked DDGS API calls."""
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_basic_text(self, mock_ddgs_class):
+        """Test basic text search functionality."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = [
+            {
+                "title": "Test Result",
+                "href": "https://example.com",
+                "body": "Test description",
+            }
+        ]
+
+        req = SearchRequest(query="test query", max_results=1)
+        result = ddg_search(req)
+
+        assert result["query"] == "test query"
+        assert result["search_type"] == "text"
+        assert result["total_results"] == 1
+        assert len(result["results"]) == 1
+        mock_ddgs.text.assert_called_once_with(
+            "test query",
+            max_results=1,
+            safesearch="moderate",
+            page=1,
+            backend="auto",
+        )
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_with_time_filter(self, mock_ddgs_class):
+        """Test search with time range filter."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(query="test query", time_range="d", max_results=2)
+        result = ddg_search(req)
+
+        assert result["search_type"] == "text"
+        assert len(result["results"]) == 0
+        mock_ddgs.text.assert_called_once_with(
+            "test query",
+            max_results=2,
+            timelimit="d",
+            safesearch="moderate",
+            page=1,
+            backend="auto",
+        )
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_with_all_common_params(self, mock_ddgs_class):
+        """Test search with all common parameters."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.news.return_value = []
+
+        req = SearchRequest(
+            query="test query",
+            search_type="news",
+            max_results=5,
+            time_range="w",
+            region="us-en",
+            safesearch="off",
+            page=2,
+            backend="api",
+        )
+        result = ddg_search(req)
+
+        assert result["search_type"] == "news"
+        mock_ddgs.news.assert_called_once_with(
+            "test query",
+            max_results=5,
+            timelimit="w",
+            region="us-en",
+            safesearch="off",
+            page=2,
+            backend="api",
+        )
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_error_handling(self, mock_ddgs_class):
+        """Test error handling when DDG API fails."""
+        mock_ddgs_class.return_value.__enter__.side_effect = Exception("Network error")
+
+        req = SearchRequest(query="test query", max_results=1)
+        result = ddg_search(req)
+
+        assert result["query"] == "test query"
+        assert result["search_type"] == "text"
+        assert result["total_results"] == 0
+        assert len(result["results"]) == 0
+        assert "error" in result
+        assert "Network error" in result["error"]
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_default_type(self, mock_ddgs_class):
+        """Test that default search type is 'text'."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(query="test")
+        result = ddg_search(req)
+
+        assert result["search_type"] == "text"
+        # Check that it was called with search_type="text"
+        mock_ddgs.text.assert_called_once()
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_none_params_not_passed(self, mock_ddgs_class):
+        """Test that None parameters are not passed to DDG."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(
+            query="test",
+            max_results=5,
+            time_range=None,
+            region=None,
+            page=1,
+        )
+        result = ddg_search(req)
+        assert result["query"] == "test"
+        assert result["search_type"] == "text"
+
+        # Verify that only non-None parameters are passed
+        call_kwargs = mock_ddgs.text.call_args[1]
+        assert "max_results" in call_kwargs
+        assert "timelimit" not in call_kwargs  # None parameter should be filtered
+        assert "region" not in call_kwargs  # None parameter should be filtered
+        # But defaults should still be present
+        assert "safesearch" in call_kwargs
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_empty_query(self, mock_ddgs_class):
+        """Test that an empty query returns an error."""
+        req = SearchRequest(query="")
+        result = ddg_search(req)
+
+        assert "error" in result
+        assert result["total_results"] == 0
+        assert "Query cannot be empty" in result["error"]
+        mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_invalid_search_type(self, mock_ddgs_class):
+        """Test that an invalid search_type returns an error."""
+        req = SearchRequest(query="test", search_type="text")
+        req.search_type = "invalid_type"  # type: ignore
+        result = ddg_search(req)
+
+        assert "error" in result
+        assert "Unsupported search type: invalid_type" in result["error"]
+        mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_no_results(self, mock_ddgs_class):
+        """Test that the search handles no results from the API."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(query="a very specific query with no results")
+        result = ddg_search(req)
+
+        assert result["total_results"] == 0
+        assert len(result["results"]) == 0
+        assert "error" not in result
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_max_results_zero(self, mock_ddgs_class):
+        """Test that max_results=0 is handled correctly."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(query="test", max_results=1)  # Create with valid value
+        req.max_results = 0  # Set to 0 to bypass validation
+        result = ddg_search(req)
+
+        assert result["total_results"] == 0
+        assert len(result["results"]) == 0
+        mock_ddgs.text.assert_called_once_with(
+            "test",
+            max_results=0,
+            safesearch="moderate",
+            page=1,
+            backend="auto",
+        )
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_malformed_api_response(self, mock_ddgs_class):
+        """Test robustness against malformed API responses."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = [
+            {"title": "Only title"},  # Missing href and body
+            {"href": "https://example.com"},  # Missing title and body
+        ]
+
+        req = SearchRequest(query="test", max_results=2)
+        result = ddg_search(req)
+
+        assert "error" not in result
+        assert result["total_results"] == 2
+        assert len(result["results"]) == 2
+        # Check that the available data is still parsed
+        assert result["results"][0]["title"] == "Only title"
+        assert result["results"][0].get("href") is None
+        assert result["results"][1].get("title") is None
+        assert result["results"][1]["href"] == "https://example.com"
+</file>
+
+<file path="AGENTS.md">
+# AGENTS.md
+
+This file provides guidelines for agentic coding agents operating in this repository.
+
+## Project Overview
+
+**web-search-mcp** is a FastMCP server providing web search, content extraction, and research tools for LLM clients. Uses Python 3.11+ with uv for dependency management.
+
+## Build Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run all tests
+uv run pytest
+
+# Run a single test file
+uv run pytest tests/test_search.py
+
+# Run a single test
+uv run pytest tests/test_search.py::TestDDGSearch::test_ddg_search_basic_text
+
+# Run with coverage
+uv run pytest --cov=web_search_mcp
+
+# Lint check
+uv run ruff check .
+
+# Auto-fix linting issues
+uv run ruff check --fix
+
+# Type checking
+uv run mypy web_search_mcp/
+
+# Run server (stdio transport)
+uv run web-search-mcp
+```
+
+## Code Style Guidelines
+
+### Imports
+
+- Use absolute imports: `from web_search_mcp.models import SearchRequest`
+- Sort imports with ruff (configured in pyproject.toml)
+- Group imports: stdlib → third-party → local
+- Use `_alias` pattern for imports in server.py to avoid name collisions with tool functions:
+
+```python
+from .search import ddg_search
+from .reader import fetch_page as _fetch_page
+```
+
+### Formatting
+
+- Line length: 100 characters
+- No enforced brace style for conditionals (use best judgment)
+- Use trailing commas for multi-line calls
+
+### Type Hints
+
+- Use Python 3.11+ union syntax: `str | None` instead of `Optional[str]`
+- Use `typing.Literal` for enum-like parameters
+- Add return type annotations for all public functions
+- Use `dict` for simple dict returns, Pydantic models for structured data
+
+### Naming Conventions
+
+- **Functions**: `snake_case` for all functions
+- **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
+- **Constants**: `SCREAMING_SNAKE_CASE`
+- **MCP Tools**: Use `action_subject` pattern:
+  - `search_web`, `search_docs` (discovery)
+  - `fetch_page`, `get_weather`, `get_forecast` (retrieval)
+- **Private functions**: Leading underscore `_helper_function`
+
+### Error Handling
+
+- Log errors with the module logger: `logger = logging.getLogger("web-search-mcp")`
+- Return error dicts from tool functions: `{"error": "message", "details": str(e)}`
+- Handle `None` values before slicing: `(info.get("key") or "")[:1000]`
+- Avoid bare `except Exception`; catch specific exceptions when possible
+- Always include context in error messages
+
+### Module Structure
+
+- **server.py**: FastMCP server, tool definitions, and orchestration
+- **search.py**: DuckDuckGo search logic (`ddg_search` function)
+- **weather.py**: OpenMeteo API integration
+- **research.py**: Technical documentation search
+- **reader.py**: Web content extraction (trafilatura)
+- **models.py**: Pydantic models for request/response
+- **config.py**: Settings via pydantic-settings
+
+### MCP Tool Definition Pattern
+
+```python
+@mcp.tool
+def tool_name(param: type, optional: type = default) -> dict:
+    """
+    One-line description.
+
+    Args:
+        param: Description
+        optional: Description
+
+    Returns:
+        Description of return dict
+    """
+    return _internal_function(param)
+```
+
+### Testing
+
+- Use `unittest.mock.patch` for external API calls
+- Mock at the class level: `@patch("web_search_mcp.search.DDGS")`
+- Test classes inherit from `unittest.TestCase` (optional, pytest can run functions too)
+- Group related tests in classes with descriptive names: `TestDDGSearch`
+- Use `assert` for assertions (S101 allowed in tests per ruff config)
+
+### Git Workflow
+
+- Write descriptive commit messages: "feat: add X tool", "fix: handle Y error"
+- Run `uv run ruff check . && uv run pytest` before committing
+- Do not commit generated files (uv.lock is an exception)
+</file>
+
+<file path="pyproject.toml">
+[project]
+name = "web_search_mcp"
+version = "0.2.0"
+description = "FastMCP-based server that provides comprehensive web search functionality for LLM clients through the Model Context Protocol"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ddgs>=9.10.0",
+    "fastmcp>=2.14.4",
+    "httpx>=0.28.1",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "trafilatura>=1.12.0",
+]
+
+[project.scripts]
+web-search-mcp = "web_search_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["web_search_mcp*"]
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest-asyncio>=0.27.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.13",
+    "types-requests>=2.32.0",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# S101: assert is standard in pytest tests
+# S323: SSL insecure context is intentional for development fallback
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101"]
+"web_search_mcp/weather.py" = ["S323"]
+</file>
+
+<file path="web_search_mcp/server.py">
+import logging
+from typing import Literal
+
+from fastmcp import FastMCP
+
+from .models import SearchRequest
+from .search import ddg_search
+from .weather import get_current_weather as weather_current
+from .weather import get_forecast as weather_forecast
+from .reader import fetch_page as _fetch_page
+from .research import search_domain as _search_domain
+
+# Set up logging
+logger = logging.getLogger("web-search-mcp")
+
+mcp = FastMCP("Web Search Tools")
+
+
+@mcp.tool
+def search_web(
+    query: str,
+    search_type: Literal["text", "news"] = "text",
+    max_results: int = 5,
+    time_range: str | None = None,
+    region: str | None = None,
+    safesearch: str = "moderate",
+    page: int = 1,
+    backend: str = "auto",
+) -> dict:
+    """
+    Unified search tool for web content and news.
+
+    Args:
+        query: Search query string
+        search_type: Type of search ('text' or 'news')
+        max_results: Max number of results to return (default 5)
+        time_range: Time filter ('d', 'w', 'm', 'y') or None
+        region: Geographic region (e.g. 'us-en', 'uk-en') or None
+        safesearch: Safe search level ('moderate', 'off', 'on')
+        page: Page number for pagination (default 1)
+        backend: Backend to use ('auto', 'legacy', 'api')
+
+    Returns:
+        Dict with query, search_type, total_results, results, and error if applicable
+    """
+    try:
+        req = SearchRequest(
+            query=query,
+            search_type=search_type,
+            max_results=max_results,
+            time_range=time_range,
+            region=region,
+            safesearch=safesearch,
+            page=page,
+            backend=backend,
+        )
+        return ddg_search(req)
+    except Exception as e:
+        logger.error(f"Search failed: {e}")
+        return {"error": "Search failed", "details": str(e)}
+
+
+@mcp.tool
+def get_weather(
+    latitude: float,
+    longitude: float,
+    mode: Literal["current", "forecast"] = "forecast",
+    days: int = 7,
+) -> dict:
+    """
+    Get current weather or forecast for a specific location.
+
+    Args:
+        latitude: Latitude of the location
+        longitude: Longitude of the location
+        mode: Type of weather data ('current' or 'forecast', default 'forecast')
+        days: Number of days for forecast (1-16, default 7, only used when mode='forecast')
+
+    Returns:
+        Dict containing weather data or error message
+    """
+    if mode == "current":
+        return weather_current(latitude, longitude)
+    else:
+        return weather_forecast(latitude, longitude, days)
+
+
+@mcp.tool
+def fetch_page(
+    url: str,
+    output_format: Literal["text", "markdown", "json"] = "text",
+    include_metadata: bool = False,
+    include_tables: bool = False,
+    include_comments: bool = False,
+    include_images: bool = False,
+    deduplicate: bool = True,
+    max_length: int = 15000,
+    timeout: int = 30,
+) -> dict:
+    """
+    Extracts the full text content from a web page URL.
+    Use this to read the details of a specific result found via search_web.
+
+    Args:
+        url: The URL to fetch and extract content from
+        output_format: Format for extracted content ('text', 'markdown', 'json')
+        include_metadata: Whether to include document metadata (title, author, date, etc.)
+        include_tables: Whether to include table content in extraction
+        include_comments: Whether to include comment content in extraction
+        include_images: Whether to include image descriptions in extraction
+        deduplicate: Whether to remove duplicated content
+        max_length: Maximum length of content to return (default 15000)
+        timeout: Request timeout in seconds (default 30)
+    """
+    return _fetch_page(
+        url=url,
+        output_format=output_format,
+        include_metadata=include_metadata,
+        include_tables=include_tables,
+        include_comments=include_comments,
+        include_images=include_images,
+        deduplicate=deduplicate,
+        max_length=max_length,
+        timeout=timeout,
+    )
+
+
+@mcp.tool
+def search_domain(query: str, domain: str = "docs.python.org") -> dict:
+    """
+    Searches specifically for technical documentation or content on a specific domain.
+
+    Args:
+        query: What you're looking for
+        domain: The domain to search (e.g. 'docs.python.org', 'stackoverflow.com')
+
+    Returns:
+        Search results from the specified domain
+    """
+    return _search_domain(query, domain=domain)
+
+
+def main():
+    mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="README.md">
+# Web Search MCP
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
+
+A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web, weather data, and more.
+
+## ✨ Features
+
+- **🌐 Deep Web Search**: Text and news search via DuckDuckGo.
+- **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
+- **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
+- **🌤️ Weather Data**: Current conditions and forecasts via OpenMeteo.
+
+## 🚀 Quick Start
+
+### Installation
+
+Install directly using `uv`:
+
+```bash
+uv tool install git+https://github.com/sydasif/web-search-mcp.git
+```
+
+### Configuration
+
+Add the server to your MCP client configuration (e.g., `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "web-search-mcp"
+    }
+  }
+}
+```
+
+## 🛠️ Tool Reference
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `search_web` | Universal search (Web, News) | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `filters` |
+| `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("text", "markdown", "json"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
+| `search_domain` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com") |
+| `get_weather` | Current conditions or forecast (defaults to 7-day forecast) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
+
+## 💻 Development
+
+<details>
+<summary>Click to expand development instructions</summary>
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/sydasif/web-search-mcp.git
+   cd web-search-mcp
+   ```
+
+2. **Sync dependencies**
+   ```bash
+   uv sync
+   ```
+
+3. **Run tests**
+   ```bash
+   # Run all tests
+   uv run pytest
+
+   # Run with coverage
+   uv run pytest --cov=web_search_mcp
+   ```
+
+4. **Linting & Formatting**
+   ```bash
+   uv run ruff check .
+   ```
+
+</details>
+</file>
+
+</files>

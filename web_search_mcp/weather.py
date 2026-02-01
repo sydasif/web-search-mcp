@@ -14,18 +14,15 @@ def _get_ssl_context():
     """Get SSL context, with safe fallback for development environments."""
     try:
         return ssl.create_default_context()
-    except Exception:
-        # Fallback if default creation fails - only for development
-        # This creates an unverified context for development purposes only
-        # In production, SSL verification should always be enforced
-        import warnings
-
-        warnings.warn(
-            "Using unverified SSL context - not suitable for production",
-            UserWarning,
-            stacklevel=2,
-        )
-        return ssl._create_unverified_context()
+    except Exception as e:
+        logger.warning(f"Failed to create default SSL context: {e}")
+        # In production, SSL verification should always be enforced.
+        # For development/corporate environments with certificate issues,
+        # better to let the user configure environment variables or settings
+        # rather than silently disabling verification.
+        # We'll let httpx use its own default behavior by returning None
+        # which will be handled specially later
+        return None
 
 
 SSL_CONTEXT = _get_ssl_context()
@@ -74,7 +71,13 @@ def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dict containing weather data or error message
     """
-    with httpx.Client(verify=SSL_CONTEXT, timeout=30.0) as client:
+    # Handle SSL context - if SSL_CONTEXT is None, use httpx default behavior
+    if SSL_CONTEXT is None:
+        client = httpx.Client(timeout=30.0)
+    else:
+        client = httpx.Client(verify=SSL_CONTEXT, timeout=30.0)
+
+    with client:
         data = make_openmeteo_request(client, "forecast", params)
 
         if not data:
