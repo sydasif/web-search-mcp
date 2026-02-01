@@ -1,87 +1,33 @@
-# Web Search MCP Server
+# Web Search MCP
 
-A FastMCP server providing comprehensive research capabilities for LLM clients:
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-- **Web Search** (DuckDuckGo) - text, news, images, videos, books
-- **Web Content Extraction** (trafilatura) - read full articles
-- **Wikipedia Search** - factual summaries
-- **ArXiv Search** - scientific/technical papers
-- **Documentation Search** - site-specific tech docs
-- **Weather Data** (OpenMeteo) - current & forecast
-- **Market Data** (Yahoo Finance) - stock prices
+A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web, scientific papers, market data, and more.
 
-## Installation
+## ✨ Features
+
+- **🌐 Deep Web Search**: Text, news, images, videos, and books via DuckDuckGo.
+- **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`.
+- **📚 Academic Research**: Direct access to ArXiv papers and Wikipedia summaries.
+- **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
+- **📈 Market Intelligence**: Real-time stock prices and company info via Yahoo Finance.
+- **weather Weather Data**: Current conditions and forecasts via OpenMeteo.
+
+## 🚀 Quick Start
+
+### Installation
+
+Install directly using `uv`:
 
 ```bash
 uv tool install git+https://github.com/sydasif/web-search-mcp.git
 ```
 
-Requires Python 3.11+ and [uv](https://github.com/astral-sh/uv).
+### Configuration
 
-## Tools
-
-### 1. `search_web`
-
-Unified tool for web, news, images, videos, and books.
-
-**Parameters:**
-
-- `query` (required): Search query
-- `search_type`: `text` (default), `news`, `image`, `video`, `books` (supports plural forms too)
-- `max_results`: Default 5
-- `time_range`: `d`, `w`, `m`, `y`
-- `region`: e.g., `us-en`, `uk-en`
-- `safesearch`: `moderate` (default), `off`, `on`
-- **Image Filters**: `size` (Small, Medium, Large, Wallpaper), `color`, `type_image`, `layout`, `license_image`
-- **Video Filters**: `resolution` (high, standart), `duration` (short, medium, long), `license_videos`
-
-### 2. `fetch_page`
-
-Extracts clean text from a URL without ads/clutter.
-
-**Parameters:**
-- `url` (required): URL to extract content from
-
-### 3. `search_wiki`
-
-Searches Wikipedia for factual summaries.
-
-**Parameters:**
-- `query` (required): Search query
-
-### 4. `search_arxiv`
-
-Searches for scientific papers on ArXiv.
-
-**Parameters:**
-- `query` (required): Search query
-- `max_results`: Default 3
-
-### 5. `search_docs`
-
-Searches technical documentation sites.
-
-**Parameters:**
-- `query` (required): What you're looking for
-- `tech_stack`: `python` (default), `react`, `mcp`, `fastapi`, `httpx`
-
-### 6. `get_weather` / `get_forecast`
-
-**Parameters:**
-
-- `latitude`, `longitude` (required)
-- `days` (forecast only, 1-16, default 7)
-
-### 7. `get_finance`
-
-Gets stock price and company information.
-
-**Parameters:**
-- `symbol` (required): Stock ticker (e.g., `AAPL`, `TSLA`)
-
-## MCP Configuration
-
-Add to your MCP settings (e.g., `claude_desktop_config.json` or `opencode.json`):
+Add the server to your MCP client configuration (e.g., `claude_desktop_config.json`):
 
 ```json
 {
@@ -93,11 +39,47 @@ Add to your MCP settings (e.g., `claude_desktop_config.json` or `opencode.json`)
 }
 ```
 
-## Development
+## 🛠️ Tool Reference
 
-```bash
-git clone https://github.com/sydasif/web-search-mcp.git
-cd web-search-mcp
-uv sync
-uv run pytest
-```
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `search_web` | Universal search (Web, News, Image, Video) | `query`, `search_type` ("text", "news", "image", "video", "books"), `max_results`, `time_range`, `region`, `filters` |
+| `fetch_page` | Extract clean article text from a URL | `url` |
+| `search_wiki` | Get Wikipedia summaries & facts | `query` |
+| `search_arxiv` | Find scientific & technical papers | `query`, `max_results` |
+| `search_docs` | Search specific tech documentation | `query`, `tech_stack` ("python", "react", "fastapi", "mcp", "httpx") |
+| `get_finance` | Stock prices & company profiles | `symbol` (e.g., AAPL) |
+| `get_weather` | Current weather conditions | `latitude`, `longitude` |
+| `get_forecast` | 1-16 day weather forecast | `latitude`, `longitude`, `days` |
+
+## 💻 Development
+
+<details>
+<summary>Click to expand development instructions</summary>
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/sydasif/web-search-mcp.git
+   cd web-search-mcp
+   ```
+
+2. **Sync dependencies**
+   ```bash
+   uv sync
+   ```
+
+3. **Run tests**
+   ```bash
+   # Run all tests
+   uv run pytest
+
+   # Run with coverage
+   uv run pytest --cov=web_search_mcp
+   ```
+
+4. **Linting & Formatting**
+   ```bash
+   uv run ruff check .
+   ```
+
+</details>
