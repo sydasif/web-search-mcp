@@ -61,3 +61,6 @@ htmlcov/
 # Local development
 local/
 debug.log
+
+# Repomix output
+repomix-output.xml
