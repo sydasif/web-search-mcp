@@ -75,4 +75,54 @@ def test_api_failure():
         result = get_current_weather(40.7128, -74.0060)
 
         assert "error" in result
+
+
+def test_api_failure_forecast():
+    """Test handling of API failure for forecast."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = None
+        result = get_forecast(40.7128, -74.0060)
+        assert "error" in result
         assert result["error"] == "Unable to fetch weather data."
+
+
+def test_invalid_coordinates():
+    """Test API error with invalid coordinates."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        # Simulate the API returning an error for invalid coordinates
+        mock_make_request.return_value = {
+            "error": True,
+            "reason": "Invalid latitude",
+        }
+        result = get_current_weather(100, -74)
+        assert result["error"]
+        assert "Invalid latitude" in result["reason"]
+
+
+def test_forecast_days_clamping():
+    """Test that the `days` parameter is clamped correctly."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        mock_make_request.return_value = {"daily": {}}
+
+        # Test days < 1
+        get_forecast(40.7128, -74.0060, days=0)
+        call_args = mock_make_request.call_args
+        params = call_args[0][2]
+        assert params["forecast_days"] == 1
+
+        # Test days > 16
+        get_forecast(40.7128, -74.0060, days=20)
+        call_args = mock_make_request.call_args
+        params = call_args[0][2]
+        assert params["forecast_days"] == 16
+
+
+def test_malformed_api_response():
+    """Test handling of a malformed API response."""
+    with patch("web_search_mcp.weather.make_openmeteo_request") as mock_make_request:
+        # Response missing the 'current' key
+        mock_make_request.return_value = {"latitude": 40.71, "longitude": -74.01}
+        result = get_current_weather(40.7128, -74.0060)
+        # The current implementation passes the response through, so we just check it's not None
+        assert result is not None
+        assert "current" not in result

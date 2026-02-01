@@ -13,6 +13,15 @@ def ddg_search(request: SearchRequest):
     Returns:
         Dict with query, search_type, total_results, and results list
     """
+    if not request.query:
+        return {
+            "query": "",
+            "search_type": request.search_type,
+            "total_results": 0,
+            "results": [],
+            "error": "Query cannot be empty",
+        }
+
     # Extract all parameters from the request model
     kwargs = request.model_dump(exclude={"query", "search_type", "filters"})
 

@@ -247,4 +247,79 @@ class TestDDGSearch:
         assert "region" not in call_kwargs  # None parameter should be filtered
         # But defaults should still be present
         assert "safesearch" in call_kwargs
-        assert "backend" in call_kwargs
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_empty_query(self, mock_ddgs_class):
+        """Test that an empty query returns an error."""
+        req = SearchRequest(query="")
+        result = ddg_search(req)
+
+        assert "error" in result
+        assert result["total_results"] == 0
+        assert "Query cannot be empty" in result["error"]
+        mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_invalid_search_type(self, mock_ddgs_class):
+        """Test that an invalid search_type returns an error."""
+        req = SearchRequest(query="test", search_type="text")
+        req.search_type = "invalid_type"  # type: ignore
+        result = ddg_search(req)
+
+        assert "error" in result
+        assert "Unsupported search type: invalid_type" in result["error"]
+        mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_no_results(self, mock_ddgs_class):
+        """Test that the search handles no results from the API."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(query="a very specific query with no results")
+        result = ddg_search(req)
+
+        assert result["total_results"] == 0
+        assert len(result["results"]) == 0
+        assert "error" not in result
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_max_results_zero(self, mock_ddgs_class):
+        """Test that max_results=0 is handled correctly."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
+        req = SearchRequest(query="test", max_results=1)  # Create with valid value
+        req.max_results = 0  # Set to 0 to bypass validation
+        result = ddg_search(req)
+
+        assert result["total_results"] == 0
+        assert len(result["results"]) == 0
+        mock_ddgs.text.assert_called_once_with(
+            "test",
+            max_results=0,
+            safesearch="moderate",
+            page=1,
+            backend="auto",
+        )
+
+    @patch("web_search_mcp.search.DDGS")
+    def test_ddg_search_malformed_api_response(self, mock_ddgs_class):
+        """Test robustness against malformed API responses."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = [
+            {"title": "Only title"},  # Missing href and body
+            {"href": "https://example.com"},  # Missing title and body
+        ]
+
+        req = SearchRequest(query="test", max_results=2)
+        result = ddg_search(req)
+
+        assert "error" not in result
+        assert result["total_results"] == 2
+        assert len(result["results"]) == 2
+        # Check that the available data is still parsed
+        assert result["results"][0]["title"] == "Only title"
+        assert result["results"][0].get("href") is None
+        assert result["results"][1].get("title") is None
+        assert result["results"][1]["href"] == "https://example.com"

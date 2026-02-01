@@ -138,6 +138,6 @@ def get_forecast(
         data = make_openmeteo_request(client, "forecast", params)
 
         if not data:
-            return {"error": "Unable to fetch forecast data."}
+            return {"error": "Unable to fetch weather data."}
 
         return data

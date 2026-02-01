@@ -10,7 +10,7 @@ def get_finance(symbol: str) -> dict:
             "symbol": symbol,
             "price": info.get("currentPrice") or info.get("regularMarketPrice"),
             "currency": info.get("currency"),
-            "business_summary": info.get("longBusinessSummary")[:1000],
+            "business_summary": (info.get("longBusinessSummary") or "")[:1000],
             "website": info.get("website"),
         }
     except Exception as e:

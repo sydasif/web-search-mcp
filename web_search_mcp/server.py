@@ -148,12 +148,12 @@ def search_wiki(query: str) -> dict:
 
 
 @mcp.tool
-def search_arxiv(query: str, max_results: int = 3) -> list:
+def search_arxiv(query: str, max_results: int = 3) -> dict:
     """
     Search ArXiv for scientific papers and technical research.
     Best for deep-tech, AI, physics, or mathematical queries.
     """
-    return _search_arxiv(query, max_results=max_results)
+    return {"results": _search_arxiv(query, max_results=max_results)}
 
 
 @mcp.tool

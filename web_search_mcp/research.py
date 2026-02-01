@@ -1,6 +1,9 @@
 import wikipedia
 import arxiv
 
+from .search import ddg_search
+from .models import SearchRequest
+
 
 def search_wiki(query: str) -> dict:
     """Searches Wikipedia for summaries."""
@@ -51,9 +54,6 @@ def search_docs(query: str, tech_stack: str = "python") -> dict:
     Returns:
         Search results from the specified documentation site
     """
-    from .search import ddg_search
-    from .models import SearchRequest
-
     site_map = {
         "python": "docs.python.org",
         "react": "react.dev",
