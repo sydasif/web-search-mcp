@@ -28,53 +28,53 @@ def fetch_page(
         if not html_content:
             return {"error": "Could not download content."}
 
-        # Prepare extraction parameters based on settings
-        extraction_params = {
-            "output_format": output_format,
-            "with_metadata": include_metadata,
-            "include_tables": include_tables,
-            "include_comments": include_comments,
-            "include_links": True,
-            "include_images": include_images,
-            "deduplicate": deduplicate,
-        }
-
         # Perform extraction with specified parameters
-        result = trafilatura.extract(html_content, **extraction_params)
+        extracted_data = trafilatura.extract(
+            html_content,
+            output_format=output_format,
+            with_metadata=include_metadata,
+            include_tables=include_tables,
+            include_comments=include_comments,
+            include_links=True,
+            include_images=include_images,
+            deduplicate=deduplicate,
+        )
 
-        if not result:
+        content = None
+        metadata = None
+
+        if include_metadata:
+            if isinstance(extracted_data, tuple):
+                content, metadata = extracted_data
+            else:  # It's a string or None
+                content = extracted_data
+        else:
+            content = extracted_data
+
+        if not content:
             return {"error": "No readable text found."}
 
         # Determine the actual length before truncation
-        actual_length = len(str(result))  # Convert to string to get actual length for any format
+        actual_length = len(str(content))
 
         # Structure the response based on format
         response_data = {"url": url, "length": actual_length}
 
-        # Handle content truncation properly for all formats
-        content_str = str(result) if isinstance(result, (str, bytes)) else str(result)
-        response_data["content"] = content_str[:max_length]
+        # Handle content truncation
+        response_data["content"] = str(content)[:max_length]
 
         # Add metadata if requested and available
         if include_metadata:
-            try:
-                metadata = trafilatura.extract_metadata(html_content)
-                if metadata:
-                    # Convert metadata to dict, accessing only available attributes
-                    meta_dict = {"title": getattr(metadata, "title", None)}
-                    if hasattr(metadata, "author"):
-                        meta_dict["author"] = getattr(metadata, "author", None)
-                    if hasattr(metadata, "date"):
-                        meta_dict["date"] = getattr(metadata, "date", None)
-                    if hasattr(metadata, "description"):
-                        meta_dict["description"] = getattr(metadata, "description", None)
-                    if hasattr(metadata, "fingerprint"):
-                        meta_dict["fingerprint"] = getattr(metadata, "fingerprint", None)
-
-                    response_data["metadata"] = meta_dict
-            except Exception as metadata_error:
-                # Log the metadata extraction error for debugging
-                logger.debug(f"Metadata extraction failed: {metadata_error}")
+            if metadata:
+                response_data["metadata"] = {
+                    "title": getattr(metadata, "title", None),
+                    "author": getattr(metadata, "author", None),
+                    "date": getattr(metadata, "date", None),
+                    "description": getattr(metadata, "description", None),
+                    "fingerprint": getattr(metadata, "fingerprint", None),
+                }
+            else:
+                response_data["warning"] = "Could not extract metadata."
 
         return response_data
 

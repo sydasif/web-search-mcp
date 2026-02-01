@@ -79,16 +79,12 @@ def test_fetch_page_with_metadata():
     with (
         patch("web_search_mcp.reader.httpx.get") as mock_get,
         patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
-        patch("web_search_mcp.reader.trafilatura.extract_metadata") as mock_extract_metadata,
     ):
         # Mock HTTP response
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Test Title</title></head><body><h1>Test</h1><p>Content</p></body></html>"
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
-
-        # Mock trafilatura
-        mock_trafilatura.extract.return_value = "Test Content"
 
         # Mock metadata
         mock_metadata = MagicMock()
@@ -98,7 +94,9 @@ def test_fetch_page_with_metadata():
         mock_metadata.description = "Test Description"
         mock_metadata.keywords = "test, keywords"
         mock_metadata.fingerprint = "abc123"
-        mock_extract_metadata.return_value = mock_metadata
+
+        # Mock trafilatura to return content and metadata
+        mock_trafilatura.extract.return_value = ("Test Content", mock_metadata)
 
         url = "https://example.com"
         result = fetch_page(url, include_metadata=True)
@@ -110,7 +108,6 @@ def test_fetch_page_with_metadata():
         assert result["metadata"]["author"] == "Test Author"
         mock_get.assert_called_once()
         mock_trafilatura.extract.assert_called_once()
-        mock_extract_metadata.assert_called_once()
 
 
 def test_fetch_page_with_different_formats():
