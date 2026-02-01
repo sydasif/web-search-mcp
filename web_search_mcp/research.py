@@ -2,26 +2,18 @@ from .search import ddg_search
 from .models import SearchRequest
 
 
-def search_docs(query: str, tech_stack: str = "python") -> dict:
+def search_domain(query: str, domain: str = "docs.python.org") -> dict:
     """
-    Searches specifically for technical documentation.
+    Searches specifically for technical documentation on a specific domain.
 
     Args:
         query: What you're looking for in the docs
-        tech_stack: Which technology's docs to search (python, react, mcp)
+        domain: The domain to search (e.g., 'docs.python.org', 'github.com')
 
     Returns:
-        Search results from the specified documentation site
+        Search results from the specified domain
     """
-    site_map = {
-        "python": "docs.python.org",
-        "react": "react.dev",
-        "mcp": "modelcontextprotocol.io",
-        "fastapi": "fastapi.tiangolo.com",
-        "httpx": "www.python-httpx.org",
-    }
-    site = site_map.get(tech_stack, site_map["python"])
-    enhanced_query = f"site:{site} {query}"
+    enhanced_query = f"site:{domain} {query}"
 
     try:
         req = SearchRequest(

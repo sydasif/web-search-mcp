@@ -8,7 +8,7 @@ from .search import ddg_search
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
 from .reader import fetch_page as _fetch_page
-from .research import search_docs as _search_docs
+from .research import search_domain as _search_domain
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -126,18 +126,18 @@ def fetch_page(
 
 
 @mcp.tool
-def search_docs(query: str, tech_stack: str = "python") -> dict:
+def search_domain(query: str, domain: str = "docs.python.org") -> dict:
     """
-    Searches specifically for technical documentation.
+    Searches specifically for technical documentation or content on a specific domain.
 
     Args:
-        query: What you're looking for in the docs
-        tech_stack: Which technology's docs to search (python, react, mcp)
+        query: What you're looking for
+        domain: The domain to search (e.g. 'docs.python.org', 'stackoverflow.com')
 
     Returns:
-        Search results from the specified documentation site
+        Search results from the specified domain
     """
-    return _search_docs(query, tech_stack=tech_stack)
+    return _search_domain(query, domain=domain)
 
 
 def main():
