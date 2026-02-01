@@ -30,21 +30,34 @@ async def test_search_web_tool(client):
 
 
 @pytest.mark.asyncio
-async def test_get_weather_tool(client):
-    """Test the get_weather tool."""
+async def test_get_weather_tool_current_mode(client):
+    """Test the get_weather tool in current mode."""
     with patch("web_search_mcp.server.weather_current") as mock_weather_current:
         mock_weather_current.return_value = {"temp": 15}
-        await client.call_tool("get_weather", {"latitude": 40.0, "longitude": -70.0})
+        await client.call_tool(
+            "get_weather", {"latitude": 40.0, "longitude": -70.0, "mode": "current"}
+        )
         mock_weather_current.assert_called_once_with(40.0, -70.0)
 
 
 @pytest.mark.asyncio
-async def test_get_forecast_tool(client):
-    """Test the get_forecast tool."""
+async def test_get_weather_tool_forecast_mode(client):
+    """Test the get_weather tool in forecast mode (default)."""
     with patch("web_search_mcp.server.weather_forecast") as mock_weather_forecast:
         mock_weather_forecast.return_value = {"forecast": []}
-        await client.call_tool("get_forecast", {"latitude": 40.0, "longitude": -70.0, "days": 5})
+        await client.call_tool(
+            "get_weather", {"latitude": 40.0, "longitude": -70.0, "mode": "forecast", "days": 5}
+        )
         mock_weather_forecast.assert_called_once_with(40.0, -70.0, 5)
+
+
+@pytest.mark.asyncio
+async def test_get_weather_tool_forecast_default_days(client):
+    """Test the get_weather tool uses default days=7 in forecast mode."""
+    with patch("web_search_mcp.server.weather_forecast") as mock_weather_forecast:
+        mock_weather_forecast.return_value = {"forecast": []}
+        await client.call_tool("get_weather", {"latitude": 40.0, "longitude": -70.0})
+        mock_weather_forecast.assert_called_once_with(40.0, -70.0, 7)
 
 
 @pytest.mark.asyncio

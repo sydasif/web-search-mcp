@@ -94,34 +94,28 @@ def search_web(
 
 
 @mcp.tool
-def get_weather(latitude: float, longitude: float) -> dict:
+def get_weather(
+    latitude: float,
+    longitude: float,
+    mode: Literal["current", "forecast"] = "forecast",
+    days: int = 7,
+) -> dict:
     """
-    Get current weather for a specific location.
+    Get current weather or forecast for a specific location.
 
     Args:
         latitude: Latitude of the location
         longitude: Longitude of the location
+        mode: Type of weather data ('current' or 'forecast', default 'forecast')
+        days: Number of days for forecast (1-16, default 7, only used when mode='forecast')
 
     Returns:
-        Dict containing current weather data or error message
+        Dict containing weather data or error message
     """
-    return weather_current(latitude, longitude)
-
-
-@mcp.tool
-def get_forecast(latitude: float, longitude: float, days: int = 7) -> dict:
-    """
-    Get daily weather forecast for a location.
-
-    Args:
-        latitude: Latitude of the location
-        longitude: Longitude of the location
-        days: Number of days for forecast (1-16, default 7)
-
-    Returns:
-        Dict containing forecast data or error message
-    """
-    return weather_forecast(latitude, longitude, days)
+    if mode == "current":
+        return weather_current(latitude, longitude)
+    else:
+        return weather_forecast(latitude, longitude, days)
 
 
 @mcp.tool

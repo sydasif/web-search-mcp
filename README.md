@@ -44,8 +44,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 | `search_web` | Universal search (Web, News, Image, Video) | `query`, `search_type` ("text", "news", "image", "video", "books"), `max_results`, `time_range`, `region`, `filters` |
 | `fetch_page` | Extract clean article text from a URL | `url` |
 | `search_docs` | Search specific tech documentation | `query`, `tech_stack` ("python", "react", "fastapi", "mcp", "httpx") |
-| `get_weather` | Current weather conditions | `latitude`, `longitude` |
-| `get_forecast` | 1-16 day weather forecast | `latitude`, `longitude`, `days` |
+| `get_weather` | Current conditions or forecast (defaults to 7-day forecast) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
 
 ## 💻 Development
 
