@@ -57,33 +57,6 @@ async def test_fetch_page_tool(client):
 
 
 @pytest.mark.asyncio
-async def test_search_wiki_tool(client):
-    """Test the search_wiki tool."""
-    with patch("web_search_mcp.server._search_wiki") as mock_search_wiki:
-        mock_search_wiki.return_value = {"summary": "..."}
-        await client.call_tool("search_wiki", {"query": "python"})
-        mock_search_wiki.assert_called_once_with("python")
-
-
-@pytest.mark.asyncio
-async def test_search_arxiv_tool(client):
-    """Test the search_arxiv tool."""
-    with patch("web_search_mcp.server._search_arxiv") as mock_search_arxiv:
-        mock_search_arxiv.return_value = [{"title": "paper"}]
-        await client.call_tool("search_arxiv", {"query": "transformer", "max_results": 5})
-        mock_search_arxiv.assert_called_once_with("transformer", max_results=5)
-
-
-@pytest.mark.asyncio
-async def test_get_finance_tool(client):
-    """Test the get_finance tool."""
-    with patch("web_search_mcp.server._get_finance") as mock_get_finance:
-        mock_get_finance.return_value = {"price": 100}
-        await client.call_tool("get_finance", {"symbol": "AAPL"})
-        mock_get_finance.assert_called_once_with("AAPL")
-
-
-@pytest.mark.asyncio
 async def test_search_docs_tool(client):
     """Test the search_docs tool."""
     with patch("web_search_mcp.server._search_docs") as mock_search_docs:

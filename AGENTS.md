@@ -70,8 +70,8 @@ from .reader import fetch_page as _fetch_page
 - **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
 - **Constants**: `SCREAMING_SNAKE_CASE`
 - **MCP Tools**: Use `action_subject` pattern:
-  - `search_web`, `search_wiki`, `search_arxiv`, `search_docs` (discovery)
-  - `fetch_page`, `get_weather`, `get_forecast`, `get_finance` (retrieval)
+  - `search_web`, `search_docs` (discovery)
+  - `fetch_page`, `get_weather`, `get_forecast` (retrieval)
 - **Private functions**: Leading underscore `_helper_function`
 
 ### Error Handling
@@ -87,9 +87,8 @@ from .reader import fetch_page as _fetch_page
 - **server.py**: FastMCP server, tool definitions, and orchestration
 - **search.py**: DuckDuckGo search logic (`ddg_search` function)
 - **weather.py**: OpenMeteo API integration
-- **research.py**: Wikipedia and ArXiv search
+- **research.py**: Technical documentation search
 - **reader.py**: Web content extraction (trafilatura)
-- **finance.py**: Yahoo Finance integration
 - **models.py**: Pydantic models for request/response
 - **config.py**: Settings via pydantic-settings
 

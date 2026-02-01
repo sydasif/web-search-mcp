@@ -4,16 +4,14 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web, scientific papers, market data, and more.
+A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web, weather data, and more.
 
 ## ✨ Features
 
 - **🌐 Deep Web Search**: Text, news, images, videos, and books via DuckDuckGo.
 - **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`.
-- **📚 Academic Research**: Direct access to ArXiv papers and Wikipedia summaries.
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
-- **📈 Market Intelligence**: Real-time stock prices and company info via Yahoo Finance.
-- **weather Weather Data**: Current conditions and forecasts via OpenMeteo.
+- **🌤️ Weather Data**: Current conditions and forecasts via OpenMeteo.
 
 ## 🚀 Quick Start
 
@@ -45,10 +43,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 |------|-------------|----------------|
 | `search_web` | Universal search (Web, News, Image, Video) | `query`, `search_type` ("text", "news", "image", "video", "books"), `max_results`, `time_range`, `region`, `filters` |
 | `fetch_page` | Extract clean article text from a URL | `url` |
-| `search_wiki` | Get Wikipedia summaries & facts | `query` |
-| `search_arxiv` | Find scientific & technical papers | `query`, `max_results` |
 | `search_docs` | Search specific tech documentation | `query`, `tech_stack` ("python", "react", "fastapi", "mcp", "httpx") |
-| `get_finance` | Stock prices & company profiles | `symbol` (e.g., AAPL) |
 | `get_weather` | Current weather conditions | `latitude`, `longitude` |
 | `get_forecast` | 1-16 day weather forecast | `latitude`, `longitude`, `days` |
 
