@@ -17,16 +17,18 @@ The application follows a modular architecture with clear separation of concerns
 - **weather.py**: OpenMeteo API integration for current weather and forecast data
 - **research.py**: Technical documentation search functionality for specific domains
 - **reader.py**: Web content extraction using `trafilatura` with support for multiple formats
+- **geocode.py**: OpenStreetMap (Nominatim) integration for geocoding addresses to coordinates
 - **models.py**: Pydantic models for request/response validation
 - **config.py**: Application settings via pydantic-settings
 
 ## MCP Tool Definitions
 
-The server exposes four main tools:
+The server exposes five main tools:
 - `search_web`: Universal web and news search
 - `fetch_page`: Extract clean text from URLs
 - `search_domain`: Targeted search on specific domains (e.g., docs.python.org)
 - `get_weather`: Current weather or forecast data via OpenMeteo
+- `geocode_location`: Convert location names/addresses to geographic coordinates using OpenStreetMap (Nominatim)
 
 ## Development Commands
 
