@@ -35,8 +35,7 @@ def fetch_page(
         with httpx.Client(timeout=timeout) as client:
             response = client.get(url, headers={"User-Agent": "web-search-mcp/1.0"})
             response.raise_for_status()
-
-        html_content = response.text
+            html_content = response.text
 
         if not html_content:
             return {"error": "Could not download content."}

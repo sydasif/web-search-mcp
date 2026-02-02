@@ -3,7 +3,7 @@ from ddgs import DDGS
 from .models import SearchRequest
 
 
-def ddg_search(request: SearchRequest):
+def ddg_search(request: SearchRequest) -> dict:
     """
     Unified DuckDuckGo search function supporting text and news search.
 

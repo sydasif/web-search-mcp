@@ -81,14 +81,20 @@ def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
         data = make_openmeteo_request(client, "forecast", params)
 
         if not data:
-            return {"error": "Unable to fetch weather data."}
+            return {
+                "error": "Unable to fetch weather data.",
+                "details": "No response received from OpenMeteo API. Check network connectivity."
+            }
 
         # Validate expected top-level keys exist in the response
         # Current weather requests expect 'current', forecasts expect 'daily'
         # Allow API-level errors to pass through
         if "current" not in data and "daily" not in data and "error" not in data:
             logger.warning(f"Weather API response missing expected keys: {list(data.keys())}")
-            return {"error": "Weather API returned unexpected response format."}
+            return {
+                "error": "Weather API returned unexpected response format.",
+                "details": f"Response contained keys: {list(data.keys())}"
+            }
 
         return data
 
