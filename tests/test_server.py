@@ -68,7 +68,7 @@ async def test_fetch_page_tool(client):
         await client.call_tool("fetch_page", {"url": "https://example.com"})
         mock_fetch_page.assert_called_once_with(
             url="https://example.com",
-            output_format="text",
+            output_format="txt",
             include_metadata=False,
             include_tables=False,
             include_comments=False,

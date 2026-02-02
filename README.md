@@ -42,7 +42,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `search_web` | Universal search (Web, News) | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `filters` |
-| `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("text", "markdown", "json"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
+| `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
 | `search_domain` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com") |
 | `get_weather` | Current conditions or forecast (defaults to 7-day forecast) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
 
@@ -77,3 +77,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
    ```
 
 </details>
+
+## 📄 License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).

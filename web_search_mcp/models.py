@@ -18,7 +18,7 @@ class SearchRequest(BaseModel):
 
 class FetchPageRequest(BaseModel):
     url: HttpUrl
-    output_format: Literal["text", "markdown", "json"] = "text"
+    output_format: Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"] = "txt"
     include_metadata: bool = False
     include_tables: bool = False
     include_comments: bool = False

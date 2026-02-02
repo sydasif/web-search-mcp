@@ -134,10 +134,22 @@ def test_fetch_page_with_different_formats():
         mock_client.get.return_value = mock_response
         mock_client_class.return_value = mock_client
 
+        # Test default format (txt)
+        mock_trafilatura.extract.return_value = "Test Content"
+
+        url = "https://example.com"
+        result = fetch_page(url)  # Uses default format
+
+        assert result["url"] == url
+        assert "Test Content" in result["content"]
+        mock_trafilatura.extract.assert_called_once()
+
+        # Reset mock call count
+        mock_trafilatura.extract.reset_mock()
+
         # Test markdown format
         mock_trafilatura.extract.return_value = "# Test\nContent"
 
-        url = "https://example.com"
         result = fetch_page(url, output_format="markdown")
 
         assert result["url"] == url

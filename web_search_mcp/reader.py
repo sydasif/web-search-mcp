@@ -8,7 +8,7 @@ logger = logging.getLogger("web-search-mcp")
 
 def fetch_page(
     url: str,
-    output_format: Literal["text", "markdown", "json"] = "text",
+    output_format: Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"] = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
     include_comments: bool = False,
@@ -17,7 +17,19 @@ def fetch_page(
     max_length: int = 15000,
     timeout: int = 30,
 ) -> dict:
-    """Extracts clean text from a URL without ads/clutter."""
+    """Extracts the full text content from a web page URL.
+
+    Args:
+        url: The URL to fetch and extract content from
+        output_format: Format for extracted content ('csv', 'html', 'json', 'markdown', 'python', 'txt', 'xml', 'xmltei')
+        include_metadata: Whether to include document metadata (title, author, date, etc.)
+        include_tables: Whether to include table content in extraction
+        include_comments: Whether to include comment content in extraction
+        include_images: Whether to include image descriptions in extraction
+        deduplicate: Whether to remove duplicated content
+        max_length: Maximum length of content to return (default 15000)
+        timeout: Request timeout in seconds (default 30)
+    """
     try:
         # Download the content with timeout control using proper client management
         with httpx.Client(timeout=timeout) as client:

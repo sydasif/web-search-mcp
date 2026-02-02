@@ -88,7 +88,7 @@ def get_weather(
 @mcp.tool
 def fetch_page(
     url: str,
-    output_format: Literal["text", "markdown", "json"] = "text",
+    output_format: Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"] = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
     include_comments: bool = False,
@@ -103,7 +103,7 @@ def fetch_page(
 
     Args:
         url: The URL to fetch and extract content from
-        output_format: Format for extracted content ('text', 'markdown', 'json')
+        output_format: Format for extracted content ('csv', 'html', 'json', 'markdown', 'python', 'txt', 'xml', 'xmltei')
         include_metadata: Whether to include document metadata (title, author, date, etc.)
         include_tables: Whether to include table content in extraction
         include_comments: Whether to include comment content in extraction
