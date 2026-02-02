@@ -128,9 +128,13 @@ def tool_name(param: type, optional: type = default) -> dict:
 - Use `assert` for assertions (S101 allowed in tests per ruff config)
 
 ### Git Workflow
-- Write descriptive commit messages: "feat: add X tool", "fix: handle Y error"
-- Run `uv run ruff check . && uv run pytest` before committing
+- Write descriptive commit messages following conventional commits: "feat: add X tool", "fix: handle Y error", "docs: update documentation"
+- Run `uv run ruff check . && uv run pytest` before committing to ensure code quality and functionality
 - Do not commit generated files (uv.lock is an exception)
+- Use feature branches for new functionality: `git checkout -b feature/new-tool-name`
+- Keep commits atomic and focused on a single change or related set of changes
+- Only add files that are part of the specific changes: `git add <specific-file>` instead of `git add .`
+- Sign off on commits that adhere to the Developer Certificate of Origin (DCO)
 
 ### Dependency and Execution Best Practices
 - Always use `uv` for dependency management (not pip)
