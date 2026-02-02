@@ -64,7 +64,7 @@ def search_web(
 def get_weather(
     latitude: float,
     longitude: float,
-    mode: Literal["current", "forecast"] = "forecast",
+    mode: Literal["current", "forecast"] = "current",
     days: int = 7,
 ) -> dict:
     """
@@ -73,7 +73,7 @@ def get_weather(
     Args:
         latitude: Latitude of the location
         longitude: Longitude of the location
-        mode: Type of weather data ('current' or 'forecast', default 'forecast')
+        mode: Type of weather data ('current' or 'forecast', default 'current')
         days: Number of days for forecast (1-16, default 7, only used when mode='forecast')
 
     Returns:
