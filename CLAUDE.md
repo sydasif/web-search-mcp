@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **web-search-mcp** is a FastMCP server providing web search, content extraction, and research tools for LLM clients. Uses Python 3.11+ with uv for dependency management. The server implements the Model Context Protocol (MCP) to provide web search, content extraction, and weather data capabilities to LLM clients.
 
+**IMPORTANT**: Always use `uv` for dependency management and `uv run` for executing commands. Do not use pip or python directly.
+
 ## Architecture
 
 The application follows a modular architecture with clear separation of concerns:
@@ -28,8 +30,10 @@ The server exposes four main tools:
 
 ## Development Commands
 
+**IMPORTANT**: Always use `uv` for dependency management and `uv run` for executing commands. Do not use pip or python directly.
+
 ```bash
-# Install dependencies
+# Install dependencies (use uv, NOT pip)
 uv sync
 
 # Run all tests
@@ -125,3 +129,9 @@ def tool_name(param: type, optional: type = default) -> dict:
 - Write descriptive commit messages: "feat: add X tool", "fix: handle Y error"
 - Run `uv run ruff check . && uv run pytest` before committing
 - Do not commit generated files (uv.lock is an exception)
+
+### Dependency and Execution Best Practices
+- Always use `uv` for dependency management (not pip)
+- Always use `uv run` to execute Python scripts and commands
+- Never use `pip install` or `python script.py` directly
+- For ad-hoc Python execution, use `uv run python -c "your code"`
