@@ -3,12 +3,16 @@ import logging
 import httpx
 from typing import Literal
 
+from .http_client import http_client
+
 logger = logging.getLogger("web-search-mcp")
 
 
 def fetch_page(
     url: str,
-    output_format: Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"] = "txt",
+    output_format: Literal[
+        "csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"
+    ] = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
     include_comments: bool = False,
@@ -31,11 +35,10 @@ def fetch_page(
         timeout: Request timeout in seconds (default 30)
     """
     try:
-        # Download the content with timeout control using proper client management
-        with httpx.Client(timeout=timeout) as client:
-            response = client.get(url, headers={"User-Agent": "web-search-mcp/1.0"})
-            response.raise_for_status()
-            html_content = response.text
+        # Download the content using shared client
+        response = http_client.get(url, timeout=timeout)
+        response.raise_for_status()
+        html_content = response.text
 
         if not html_content:
             return {"error": "Could not download content."}

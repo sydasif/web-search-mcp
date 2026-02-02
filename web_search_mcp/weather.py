@@ -5,27 +5,9 @@ from typing import Any
 import httpx
 
 from .config import settings
+from .http_client import http_client
 
 logger = logging.getLogger("web-search-mcp")
-
-
-# SSL context for secure connections
-def _get_ssl_context():
-    """Get SSL context, with safe fallback for development environments."""
-    try:
-        return ssl.create_default_context()
-    except Exception as e:
-        logger.warning(f"Failed to create default SSL context: {e}")
-        # In production, SSL verification should always be enforced.
-        # For development/corporate environments with certificate issues,
-        # better to let the user configure environment variables or settings
-        # rather than silently disabling verification.
-        # We'll let httpx use its own default behavior by returning None
-        # which will be handled specially later
-        return None
-
-
-SSL_CONTEXT = _get_ssl_context()
 
 
 def make_openmeteo_request(
@@ -43,7 +25,8 @@ def make_openmeteo_request(
         JSON response as dict or None if request fails
     """
     url = f"{settings.weather_api_base}/{endpoint}"
-    headers = {"User-Agent": settings.user_agent, "Accept": "application/json"}
+    # Client has User-Agent; just add Accept header
+    headers = {"Accept": "application/json"}
 
     try:
         response = client.get(url, headers=headers, params=params)
@@ -71,32 +54,25 @@ def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dict containing weather data or error message
     """
-    # Handle SSL context - if SSL_CONTEXT is None, use httpx default behavior
-    if SSL_CONTEXT is None:
-        client = httpx.Client(timeout=30.0)
-    else:
-        client = httpx.Client(verify=SSL_CONTEXT, timeout=30.0)
+    data = make_openmeteo_request(http_client, "forecast", params)
 
-    with client:
-        data = make_openmeteo_request(client, "forecast", params)
+    if not data:
+        return {
+            "error": "Unable to fetch weather data.",
+            "details": "No response received from OpenMeteo API. Check network connectivity.",
+        }
 
-        if not data:
-            return {
-                "error": "Unable to fetch weather data.",
-                "details": "No response received from OpenMeteo API. Check network connectivity."
-            }
+    # Validate expected top-level keys exist in the response
+    # Current weather requests expect 'current', forecasts expect 'daily'
+    # Allow API-level errors to pass through
+    if "current" not in data and "daily" not in data and "error" not in data:
+        logger.warning(f"Weather API response missing expected keys: {list(data.keys())}")
+        return {
+            "error": "Weather API returned unexpected response format.",
+            "details": f"Response contained keys: {list(data.keys())}",
+        }
 
-        # Validate expected top-level keys exist in the response
-        # Current weather requests expect 'current', forecasts expect 'daily'
-        # Allow API-level errors to pass through
-        if "current" not in data and "daily" not in data and "error" not in data:
-            logger.warning(f"Weather API response missing expected keys: {list(data.keys())}")
-            return {
-                "error": "Weather API returned unexpected response format.",
-                "details": f"Response contained keys: {list(data.keys())}"
-            }
-
-        return data
+    return data
 
 
 def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
