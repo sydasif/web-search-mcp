@@ -9,6 +9,7 @@ from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
 from .reader import fetch_page as _fetch_page
 from .research import search_domain as _search_domain
+from .geocode import geocode_location as _geocode_location
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -138,6 +139,21 @@ def search_domain(query: str, domain: str = "docs.python.org") -> dict:
         Search results from the specified domain
     """
     return _search_domain(query, domain=domain)
+
+
+@mcp.tool
+def geocode_location(query: str, limit: int = 5) -> dict:
+    """
+    Convert location names/addresses to geographic coordinates using Nominatim (OpenStreetMap) API.
+
+    Args:
+        query: Location name or address to geocode
+        limit: Maximum number of results to return (default 5, max 40)
+
+    Returns:
+        Dict containing geocoding results with latitude, longitude, and location details
+    """
+    return _geocode_location(query, limit=limit)
 
 
 def main():

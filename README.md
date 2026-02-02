@@ -12,6 +12,7 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 - **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
 - **🌤️ Weather Data**: Current conditions and forecasts via OpenMeteo.
+- **📍 Geocoding**: Convert location names/addresses to geographic coordinates using OpenStreetMap (Nominatim).
 
 ## 🚀 Quick Start
 
@@ -45,6 +46,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 | `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
 | `search_domain` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com") |
 | `get_weather` | Current conditions or forecast (defaults to current) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
+| `geocode_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results) |
 
 ## 💻 Development
 
