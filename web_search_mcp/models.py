@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class SearchRequest(BaseModel):
@@ -12,17 +12,4 @@ class SearchRequest(BaseModel):
     safesearch: str = "moderate"
     page: int = 1
     backend: str = "auto"
-    # Catch-all for extra filters
     filters: dict[str, Any] = {}
-
-
-class FetchPageRequest(BaseModel):
-    url: HttpUrl
-    output_format: Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"] = "txt"
-    include_metadata: bool = False
-    include_tables: bool = False
-    include_comments: bool = False
-    include_images: bool = False
-    deduplicate: bool = True
-    max_length: int = Field(default=15000, ge=100, le=50000)
-    timeout: int = Field(default=30, ge=5, le=120)

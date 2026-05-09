@@ -44,9 +44,9 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 |------|-------------|----------------|
 | `search_web` | Universal search (Web, News) | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `filters` |
 | `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
-| `search_domain` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com") |
+| `search_docs` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com") |
 | `get_weather` | Current conditions or forecast (defaults to current) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
-| `geocode_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results) |
+| `get_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results) |
 
 ## 💻 Development
 
