@@ -37,7 +37,6 @@ def ddg_search(request: SearchRequest) -> dict:
             # Map search type to DDGS method
             search_methods = {
                 "text": ddgs.text,
-                "web": ddgs.text,
                 "news": ddgs.news,
             }
 
@@ -52,20 +51,15 @@ def ddg_search(request: SearchRequest) -> dict:
 
             search_func = search_methods[request.search_type]
 
-            # Prepare kwargs for DDGS
-            search_kwargs = {}
-            if kwargs.get("max_results") is not None:
-                search_kwargs["max_results"] = kwargs["max_results"]
-            if kwargs.get("region") is not None:
-                search_kwargs["region"] = kwargs["region"]
-            if kwargs.get("safesearch") is not None:
-                search_kwargs["safesearch"] = kwargs["safesearch"]
-            if kwargs.get("page") is not None:
-                search_kwargs["page"] = kwargs["page"]
-            if kwargs.get("backend") is not None:
-                search_kwargs["backend"] = kwargs["backend"]
-            if kwargs.get("time_range") is not None:
-                search_kwargs["timelimit"] = kwargs["time_range"]
+            search_kwargs = {
+                "max_results": kwargs.get("max_results"),
+                "region": kwargs.get("region"),
+                "safesearch": kwargs.get("safesearch"),
+                "page": kwargs.get("page"),
+                "backend": kwargs.get("backend"),
+                "timelimit": kwargs.get("time_range"),
+            }
+            search_kwargs = {k: v for k, v in search_kwargs.items() if v is not None}
 
             results = list(search_func(request.query, **search_kwargs))
             return {

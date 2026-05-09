@@ -72,8 +72,8 @@ def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
             # Extract essential fields
             processed_item = {
                 "display_name": item.get("display_name", ""),
-                "latitude": float(item.get("lat", 0)),
-                "longitude": float(item.get("lon", 0)),
+                "latitude": float(item.get("lat") or 0),
+                "longitude": float(item.get("lon") or 0),
                 "bounding_box": item.get("boundingbox", []),
                 "class": item.get("class", ""),
                 "type": item.get("type", ""),
