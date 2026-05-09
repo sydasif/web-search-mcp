@@ -127,7 +127,7 @@ def fetch_page(
 
 
 @mcp.tool
-def search_domain(query: str, domain: str = "docs.python.org") -> dict:
+def search_docs(query: str, domain: str = "docs.python.org") -> dict:
     """
     Searches specifically for technical documentation or content on a specific domain.
 
@@ -142,7 +142,7 @@ def search_domain(query: str, domain: str = "docs.python.org") -> dict:
 
 
 @mcp.tool
-def geocode_location(query: str, limit: int = 5) -> dict:
+def get_location(query: str, limit: int = 5) -> dict:
     """
     Convert location names/addresses to geographic coordinates using Nominatim (OpenStreetMap) API.
 

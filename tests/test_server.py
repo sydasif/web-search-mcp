@@ -80,11 +80,11 @@ async def test_fetch_page_tool(client):
 
 
 @pytest.mark.asyncio
-async def test_search_domain_tool(client):
-    """Test the search_domain tool."""
+async def test_search_docs_tool(client):
+    """Test the search_docs tool."""
     with patch("web_search_mcp.server._search_domain") as mock_search_domain:
         mock_search_domain.return_value = {"results": []}
-        await client.call_tool("search_domain", {"query": "testing", "domain": "react.dev"})
+        await client.call_tool("search_docs", {"query": "testing", "domain": "react.dev"})
         mock_search_domain.assert_called_once_with("testing", domain="react.dev")
 
 
