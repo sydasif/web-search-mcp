@@ -4,7 +4,8 @@ from typing import Literal
 from fastmcp import FastMCP
 
 from .models import SearchRequest
-from .search import ddg_search
+from .search import ddg_search, format_search_results_markdown
+from .utils import format_error
 from .weather import get_current_weather as weather_current
 from .weather import get_forecast as weather_forecast
 from .reader import fetch_page as _fetch_page
@@ -17,17 +18,26 @@ logger = logging.getLogger("web-search-mcp")
 mcp = FastMCP("Web Search Tools")
 
 
-@mcp.tool
+@mcp.tool(
+    name="search_web",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
 def search_web(
     query: str,
     search_type: Literal["text", "news"] = "text",
     max_results: int = 5,
     time_range: str | None = None,
     region: str | None = None,
-    safesearch: str = "moderate",
+    safesearch: Literal["moderate", "off", "on"] = "moderate",
     page: int = 1,
-    backend: str = "auto",
-) -> dict:
+    backend: Literal["auto", "legacy", "api"] = "auto",
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | dict:
     """
     Unified search tool for web content and news.
 
@@ -40,9 +50,12 @@ def search_web(
         safesearch: Safe search level ('moderate', 'off', 'on')
         page: Page number for pagination (default 1)
         backend: Backend to use ('auto', 'legacy', 'api')
+        response_format: Output format - 'markdown' for human-readable, 'json' for structured data
 
     Returns:
-        Dict with query, search_type, total_results, results, and error if applicable
+        str: Markdown-formatted search results (when response_format="markdown")
+        dict: Raw search results with keys: query, search_type, total_results,
+              results, has_more, next_page, and error if applicable
     """
     try:
         req = SearchRequest(
@@ -54,14 +67,26 @@ def search_web(
             safesearch=safesearch,
             page=page,
             backend=backend,
+            response_format=response_format,
         )
-        return ddg_search(req)
+        result = ddg_search(req)
+        if response_format == "markdown":
+            return format_search_results_markdown(result)
+        return result
     except Exception as e:
         logger.error(f"Search failed: {e}")
-        return {"error": "Search failed", "details": str(e)}
+        return format_error("Search failed", str(e))
 
 
-@mcp.tool
+@mcp.tool(
+    name="get_weather",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
 def get_weather(
     latitude: float,
     longitude: float,
@@ -86,10 +111,20 @@ def get_weather(
         return weather_forecast(latitude, longitude, days)
 
 
-@mcp.tool
+@mcp.tool(
+    name="fetch_page",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
 def fetch_page(
     url: str,
-    output_format: Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"] = "txt",
+    output_format: Literal[
+        "csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"
+    ] = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
     include_comments: bool = False,
@@ -126,7 +161,15 @@ def fetch_page(
     )
 
 
-@mcp.tool
+@mcp.tool(
+    name="search_docs",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
 def search_docs(query: str, domain: str = "docs.python.org") -> dict:
     """
     Searches specifically for technical documentation or content on a specific domain.
@@ -141,7 +184,15 @@ def search_docs(query: str, domain: str = "docs.python.org") -> dict:
     return _search_domain(query, domain=domain)
 
 
-@mcp.tool
+@mcp.tool(
+    name="get_location",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
 def get_location(query: str, limit: int = 5) -> dict:
     """
     Convert location names/addresses to geographic coordinates using Nominatim (OpenStreetMap) API.

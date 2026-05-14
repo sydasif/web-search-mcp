@@ -6,6 +6,7 @@ import httpx
 
 from .config import settings
 from .http_client import http_client
+from .utils import format_error
 
 logger = logging.getLogger("web-search-mcp")
 
@@ -31,17 +32,17 @@ def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
     data = make_openmeteo_request(http_client, "forecast", params)
 
     if not data:
-        return {
-            "error": "Unable to fetch weather data.",
-            "details": "No response received from OpenMeteo API. Check network connectivity.",
-        }
+        return format_error(
+            "Unable to fetch weather data.",
+            "No response received from OpenMeteo API. Check network connectivity.",
+        )
 
     if "current" not in data and "daily" not in data and "error" not in data:
         logger.warning(f"Weather API response missing expected keys: {list(data.keys())}")
-        return {
-            "error": "Weather API returned unexpected response format.",
-            "details": f"Response contained keys: {list(data.keys())}",
-        }
+        return format_error(
+            "Weather API returned unexpected response format.",
+            f"Response contained keys: {list(data.keys())}",
+        )
 
     return data
 

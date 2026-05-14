@@ -5,6 +5,7 @@ import httpx
 
 from .config import settings
 from .http_client import http_client
+from .utils import format_error
 
 logger = logging.getLogger("web-search-mcp")
 
@@ -21,7 +22,7 @@ def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
         Dict containing geocoding results or error message
     """
     if not query or not query.strip():
-        return {"error": "Query parameter is required and cannot be empty"}
+        return format_error("Query parameter is required and cannot be empty")
 
     limit = max(1, min(40, limit))
 
@@ -47,10 +48,10 @@ def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
         data = response.json()
 
         if not isinstance(data, list):
-            return {
-                "error": "Unexpected response format from geocoding service",
-                "details": f"Expected list, got {type(data)}",
-            }
+            return format_error(
+                "Unexpected response format from geocoding service",
+                f"Expected list, got {type(data)}",
+            )
 
         processed_results = []
         for item in data:
@@ -79,13 +80,10 @@ def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
 
     except httpx.HTTPStatusError as e:
         logger.error(f"Geocoding API HTTP error {e.response.status_code}: {e}")
-        return {
-            "error": f"Geocoding API returned error {e.response.status_code}",
-            "details": str(e),
-        }
+        return format_error(f"Geocoding API returned error {e.response.status_code}", str(e))
     except httpx.RequestError as e:
         logger.error(f"Geocoding API request failed: {e}")
-        return {"error": "Network error occurred during geocoding request", "details": str(e)}
+        return format_error("Network error occurred during geocoding request", str(e))
     except Exception as e:
         logger.error(f"Geocoding failed unexpectedly: {e}")
-        return {"error": "Geocoding failed", "details": str(e)}
+        return format_error("Geocoding failed", str(e))

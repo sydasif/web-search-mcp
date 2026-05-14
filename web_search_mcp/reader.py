@@ -4,6 +4,7 @@ import httpx
 from typing import Literal
 
 from .http_client import http_client
+from .utils import format_error
 
 logger = logging.getLogger("web-search-mcp")
 
@@ -29,7 +30,7 @@ def fetch_page(
         html_content = response.text
 
         if not html_content:
-            return {"error": "Could not download content."}
+            return format_error("Could not download content.")
 
         # Perform extraction with specified parameters
         extracted_data = trafilatura.extract(
@@ -54,7 +55,7 @@ def fetch_page(
             content = extracted_data
 
         if not content:
-            return {"error": "No readable text found."}
+            return format_error("No readable text found.")
 
         actual_length = len(str(content))
         response_data = {"url": url, "length": actual_length, "content": str(content)[:max_length]}
@@ -75,10 +76,10 @@ def fetch_page(
 
     except httpx.TimeoutException as e:
         logger.error(f"Timeout during fetch: {e}")
-        return {"error": f"Request timed out after {timeout}s: {str(e)}"}
+        return format_error(f"Request timed out after {timeout}s: {str(e)}")
     except httpx.RequestError as e:
         logger.error(f"HTTP error during fetch: {e}")
-        return {"error": f"HTTP request failed: {str(e)}"}
+        return format_error(f"HTTP request failed: {str(e)}")
     except Exception as e:
         logger.error(f"Reader error: {e}")
-        return {"error": str(e)}
+        return format_error(str(e))
