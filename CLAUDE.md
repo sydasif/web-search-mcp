@@ -20,10 +20,12 @@ The application follows a modular architecture with clear separation of concerns
 - **geocode.py**: OpenStreetMap (Nominatim) integration for geocoding addresses to coordinates
 - **models.py**: Pydantic models for request/response validation
 - **config.py**: Application settings via pydantic-settings
+- **utils.py**: Shared utility functions for consistent error formatting and helpers
 
 ## MCP Tool Definitions
 
 The server exposes five main tools:
+
 - `search_web`: Universal web and news search
 - `fetch_page`: Extract clean text from URLs
 - `search_docs`: Targeted search on specific domains (e.g., docs.python.org)
@@ -66,6 +68,7 @@ uv run web-search-mcp
 ## Code Style Guidelines
 
 ### Imports
+
 - Use absolute imports: `from web_search_mcp.models import SearchRequest`
 - Sort imports with ruff (configured in pyproject.toml)
 - Group imports: stdlib → third-party → local
@@ -77,17 +80,20 @@ from .reader import fetch_page as _fetch_page
 ```
 
 ### Formatting
+
 - Line length: 100 characters
 - No enforced brace style for conditionals (use best judgment)
 - Use trailing commas for multi-line calls
 
 ### Type Hints
+
 - Use Python 3.11+ union syntax: `str | None` instead of `Optional[str]`
 - Use `typing.Literal` for enum-like parameters
 - Add return type annotations for all public functions
 - Use `dict` for simple dict returns, Pydantic models for structured data
 
 ### Naming Conventions
+
 - **Functions**: `snake_case` for all functions
 - **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
 - **Constants**: `SCREAMING_SNAKE_CASE`
@@ -97,16 +103,26 @@ from .reader import fetch_page as _fetch_page
 - **Private functions**: Leading underscore `_helper_function`
 
 ### Error Handling
+
 - Log errors with the module logger: `logger = logging.getLogger("web-search-mcp")`
-- Return error dicts from tool functions: `{"error": "message", "details": str(e)}`
+- Use `utils.format_error()` for consistent error responses across all tools: `{"error": "message", "details": str(e)}`
 - Handle `None` values before slicing: `(info.get("key") or "")[:1000]`
 - Avoid bare `except Exception`; catch specific exceptions when possible
 - Always include context in error messages
 
 ### MCP Tool Definition Pattern
+
 ```python
-@mcp.tool
-def tool_name(param: type, optional: type = default) -> dict:
+@mcp.tool(
+    name="tool_name",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+def tool_name(param: type, optional: type = default) -> str | dict:
     """
     One-line description.
 
@@ -115,12 +131,13 @@ def tool_name(param: type, optional: type = default) -> dict:
         optional: Description
 
     Returns:
-        Description of return dict
+        A dictionary for structured JSON response or a string for human-readable output
     """
     return _internal_function(param)
 ```
 
 ### Testing
+
 - Use `unittest.mock.patch` for external API calls
 - Mock at the class level: `@patch("web_search_mcp.search.DDGS")`
 - Test classes inherit from `unittest.TestCase` (optional, pytest can run functions too)
@@ -128,6 +145,7 @@ def tool_name(param: type, optional: type = default) -> dict:
 - Use `assert` for assertions (S101 allowed in tests per ruff config)
 
 ### Git Workflow
+
 - Write descriptive commit messages following conventional commits: "feat: add X tool", "fix: handle Y error", "docs: update documentation"
 - Run `uv run ruff check . && uv run pytest` before committing to ensure code quality and functionality
 - Do not commit generated files (uv.lock is an exception)
@@ -137,6 +155,7 @@ def tool_name(param: type, optional: type = default) -> dict:
 - Sign off on commits that adhere to the Developer Certificate of Origin (DCO)
 
 ### Dependency and Execution Best Practices
+
 - Always use `uv` for dependency management (not pip)
 - Always use `uv run` to execute Python scripts and commands
 - Never use `pip install` or `python script.py` directly

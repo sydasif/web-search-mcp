@@ -40,13 +40,13 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 
 ## 🛠️ Tool Reference
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `search_web` | Universal search (Web, News) | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `filters` |
-| `fetch_page` | Extract clean article text from a URL | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
-| `search_docs` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com") |
-| `get_weather` | Current conditions or forecast (defaults to current) | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days` |
-| `get_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results) |
+| Tool           | Description                                                | Key Parameters                                                                                                                                                                                    |
+| -------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_web`   | Universal search (Web, News)                               | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                    |
+| `fetch_page`   | Extract clean article text from a URL                      | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
+| `search_docs`  | Search specific tech documentation or domains              | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                         |
+| `get_weather`  | Current conditions or forecast (defaults to current)       | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days`                                                                                                                                    |
+| `get_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results)                                                                                                                                                          |
 
 ## 💻 Development
 
@@ -54,17 +54,20 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 <summary>Click to expand development instructions</summary>
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/sydasif/web-search-mcp.git
    cd web-search-mcp
    ```
 
 2. **Sync dependencies**
+
    ```bash
    uv sync
    ```
 
 3. **Run tests**
+
    ```bash
    # Run all tests
    uv run pytest
