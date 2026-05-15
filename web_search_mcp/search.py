@@ -1,6 +1,12 @@
 from ddgs import DDGS
 
 from .models import SearchRequest
+from .utils import RateLimiter
+from .config import settings
+
+
+# Initialize rate limiter for search
+search_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_search)
 
 
 def _error_dict(query: str, search_type: str, message: str) -> dict:
@@ -49,6 +55,9 @@ def format_search_results_markdown(results_dict: dict) -> str:
 def ddg_search(request: SearchRequest) -> dict:
     if not request.query:
         return _error_dict("", request.search_type, "Query cannot be empty")
+
+    # Apply rate limiting
+    search_rate_limiter.acquire()
 
     kwargs = request.model_dump(exclude_none=True)
     kwargs.pop("query", None)

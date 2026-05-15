@@ -1,5 +1,174 @@
 from unittest.mock import patch, MagicMock
-from web_search_mcp.reader import fetch_page
+import pytest
+from web_search_mcp.reader import (
+    fetch_page,
+    _fetch_httpx,
+    _fetch_curl,
+    _fetch_auto,
+    _is_cloudflare_challenge_body,
+    SUPPORTED_FETCH_BACKENDS,
+)
+
+
+def test_fetch_backend_constants():
+    """Test that supported backends are defined correctly."""
+    assert SUPPORTED_FETCH_BACKENDS == ("httpx", "curl", "auto")
+
+
+def test_is_cloudflare_challenge_body():
+    """Test Cloudflare challenge detection."""
+    assert _is_cloudflare_challenge_body("") is False
+    assert _is_cloudflare_challenge_body("Just a moment...") is True
+    assert _is_cloudflare_challenge_body("cf-mitigated: challenge") is True
+    assert _is_cloudflare_challenge_body("Checking your browser before accessing") is True
+    assert _is_cloudflare_challenge_body("Normal webpage content") is False
+
+
+def test_fetch_httpx_backend():
+    """Test httpx backend fetches content correctly."""
+    with patch("web_search_mcp.reader.http_client") as mock_client:
+        mock_response = MagicMock()
+        mock_response.text = "<html><body>Test</body></html>"
+        mock_response.raise_for_status.return_value = None
+        mock_client.get.return_value = mock_response
+
+        result = _fetch_httpx("https://example.com")
+        assert result == "<html><body>Test</body></html>"
+        mock_client.get.assert_called_once_with("https://example.com", timeout=30)
+
+
+def test_fetch_curl_backend():
+    """Test curl backend fetches content correctly."""
+    mock_session = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "<html><body>Curl Test</body></html>"
+    mock_response.raise_for_status.return_value = None
+    mock_session.get.return_value = mock_response
+
+    with patch("web_search_mcp.reader.curl_requests.Session", return_value=mock_session):
+        result = _fetch_curl("https://example.com")
+        assert result == "<html><body>Curl Test</body></html>"
+        mock_session.get.assert_called_once()
+        mock_session.close.assert_called_once()
+
+
+def test_fetch_auto_backend_httpx_success():
+    """Test auto backend uses httpx when successful."""
+    with patch("web_search_mcp.reader._fetch_httpx") as mock_httpx:
+        mock_httpx.return_value = "<html><body>Auto Test</body></html>"
+
+        result = _fetch_auto("https://example.com")
+        assert result == "<html><body>Auto Test</body></html>"
+        mock_httpx.assert_called_once()
+
+
+def test_fetch_auto_backend_fallback_on_403():
+    """Test auto backend falls back to curl on 403."""
+    import httpx as httpx_mod
+
+    with (
+        patch("web_search_mcp.reader._fetch_httpx") as mock_httpx,
+        patch("web_search_mcp.reader._fetch_curl") as mock_curl,
+    ):
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_httpx.side_effect = httpx_mod.HTTPStatusError(
+            "403", request=MagicMock(), response=mock_response
+        )
+        mock_curl.return_value = "<html><body>Fallback</body></html>"
+
+        result = _fetch_auto("https://example.com")
+        assert result == "<html><body>Fallback</body></html>"
+        mock_httpx.assert_called_once()
+        mock_curl.assert_called_once()
+
+
+def test_fetch_auto_backend_fallback_on_cloudflare():
+    """Test auto backend falls back to curl on Cloudflare challenge."""
+    with (
+        patch("web_search_mcp.reader._fetch_httpx") as mock_httpx,
+        patch("web_search_mcp.reader._fetch_curl") as mock_curl,
+    ):
+        mock_httpx.return_value = "<html>Just a moment...</html>"
+        mock_curl.return_value = "<html><body>Real Content</body></html>"
+
+        result = _fetch_auto("https://example.com")
+        assert result == "<html><body>Real Content</body></html>"
+        mock_httpx.assert_called_once()
+        mock_curl.assert_called_once()
+
+
+def test_fetch_page_with_backend_parameter():
+    """Test that fetch_page passes backend parameter correctly."""
+    with (
+        patch("web_search_mcp.reader._fetch_with_backend") as mock_fetch,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        mock_fetch.return_value = "<html><body>Content</body></html>"
+        mock_trafilatura.extract.return_value = "Extracted Content"
+
+        result = fetch_page("https://example.com", backend="curl")
+        mock_fetch.assert_called_once_with("https://example.com", backend="curl", timeout=30)
+        assert "Extracted Content" in result["content"]
+
+
+def test_fetch_page_with_auto_backend():
+    """Test fetch_page with auto backend (default)."""
+    with (
+        patch("web_search_mcp.reader._fetch_with_backend") as mock_fetch,
+        patch("web_search_mcp.reader.trafilatura") as mock_trafilatura,
+    ):
+        mock_fetch.return_value = "<html><body>Content</body></html>"
+        mock_trafilatura.extract.return_value = "Extracted Content"
+
+        result = fetch_page("https://example.com", backend="auto")
+        mock_fetch.assert_called_once_with("https://example.com", backend="auto", timeout=30)
+        assert "Extracted Content" in result["content"]
+
+
+def test_fetch_with_backend_unknown_raises():
+    """Test that unknown backend raises ValueError."""
+    from web_search_mcp.reader import _fetch_with_backend
+
+    with pytest.raises(ValueError, match="Unknown fetch backend"):
+        _fetch_with_backend("https://example.com", backend="unknown")
+
+
+def test_fetch_curl_backend_custom_timeout():
+    """Test curl backend with custom timeout."""
+    mock_session = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "<html><body>Timeout Test</body></html>"
+    mock_response.raise_for_status.return_value = None
+    mock_session.get.return_value = mock_response
+
+    with patch("web_search_mcp.reader.curl_requests.Session", return_value=mock_session):
+        result = _fetch_curl("https://example.com", timeout=60)
+        assert result == "<html><body>Timeout Test</body></html>"
+        mock_session.get.assert_called_once_with(
+            "https://example.com", allow_redirects=True, timeout=60
+        )
+
+
+def test_fetch_auto_backend_both_fail():
+    """Test auto backend when both httpx and curl fail."""
+    import httpx as httpx_mod
+
+    with (
+        patch("web_search_mcp.reader._fetch_httpx") as mock_httpx,
+        patch("web_search_mcp.reader._fetch_curl") as mock_curl,
+    ):
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_httpx.side_effect = httpx_mod.HTTPStatusError(
+            "403", request=MagicMock(), response=mock_response
+        )
+        mock_curl.side_effect = Exception("Curl also failed")
+
+        from web_search_mcp.reader import _fetch_auto
+
+        with pytest.raises(Exception, match="Curl also failed"):
+            _fetch_auto("https://example.com")
 
 
 def test_fetch_page_success():

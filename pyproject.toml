@@ -5,6 +5,7 @@ description = "FastMCP-based server that provides comprehensive web search funct
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "curl_cffi>=0.7.0",
     "ddgs>=9.10.0",
     "fastmcp>=2.14.4",
     "httpx>=0.28.1",

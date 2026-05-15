@@ -2,11 +2,84 @@ import trafilatura
 import logging
 import httpx
 from typing import Literal
+from curl_cffi import requests as curl_requests
+from curl_cffi import CurlError
 
 from .http_client import http_client
-from .utils import format_error
+from .utils import format_error, RateLimiter
+from .config import settings
 
 logger = logging.getLogger("web-search-mcp")
+
+SUPPORTED_FETCH_BACKENDS = ("httpx", "curl", "auto")
+
+_CLOUDFLARE_BODY_SIGNALS = (
+    "cf-mitigated",
+    "Just a moment...",
+    "Enable JavaScript and cookies to continue",
+    "Checking your browser before accessing",
+)
+
+
+def _is_cloudflare_challenge_body(html: str) -> bool:
+    if not html:
+        return False
+    sample = html[:4096].casefold()
+    return any(sig.casefold() in sample for sig in _CLOUDFLARE_BODY_SIGNALS)
+
+
+# Initialize rate limiter for fetching pages
+fetch_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_fetch)
+
+
+def _fetch_httpx(url: str, timeout: int = 30) -> str:
+    """Fetch URL via httpx. Raises httpx.HTTPStatusError on non-2xx."""
+    response = http_client.get(url, timeout=timeout)
+    response.raise_for_status()
+    return response.text
+
+
+def _fetch_curl(url: str, timeout: int = 30) -> str:
+    """Fetch URL via curl_cffi with Chrome 131 TLS impersonation."""
+    session: curl_requests.Session = curl_requests.Session(impersonate="chrome131")
+    try:
+        response = session.get(url, allow_redirects=True, timeout=timeout)
+        response.raise_for_status()
+        return response.text
+    finally:
+        session.close()
+
+
+def _fetch_auto(url: str, timeout: int = 30) -> str:
+    """Try httpx first. On 403 or Cloudflare challenge, fall back to curl."""
+    try:
+        html = _fetch_httpx(url, timeout=timeout)
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if e.response is not None else None
+        if status == 403:
+            logger.info(f"httpx got 403 for {url}; retrying with curl backend")
+            return _fetch_curl(url, timeout=timeout)
+        raise
+
+    if _is_cloudflare_challenge_body(html):
+        logger.info(f"httpx got Cloudflare challenge for {url}; retrying with curl backend")
+        return _fetch_curl(url, timeout=timeout)
+
+    return html
+
+
+def _fetch_with_backend(url: str, backend: str, timeout: int = 30) -> str:
+    """Fetch URL using the specified backend."""
+    if backend == "httpx":
+        return _fetch_httpx(url, timeout=timeout)
+    elif backend == "curl":
+        return _fetch_curl(url, timeout=timeout)
+    elif backend == "auto":
+        return _fetch_auto(url, timeout=timeout)
+    else:
+        raise ValueError(
+            f"Unknown fetch backend '{backend}'. Supported: {SUPPORTED_FETCH_BACKENDS}"
+        )
 
 
 def fetch_page(
@@ -21,13 +94,13 @@ def fetch_page(
     deduplicate: bool = True,
     max_length: int = 15000,
     timeout: int = 30,
+    backend: Literal["httpx", "curl", "auto"] = "auto",
 ) -> dict:
     """Extracts the full text content from a web page URL."""
+    # Apply rate limiting
+    fetch_rate_limiter.acquire()
     try:
-        # Download the content using shared client
-        response = http_client.get(url, timeout=timeout)
-        response.raise_for_status()
-        html_content = response.text
+        html_content = _fetch_with_backend(url, backend=backend, timeout=timeout)
 
         if not html_content:
             return format_error("Could not download content.")
@@ -79,6 +152,13 @@ def fetch_page(
         return format_error(f"Request timed out after {timeout}s: {str(e)}")
     except httpx.RequestError as e:
         logger.error(f"HTTP error during fetch: {e}")
+        return format_error(f"HTTP request failed: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if e.response is not None else None
+        logger.error(f"HTTP status error during fetch: {e}")
+        return format_error(f"HTTP request failed with status {status}: {str(e)}")
+    except CurlError as e:
+        logger.error(f"Curl error during fetch: {e}")
         return format_error(f"HTTP request failed: {str(e)}")
     except Exception as e:
         logger.error(f"Reader error: {e}")

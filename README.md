@@ -10,6 +10,7 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 
 - **🌐 Deep Web Search**: Text and news search via DuckDuckGo.
 - **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
+- **🛡️ Bot Detection Bypass**: Automatic fallback to Chrome TLS impersonation when sites block requests (Cloudflare, etc.).
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
 - **🌤️ Weather Data**: Current conditions and forecasts via OpenMeteo.
 - **📍 Geocoding**: Convert location names/addresses to geographic coordinates using OpenStreetMap (Nominatim).
@@ -26,27 +27,46 @@ uv tool install git+https://github.com/sydasif/web-search-mcp.git
 
 ### Configuration
 
-Add the server to your MCP client configuration (e.g., `claude_desktop_config.json`):
+Add the server to your MCP client configuration (e.g., `claude_desktop_config.json`). You can optionally configure rate limits via environment variables to avoid DuckDuckGo blocking.
 
 ```json
 {
   "mcpServers": {
     "web-search": {
-      "command": "web-search-mcp"
+      "command": "web-search-mcp",
+      "env": {
+        "SEARCH_MCP_RATE_LIMIT_SEARCH": "30",
+        "SEARCH_MCP_RATE_LIMIT_FETCH": "20"
+      }
     }
   }
 }
 ```
 
+**Available Environment Variables:**
+
+- `SEARCH_MCP_RATE_LIMIT_SEARCH`: Max search requests per minute (default: `30`).
+- `SEARCH_MCP_RATE_LIMIT_FETCH`: Max page fetch requests per minute (default: `20`).
+
+### Fetch Backend Options
+
+The `fetch_page` tool supports three backend modes to handle sites with bot detection:
+
+| Backend          | Description                                                              | Use Case                                    |
+| ---------------- | ------------------------------------------------------------------------ | ------------------------------------------- |
+| `auto` (default) | Tries `httpx` first, falls back to `curl` on 403 or Cloudflare challenge | Recommended for most use cases              |
+| `httpx`          | Lightweight async HTTP client                                            | Fast, but may be blocked by some sites      |
+| `curl`           | Uses `curl_cffi` with Chrome 131 TLS impersonation                       | Bypasses Cloudflare and similar bot filters |
+
 ## 🛠️ Tool Reference
 
-| Tool           | Description                                                | Key Parameters                                                                                                                                                                                    |
-| -------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_web`   | Universal search (Web, News)                               | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                    |
-| `fetch_page`   | Extract clean article text from a URL                      | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout` |
-| `search_docs`  | Search specific tech documentation or domains              | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                         |
-| `get_weather`  | Current conditions or forecast (defaults to current)       | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days`                                                                                                                                    |
-| `get_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results)                                                                                                                                                          |
+| Tool           | Description                                                | Key Parameters                                                                                                                                                                                                                         |
+| -------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_web`   | Universal search (Web, News)                               | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                                                         |
+| `fetch_page`   | Extract clean article text from a URL                      | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout`, `backend` ("httpx", "curl", "auto") |
+| `search_docs`  | Search specific tech documentation or domains              | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                                                              |
+| `get_weather`  | Current conditions or forecast (defaults to current)       | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days`                                                                                                                                                                         |
+| `get_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results)                                                                                                                                                                                               |
 
 ## 💻 Development
 

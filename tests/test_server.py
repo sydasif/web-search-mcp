@@ -76,6 +76,7 @@ async def test_fetch_page_tool(client):
             deduplicate=True,
             max_length=15000,
             timeout=30,
+            backend="auto",
         )
 
 

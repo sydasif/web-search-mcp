@@ -132,6 +132,7 @@ def fetch_page(
     deduplicate: bool = True,
     max_length: int = 15000,
     timeout: int = 30,
+    backend: Literal["httpx", "curl", "auto"] = "auto",
 ) -> dict:
     """
     Extracts the full text content from a web page URL.
@@ -147,6 +148,7 @@ def fetch_page(
         deduplicate: Whether to remove duplicated content
         max_length: Maximum length of content to return (default 15000)
         timeout: Request timeout in seconds (default 30)
+        backend: HTTP backend to use ('httpx' for lightweight, 'curl' to bypass bot detection, 'auto' to try httpx first then fallback to curl)
     """
     return _fetch_page(
         url=url,
@@ -158,6 +160,7 @@ def fetch_page(
         deduplicate=deduplicate,
         max_length=max_length,
         timeout=timeout,
+        backend=backend,
     )
 
 
