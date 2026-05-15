@@ -26,7 +26,7 @@ The application follows a modular architecture with clear separation of concerns
 
 The server exposes five main tools:
 
-- `search_web`: Universal web and news search
+- `web_search`: Universal web and news search
 - `fetch_page`: Extract clean text from URLs
 - `search_docs`: Targeted search on specific domains (e.g., docs.python.org)
 - `get_weather`: Current weather or forecast data via OpenMeteo
@@ -98,7 +98,7 @@ from .reader import fetch_page as _fetch_page
 - **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
 - **Constants**: `SCREAMING_SNAKE_CASE`
 - **MCP Tools**: Use `action_subject` pattern:
-  - `search_web`, `search_docs` (discovery)
+  - `web_search`, `search_docs` (discovery)
   - `fetch_page`, `get_weather`, `get_forecast` (retrieval)
 - **Private functions**: Leading underscore `_helper_function`
 

@@ -70,7 +70,7 @@ from .reader import fetch_page as _fetch_page
 - **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
 - **Constants**: `SCREAMING_SNAKE_CASE`
 - **MCP Tools**: Use `action_subject` pattern:
-  - `search_web`, `search_docs` (discovery)
+  - `web_search`, `search_docs` (discovery)
   - `fetch_page`, `get_weather`, `get_forecast` (retrieval)
 - **Private functions**: Leading underscore `_helper_function`
 

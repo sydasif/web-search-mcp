@@ -19,7 +19,7 @@ mcp = FastMCP("Web Search Tools")
 
 
 @mcp.tool(
-    name="search_web",
+    name="web_search",
     annotations={
         "readOnlyHint": True,
         "destructiveHint": False,
@@ -27,7 +27,7 @@ mcp = FastMCP("Web Search Tools")
         "openWorldHint": True,
     },
 )
-def search_web(
+def web_search(
     query: str,
     search_type: Literal["text", "news"] = "text",
     max_results: int = 5,
@@ -136,7 +136,7 @@ def fetch_page(
 ) -> dict:
     """
     Extracts the full text content from a web page URL.
-    Use this to read the details of a specific result found via search_web.
+    Use this to read the details of a specific result found via web_search.
 
     Args:
         url: The URL to fetch and extract content from

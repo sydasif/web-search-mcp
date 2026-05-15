@@ -17,11 +17,11 @@ async def client():
 
 
 @pytest.mark.asyncio
-async def test_search_web_tool(client):
-    """Test that the search_web tool calls ddg_search correctly."""
+async def test_web_search_tool(client):
+    """Test that the web_search tool calls ddg_search correctly."""
     with patch("web_search_mcp.server.ddg_search") as mock_ddg_search:
         mock_ddg_search.return_value = {"results": []}
-        await client.call_tool("search_web", {"query": "test", "max_results": 10})
+        await client.call_tool("web_search", {"query": "test", "max_results": 10})
 
         mock_ddg_search.assert_called_once()
         call_args = mock_ddg_search.call_args[0][0]
