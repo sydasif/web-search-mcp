@@ -1,13 +1,20 @@
 import logging
 import time
 import threading
-from typing import List
 
 logger = logging.getLogger("web-search-mcp")
 
 
 def format_error(message: str, details: str | None = None) -> dict:
-    """Unified error response format."""
+    """Creates a unified error response dictionary.
+
+    Args:
+        message: A concise summary of the error.
+        details: Additional details or exception messages. Defaults to None.
+
+    Returns:
+        A dictionary containing the error message and details.
+    """
     return {
         "error": message,
         "details": details or "No additional details provided.",
@@ -15,12 +22,11 @@ def format_error(message: str, details: str | None = None) -> dict:
 
 
 class RateLimiter:
-    """
-    Simple sliding window rate limiter.
+    """A simple sliding window rate limiter.
 
     Args:
         requests_per_minute: Maximum number of requests allowed per minute.
-        window_seconds: The time window in seconds to track requests (default 60.0).
+        window_seconds: The time window in seconds to track requests. Defaults to 60.0.
     """
 
     def __init__(self, requests_per_minute: int = 30, window_seconds: float = 60.0):
@@ -31,12 +37,14 @@ class RateLimiter:
 
         self.requests_per_minute = requests_per_minute
         self.window_seconds = window_seconds
-        self.requests: List[float] = []
+        self.requests: list[float] = []
         self._lock = threading.Lock()
 
     def acquire(self) -> None:
-        """
-        Blocks until a request can be made without exceeding the rate limit.
+        """Blocks until a request can be made without exceeding the rate limit.
+
+        This method implements a sliding window algorithm, removing requests older
+        than the window_seconds and sleeping if the limit is reached.
         """
         if self.requests_per_minute <= 0:
             return

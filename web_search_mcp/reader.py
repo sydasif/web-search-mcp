@@ -1,13 +1,13 @@
-import trafilatura
 import logging
-import httpx
 from typing import Literal
-from curl_cffi import requests as curl_requests
-from curl_cffi import CurlError
 
-from .http_client import http_client
-from .utils import format_error, RateLimiter
+import httpx
+import trafilatura
+from curl_cffi import CurlError, requests as curl_requests
+
 from .config import settings
+from .http_client import http_client
+from .utils import RateLimiter, format_error
 
 logger = logging.getLogger("web-search-mcp")
 
@@ -22,6 +22,14 @@ _CLOUDFLARE_BODY_SIGNALS = (
 
 
 def _is_cloudflare_challenge_body(html: str) -> bool:
+    """Checks if the HTML body contains signals of a Cloudflare challenge.
+
+    Args:
+        html: The HTML content to analyze.
+
+    Returns:
+        True if a Cloudflare challenge signal is found, False otherwise.
+    """
     if not html:
         return False
     sample = html[:4096].casefold()
@@ -33,14 +41,36 @@ fetch_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_fetch)
 
 
 def _fetch_httpx(url: str, timeout: int = 30) -> str:
-    """Fetch URL via httpx. Raises httpx.HTTPStatusError on non-2xx."""
+    """Fetches a URL using the httpx client.
+
+    Args:
+        url: The URL to fetch.
+        timeout: Request timeout in seconds. Defaults to 30.
+
+    Returns:
+        The response body as a string.
+
+    Raises:
+        httpx.HTTPStatusError: If the response returns a non-2xx status code.
+    """
     response = http_client.get(url, timeout=timeout)
     response.raise_for_status()
     return response.text
 
 
 def _fetch_curl(url: str, timeout: int = 30) -> str:
-    """Fetch URL via curl_cffi with Chrome 131 TLS impersonation."""
+    """Fetches a URL using curl_cffi with Chrome 131 TLS impersonation.
+
+    Args:
+        url: The URL to fetch.
+        timeout: Request timeout in seconds. Defaults to 30.
+
+    Returns:
+        The response body as a string.
+
+    Raises:
+        curl_requests.HTTPError: If the response returns a non-2xx status code.
+    """
     session: curl_requests.Session = curl_requests.Session(impersonate="chrome131")
     try:
         response = session.get(url, allow_redirects=True, timeout=timeout)
@@ -51,7 +81,18 @@ def _fetch_curl(url: str, timeout: int = 30) -> str:
 
 
 def _fetch_auto(url: str, timeout: int = 30) -> str:
-    """Try httpx first. On 403 or Cloudflare challenge, fall back to curl."""
+    """Attempts to fetch a URL, falling back to curl if httpx fails or hits Cloudflare.
+
+    Args:
+        url: The URL to fetch.
+        timeout: Request timeout in seconds. Defaults to 30.
+
+    Returns:
+        The response body as a string.
+
+    Raises:
+        httpx.HTTPStatusError: If httpx fails with a non-403 status.
+    """
     try:
         html = _fetch_httpx(url, timeout=timeout)
     except httpx.HTTPStatusError as e:
@@ -69,7 +110,19 @@ def _fetch_auto(url: str, timeout: int = 30) -> str:
 
 
 def _fetch_with_backend(url: str, backend: str, timeout: int = 30) -> str:
-    """Fetch URL using the specified backend."""
+    """Dispatches the fetch request to the specified backend.
+
+    Args:
+        url: The URL to fetch.
+        backend: The backend to use ('httpx', 'curl', or 'auto').
+        timeout: Request timeout in seconds. Defaults to 30.
+
+    Returns:
+        The response body as a string.
+
+    Raises:
+        ValueError: If an unsupported backend is specified.
+    """
     if backend == "httpx":
         return _fetch_httpx(url, timeout=timeout)
     elif backend == "curl":
@@ -96,7 +149,24 @@ def fetch_page(
     timeout: int = 30,
     backend: Literal["httpx", "curl", "auto"] = "auto",
 ) -> dict:
-    """Extracts the full text content from a web page URL."""
+    """Extracts clean text content from a web page URL.
+
+    Args:
+        url: The URL to fetch and extract from.
+        output_format: The format of the extracted content. Defaults to 'txt'.
+        include_metadata: Whether to attempt to extract page metadata. Defaults to False.
+        include_tables: Whether to include tables in the extraction. Defaults to False.
+        include_comments: Whether to include comments in the extraction. Defaults to False.
+        include_images: Whether to include image descriptions. Defaults to False.
+        deduplicate: Whether to remove duplicate content. Defaults to True.
+        max_length: Maximum length of the returned content string. Defaults to 15000.
+        timeout: Request timeout in seconds. Defaults to 30.
+        backend: The fetch backend to use ('httpx', 'curl', or 'auto'). Defaults to 'auto'.
+
+    Returns:
+        A dictionary containing the URL, content length, and the extracted content.
+        May include a 'metadata' field or a 'warning' if metadata extraction failed.
+    """
     # Apply rate limiting
     fetch_rate_limiter.acquire()
     try:

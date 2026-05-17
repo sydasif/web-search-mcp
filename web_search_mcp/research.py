@@ -1,17 +1,21 @@
+import logging
 from .search import ddg_search
 from .models import SearchRequest
+from .utils import format_error
+
+logger = logging.getLogger("web-search-mcp")
 
 
 def search_domain(query: str, domain: str = "docs.python.org") -> dict:
-    """
-    Searches specifically for technical documentation on a specific domain.
+    """Searches specifically for technical documentation on a specified domain.
 
     Args:
-        query: What you're looking for in the docs
-        domain: The domain to search (e.g., 'docs.python.org', 'github.com')
+        query: The search query for the documentation.
+        domain: The domain to restrict the search to. Defaults to 'docs.python.org'.
 
     Returns:
-        Search results from the specified domain
+        A dictionary containing the search results from the specified domain,
+        or a formatted error dictionary on failure.
     """
     enhanced_query = f"site:{domain} {query}"
 
@@ -23,4 +27,5 @@ def search_domain(query: str, domain: str = "docs.python.org") -> dict:
         )
         return ddg_search(req)
     except Exception as e:
-        return {"error": "Search failed", "details": str(e)}
+        logger.exception(f"Domain search failed for query '{query}' on domain '{domain}': {e}")
+        return format_error("Search failed", str(e))

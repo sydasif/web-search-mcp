@@ -1,5 +1,5 @@
 import logging
-from typing import Literal
+from typing import Literal, cast
 
 from fastmcp import FastMCP
 
@@ -207,7 +207,7 @@ def get_location(query: str, limit: int = 5) -> dict:
     Returns:
         Dict containing geocoding results with latitude, longitude, and location details
     """
-    return _geocode_location(query, limit=limit)
+    return cast(dict, _geocode_location(query, limit=limit))
 
 
 def main():

@@ -1,28 +1,26 @@
+import logging
 from ddgs import DDGS
 
 from .models import SearchRequest
-from .utils import RateLimiter
+from .utils import RateLimiter, format_error
 from .config import settings
 
+logger = logging.getLogger("web-search-mcp")
 
 # Initialize rate limiter for search
 search_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_search)
 
 
-def _error_dict(query: str, search_type: str, message: str) -> dict:
-    return {
-        "query": query,
-        "search_type": search_type,
-        "total_results": 0,
-        "results": [],
-        "error": message,
-        "has_more": False,
-        "next_page": None,
-    }
-
-
 def format_search_results_markdown(results_dict: dict) -> str:
-    """Format search results as a human-readable markdown string."""
+    """Formats search results as a human-readable markdown string.
+
+    Args:
+        results_dict: A dictionary containing the search results, including 'query',
+            'search_type', 'total_results', and 'results'.
+
+    Returns:
+        A markdown formatted string summarizing the search results.
+    """
     if "error" in results_dict:
         return f"**Error:** {results_dict['error']}"
 
@@ -53,8 +51,17 @@ def format_search_results_markdown(results_dict: dict) -> str:
 
 
 def ddg_search(request: SearchRequest) -> dict:
+    """Performs a web or news search using DuckDuckGo.
+
+    Args:
+        request: A SearchRequest object containing the query and search parameters.
+
+    Returns:
+        A dictionary containing the search results, total count, and pagination info,
+        or a formatted error dictionary on failure.
+    """
     if not request.query:
-        return _error_dict("", request.search_type, "Query cannot be empty")
+        return format_error("Query cannot be empty")
 
     # Apply rate limiting
     search_rate_limiter.acquire()
@@ -70,11 +77,7 @@ def ddg_search(request: SearchRequest) -> dict:
         with DDGS() as ddgs:
             search_methods = {"text": ddgs.text, "news": ddgs.news}
             if request.search_type not in search_methods:
-                return _error_dict(
-                    request.query,
-                    request.search_type,
-                    f"Unsupported search type: {request.search_type}",
-                )
+                return format_error(f"Unsupported search type: {request.search_type}")
 
             search_func = search_methods[request.search_type]
             results = list(search_func(request.query, **kwargs))
@@ -92,4 +95,5 @@ def ddg_search(request: SearchRequest) -> dict:
                 "next_page": request.page + 1 if has_more else None,
             }
     except Exception as e:
-        return _error_dict(request.query, request.search_type, str(e))
+        logger.exception(f"DuckDuckGo search failed for query '{request.query}': {e}")
+        return format_error(str(e))

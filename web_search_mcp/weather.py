@@ -1,6 +1,5 @@
 import logging
 import ssl
-from typing import Any
 
 import httpx
 
@@ -12,9 +11,21 @@ logger = logging.getLogger("web-search-mcp")
 
 
 def make_openmeteo_request(
-    client: httpx.Client, endpoint: str, params: dict
-) -> dict[str, Any] | None:
-    """Make request to OpenMeteo API with proper error handling."""
+    client: httpx.Client, endpoint: str, params: dict[str, str | int | float]
+) -> dict[str, str | int | float | list | dict] | None:
+    """Makes a request to the OpenMeteo API with proper error handling.
+
+    Args:
+        client: The httpx client used to make the request.
+        endpoint: The API endpoint to call.
+        params: A dictionary of query parameters.
+
+    Returns:
+        The JSON response from the API as a dictionary, or None if an error occurs.
+
+    Raises:
+        httpx.HTTPStatusError: If the request returns a non-2xx status code.
+    """
     url = f"{settings.weather_api_base}/{endpoint}"
     headers = {"Accept": "application/json"}
 
@@ -27,8 +38,20 @@ def make_openmeteo_request(
         return None
 
 
-def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
-    """Execute weather API request using shared client configuration."""
+def _fetch_weather_data(
+    params: dict[str, str | int | float],
+) -> dict[str, str | int | float | list | dict]:
+    """Executes a weather API request using the shared client configuration.
+
+    Args:
+        params: A dictionary of query parameters for the API request.
+
+    Returns:
+        The validated weather data from the API.
+
+    Raises:
+        ValueError: If the API returns an unexpected response format.
+    """
     data = make_openmeteo_request(http_client, "forecast", params)
 
     if not data:
@@ -47,8 +70,18 @@ def _fetch_weather_data(params: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
-    """Get current weather for a specific location."""
+def get_current_weather(
+    latitude: float, longitude: float
+) -> dict[str, str | int | float | list | dict]:
+    """Gets the current weather for a specific geographic location.
+
+    Args:
+        latitude: The latitude of the location.
+        longitude: The longitude of the location.
+
+    Returns:
+        A dictionary containing the current weather data.
+    """
     fields = [
         "temperature_2m",
         "relative_humidity_2m",
@@ -58,7 +91,7 @@ def get_current_weather(latitude: float, longitude: float) -> dict[str, Any]:
         "wind_speed_10m",
     ]
 
-    params = {
+    params: dict[str, str | int | float] = {
         "latitude": latitude,
         "longitude": longitude,
         "current": ",".join(fields),
@@ -71,8 +104,17 @@ def get_forecast(
     latitude: float,
     longitude: float,
     days: int = 7,
-) -> dict[str, Any]:
-    """Get daily weather forecast for a location."""
+) -> dict[str, str | int | float | list | dict]:
+    """Gets the daily weather forecast for a location.
+
+    Args:
+        latitude: The latitude of the location.
+        longitude: The longitude of the location.
+        days: The number of days for the forecast. Defaults to 7.
+
+    Returns:
+        A dictionary containing the daily weather forecast.
+    """
     days = max(1, min(16, days))
 
     fields = [
@@ -83,7 +125,7 @@ def get_forecast(
         "uv_index_max",
     ]
 
-    params = {
+    params: dict[str, str | int | float] = {
         "latitude": latitude,
         "longitude": longitude,
         "daily": ",".join(fields),

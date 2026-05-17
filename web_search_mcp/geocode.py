@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import TypedDict, List, Dict
 
 import httpx
 
@@ -10,16 +10,34 @@ from .utils import format_error
 logger = logging.getLogger("web-search-mcp")
 
 
-def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
-    """
-    Convert location names/addresses to geographic coordinates using Nominatim (OpenStreetMap) API.
+class GeocodeItem(TypedDict):
+    display_name: str
+    latitude: float
+    longitude: float
+    bounding_box: List[str]
+    class_: str
+    type: str
+    importance: float
+    address: Dict[str, str]
+    namedetails: Dict[str, str]
+
+
+class GeocodeResponse(TypedDict):
+    query: str
+    total_results: int
+    results: List[GeocodeItem]
+
+
+def geocode_location(query: str, limit: int = 5) -> GeocodeResponse | dict:
+    """Converts location names or addresses to geographic coordinates using the Nominatim API.
 
     Args:
-        query: Location name or address to geocode
-        limit: Maximum number of results to return (max 40 as per API limit)
+        query: The location name or address to geocode.
+        limit: Maximum number of results to return (capped at 40). Defaults to 5.
 
     Returns:
-        Dict containing geocoding results or error message
+        A dictionary containing the query, total results, and a list of
+        processed geocoding results. Returns a formatted error dictionary on failure.
     """
     if not query or not query.strip():
         return format_error("Query parameter is required and cannot be empty")
@@ -53,7 +71,7 @@ def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
                 f"Expected list, got {type(data)}",
             )
 
-        processed_results = []
+        processed_results: List[GeocodeItem] = []
         for item in data:
             if not isinstance(item, dict):
                 continue
@@ -64,7 +82,7 @@ def geocode_location(query: str, limit: int = 5) -> dict[str, Any]:
                     "latitude": float(item.get("lat") or 0),
                     "longitude": float(item.get("lon") or 0),
                     "bounding_box": item.get("boundingbox", []),
-                    "class": item.get("class", ""),
+                    "class_": item.get("class", ""),
                     "type": item.get("type", ""),
                     "importance": item.get("importance", 0),
                     "address": item.get("address", {}),

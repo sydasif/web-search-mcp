@@ -91,10 +91,6 @@ class TestDDGSearch:
         req = SearchRequest(query="test query", max_results=1)
         result = ddg_search(req)
 
-        assert result["query"] == "test query"
-        assert result["search_type"] == "text"
-        assert result["total_results"] == 0
-        assert len(result["results"]) == 0
         assert "error" in result
         assert "Network error" in result["error"]
 
@@ -143,7 +139,6 @@ class TestDDGSearch:
         result = ddg_search(req)
 
         assert "error" in result
-        assert result["total_results"] == 0
         assert "Query cannot be empty" in result["error"]
         mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
 
