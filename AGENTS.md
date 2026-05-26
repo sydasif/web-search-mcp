@@ -71,7 +71,7 @@ from .reader import fetch_page as _fetch_page
 - **Constants**: `SCREAMING_SNAKE_CASE`
 - **MCP Tools**: Use `action_subject` pattern:
   - `web_search`, `search_docs` (discovery)
-  - `fetch_page`, `get_weather`, `get_forecast` (retrieval)
+  - `fetch_page` (retrieval)
 - **Private functions**: Leading underscore `_helper_function`
 
 ### Error Handling
@@ -86,7 +86,6 @@ from .reader import fetch_page as _fetch_page
 
 - **server.py**: FastMCP server, tool definitions, and orchestration
 - **search.py**: DuckDuckGo search logic (`ddg_search` function)
-- **weather.py**: OpenMeteo API integration
 - **research.py**: Technical documentation search
 - **reader.py**: Web content extraction (trafilatura)
 - **models.py**: Pydantic models for request/response

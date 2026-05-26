@@ -4,7 +4,7 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web, weather data, and more.
+A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web and more.
 
 ## ✨ Features
 
@@ -12,8 +12,6 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 - **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
 - **🛡️ Bot Detection Bypass**: Automatic fallback to Chrome TLS impersonation when sites block requests (Cloudflare, etc.).
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
-- **🌤️ Weather Data**: Current conditions and forecasts via OpenMeteo.
-- **📍 Geocoding**: Convert location names/addresses to geographic coordinates using OpenStreetMap (Nominatim).
 
 ## 🚀 Quick Start
 
@@ -60,13 +58,11 @@ The `fetch_page` tool supports three backend modes to handle sites with bot dete
 
 ## 🛠️ Tool Reference
 
-| Tool           | Description                                                | Key Parameters                                                                                                                                                                                                                         |
-| -------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `web_search`   | Universal search (Web, News)                               | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                                                         |
-| `fetch_page`   | Extract clean article text from a URL                      | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout`, `backend` ("httpx", "curl", "auto") |
-| `search_docs`  | Search specific tech documentation or domains              | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                                                              |
-| `get_weather`  | Current conditions or forecast (defaults to current)       | `latitude`, `longitude`, `mode` ("current"/"forecast"), `days`                                                                                                                                                                         |
-| `get_location` | Convert location names/addresses to geographic coordinates | `query`, `limit` (max number of results)                                                                                                                                                                                               |
+| Tool          | Description                                   | Key Parameters                                                                                                                                                                                                                         |
+| ------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `web_search`  | Universal search (Web, News)                  | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                                                         |
+| `fetch_page`  | Extract clean article text from a URL         | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout`, `backend` ("httpx", "curl", "auto") |
+| `search_docs` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                                                              |
 
 ## 💻 Development
 

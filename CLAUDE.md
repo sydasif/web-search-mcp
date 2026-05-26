@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**web-search-mcp** is a FastMCP server providing web search, content extraction, and research tools for LLM clients. Uses Python 3.11+ with uv for dependency management. The server implements the Model Context Protocol (MCP) to provide web search, content extraction, and weather data capabilities to LLM clients.
+**web-search-mcp** is a FastMCP server providing web search, content extraction, and research tools for LLM clients. Uses Python 3.11+ with uv for dependency management. The server implements the Model Context Protocol (MCP) to provide web search and content extraction capabilities to LLM clients.
 
 **IMPORTANT**: Always use `uv` for dependency management and `uv run` for executing commands. Do not use pip or python directly.
 
@@ -14,23 +14,19 @@ The application follows a modular architecture with clear separation of concerns
 
 - **server.py**: FastMCP server entry point, defines MCP tools exposed to clients
 - **search.py**: DuckDuckGo search logic (`ddg_search` function) with text/news search capabilities
-- **weather.py**: OpenMeteo API integration for current weather and forecast data
 - **research.py**: Technical documentation search functionality for specific domains
 - **reader.py**: Web content extraction using `trafilatura` with support for multiple formats
-- **geocode.py**: OpenStreetMap (Nominatim) integration for geocoding addresses to coordinates
 - **models.py**: Pydantic models for request/response validation
 - **config.py**: Application settings via pydantic-settings
 - **utils.py**: Shared utility functions for consistent error formatting and helpers
 
 ## MCP Tool Definitions
 
-The server exposes five main tools:
+The server exposes three main tools:
 
 - `web_search`: Universal web and news search
 - `fetch_page`: Extract clean text from URLs
 - `search_docs`: Targeted search on specific domains (e.g., docs.python.org)
-- `get_weather`: Current weather or forecast data via OpenMeteo
-- `get_location`: Convert location names/addresses to geographic coordinates using OpenStreetMap (Nominatim)
 
 ## Development Commands
 
@@ -99,7 +95,7 @@ from .reader import fetch_page as _fetch_page
 - **Constants**: `SCREAMING_SNAKE_CASE`
 - **MCP Tools**: Use `action_subject` pattern:
   - `web_search`, `search_docs` (discovery)
-  - `fetch_page`, `get_weather`, `get_forecast` (retrieval)
+  - `fetch_page` (retrieval)
 - **Private functions**: Leading underscore `_helper_function`
 
 ### Error Handling
