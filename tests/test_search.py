@@ -1,7 +1,8 @@
 from unittest.mock import patch
+from web_search_mcp.models import SearchRequest, SearchResponse, SearchResult, ErrorResponse
+from web_search_mcp.search import ddg_search, format_search_results_markdown
 
-from web_search_mcp.models import SearchRequest
-from web_search_mcp.search import ddg_search
+# ... (existing TestDDGSearch class remains unchanged)
 
 
 class TestDDGSearch:
@@ -206,3 +207,103 @@ class TestDDGSearch:
         assert result["results"][0].get("href") is None
         assert result["results"][1].get("title") is None
         assert result["results"][1]["href"] == "https://example.com"
+
+
+class TestFormatSearchResultsMarkdown:
+    """Test suite for search results markdown formatting."""
+
+    def test_format_error_response(self):
+        """Test formatting of ErrorResponse objects."""
+        err = ErrorResponse(error="API failure", details="Timeout")
+        result = format_search_results_markdown(err)
+        assert result == "**Error:** API failure"
+
+    def test_format_error_dict(self):
+        """Test formatting of error dictionaries."""
+        # Explicit error
+        assert (
+            format_search_results_markdown({"error": "Custom error"}) == "**Error:** Custom error"
+        )
+        # A dictionary without an "error" key is treated as a successful empty search
+        result = format_search_results_markdown({"something": "else"})
+        assert "# Search Results" in result
+        assert "No results found." in result
+
+    def test_format_minimal_dict(self):
+        """Test backward compatibility with minimal result dictionaries."""
+        results = {"query": "test", "results": []}
+        result = format_search_results_markdown(results)
+        assert "# Search Results for 'test' (text)" in result
+        assert "Found 0 results." in result
+        assert "No results found." in result
+
+    def test_format_result_types(self):
+        """Test formatting with both SearchResult models and raw dictionaries."""
+        results = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=2,
+            results=[
+                SearchResult(title="Model Title", href="https://model.com", body="Model body"),
+                {"title": "Dict Title", "href": "https://dict.com", "body": "Dict body"},
+            ],
+            has_more=False,
+            next_page=None,
+        )
+        result = format_search_results_markdown(results)
+        assert "**[Model Title](https://model.com)**" in result
+        assert "Model body" in result
+        assert "**[Dict Title](https://dict.com)**" in result
+        assert "Dict body" in result
+
+    def test_format_url_fallbacks(self):
+        """Test URL fallback logic (href -> url -> #)."""
+        results_list = [
+            {"title": "T1", "href": "https://href.com"},
+            {"title": "T2", "url": "https://url.com"},
+            {"title": "T3"},  # Both missing
+        ]
+        results = {"query": "test", "results": results_list}
+        result = format_search_results_markdown(results)
+        assert "[T1](https://href.com)" in result
+        assert "[T2](https://url.com)" in result
+        assert "[T3](#)" in result
+
+    def test_format_body_omission(self):
+        """Test that results with empty or None bodies omit the body line."""
+        results_list = [
+            {"title": "T1", "href": "https://1.com", "body": ""},
+            {"title": "T2", "href": "https://2.com", "body": None},
+            {"title": "T3", "href": "https://3.com", "body": "Exists"},
+        ]
+        results = {"query": "test", "results": results_list}
+        result = format_search_results_markdown(results)
+        # Body for T1 and T2 should not be present (no indented line after title)
+        lines = result.split("\n")
+        body_lines = [l for l in lines if l.startswith("   ")]
+        assert len(body_lines) == 1
+        assert "Exists" in body_lines[0]
+
+    def test_format_pagination(self):
+        """Test the pagination footer."""
+        # Pagination active
+        res_active = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=10,
+            results=[SearchResult(title="T", href="U", body="B")],
+            has_more=True,
+            next_page=2,
+        )
+        assert "More results available. See page 2." in format_search_results_markdown(res_active)
+
+        # Pagination inactive
+        res_inactive = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=1,
+            results=[SearchResult(title="T", href="U", body="B")],
+            has_more=False,
+            next_page=None,
+        )
+        assert "More results available" not in format_search_results_markdown(res_inactive)
