@@ -2,6 +2,99 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+FetchOutputFormat = Literal["csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"]
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response format."""
+
+    error: str
+    details: str
+
+    def __getitem__(self, item):
+        """Allow dict-like access for backward compatibility with tests."""
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        """Allow .get() access for backward compatibility with tests."""
+        return getattr(self, item, default)
+
+    def __contains__(self, item):
+        """Allow 'in' checks for backward compatibility with tests."""
+        val = getattr(self, item, None)
+        return val is not None
+
+
+class SearchResult(BaseModel):
+    """A single search result item."""
+
+    title: str | None = None
+    href: str | None = None
+    url: str | None = None
+    body: str | None = None
+
+    def __getitem__(self, item):
+        """Allow dict-like access for backward compatibility with tests."""
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        """Allow .get() access for backward compatibility with tests."""
+        return getattr(self, item, default)
+
+    def __contains__(self, item):
+        """Allow 'in' checks for backward compatibility with tests."""
+        val = getattr(self, item, None)
+        return val is not None
+
+
+class SearchResponse(BaseModel):
+    """Structured response for search operations."""
+
+    query: str
+    search_type: Literal["text", "news"]
+    total_results: int
+    results: list[SearchResult]
+    has_more: bool
+    next_page: int | None = None
+    error: str | None = None
+    details: str | None = None
+
+    def __getitem__(self, item):
+        """Allow dict-like access for backward compatibility with tests."""
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        """Allow .get() access for backward compatibility with tests."""
+        return getattr(self, item, default)
+
+    def __contains__(self, item):
+        """Allow 'in' checks for backward compatibility with tests."""
+        val = getattr(self, item, None)
+        return val is not None
+
+
+class PageResponse(BaseModel):
+    """Structured response for page extraction."""
+
+    url: str
+    length: int
+    content: str
+    metadata: dict[str, str | None] | None = None
+    warning: str | None = None
+
+    def __getitem__(self, item):
+        """Allow dict-like access for backward compatibility with tests."""
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        """Allow .get() access for backward compatibility with tests."""
+        return getattr(self, item, default)
+
+    def __contains__(self, item):
+        """Allow 'in' checks for backward compatibility with tests."""
+        return hasattr(self, item) or item in (self.metadata or {})
+
+
 class SearchRequest(BaseModel):
     """Request schema for web and news searches.
 

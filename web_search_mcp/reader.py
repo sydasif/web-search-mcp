@@ -7,6 +7,7 @@ from curl_cffi import CurlError, requests as curl_requests
 
 from .config import settings
 from .http_client import http_client
+from .models import PageResponse, ErrorResponse
 from .utils import RateLimiter, format_error
 
 logger = logging.getLogger("web-search-mcp")
@@ -71,13 +72,10 @@ def _fetch_curl(url: str, timeout: int = 30) -> str:
     Raises:
         curl_requests.HTTPError: If the response returns a non-2xx status code.
     """
-    session: curl_requests.Session = curl_requests.Session(impersonate="chrome131")
-    try:
+    with curl_requests.Session(impersonate="chrome131") as session:
         response = session.get(url, allow_redirects=True, timeout=timeout)
         response.raise_for_status()
         return response.text
-    finally:
-        session.close()
 
 
 def _fetch_auto(url: str, timeout: int = 30) -> str:
@@ -123,16 +121,17 @@ def _fetch_with_backend(url: str, backend: str, timeout: int = 30) -> str:
     Raises:
         ValueError: If an unsupported backend is specified.
     """
-    if backend == "httpx":
-        return _fetch_httpx(url, timeout=timeout)
-    elif backend == "curl":
-        return _fetch_curl(url, timeout=timeout)
-    elif backend == "auto":
-        return _fetch_auto(url, timeout=timeout)
-    else:
-        raise ValueError(
-            f"Unknown fetch backend '{backend}'. Supported: {SUPPORTED_FETCH_BACKENDS}"
-        )
+    match backend:
+        case "httpx":
+            return _fetch_httpx(url, timeout=timeout)
+        case "curl":
+            return _fetch_curl(url, timeout=timeout)
+        case "auto":
+            return _fetch_auto(url, timeout=timeout)
+        case _:
+            raise ValueError(
+                f"Unknown fetch backend '{backend}'. Supported: {SUPPORTED_FETCH_BACKENDS}"
+            )
 
 
 def fetch_page(
@@ -148,7 +147,7 @@ def fetch_page(
     max_length: int = 15000,
     timeout: int = 30,
     backend: Literal["httpx", "curl", "auto"] = "auto",
-) -> dict:
+) -> PageResponse | ErrorResponse:
     """Extracts clean text content from a web page URL.
 
     Args:
@@ -170,6 +169,7 @@ def fetch_page(
     # Apply rate limiting
     fetch_rate_limiter.acquire()
     try:
+        metadata = None
         html_content = _fetch_with_backend(url, backend=backend, timeout=timeout)
 
         if not html_content:
@@ -187,35 +187,47 @@ def fetch_page(
             deduplicate=deduplicate,
         )
 
-        metadata = None
+        if not extracted_data:
+            return format_error("No readable text found.")
 
         if include_metadata:
+            # trafilatura.extract can return a tuple (content, metadata) if with_metadata=True
             if isinstance(extracted_data, tuple):
                 content, metadata = extracted_data
             else:
                 content = extracted_data
+                metadata = None
         else:
             content = extracted_data
+            metadata = None
 
         if not content:
             return format_error("No readable text found.")
 
         actual_length = len(str(content))
-        response_data = {"url": url, "length": actual_length, "content": str(content)[:max_length]}
+
+        # Create a PageResponse model for structured data
+        response = PageResponse(
+            url=url,
+            length=actual_length,
+            content=str(content)[:max_length],
+        )
 
         if include_metadata:
             if metadata:
-                response_data["metadata"] = {
+                # trafilatura metadata is an object with attributes
+                meta_dict = {
                     "title": getattr(metadata, "title", None),
                     "author": getattr(metadata, "author", None),
                     "date": getattr(metadata, "date", None),
                     "description": getattr(metadata, "description", None),
                     "fingerprint": getattr(metadata, "fingerprint", None),
                 }
+                response.metadata = meta_dict
             else:
-                response_data["warning"] = "Could not extract metadata."
+                response.warning = "Could not extract metadata."
 
-        return response_data
+        return response
 
     except httpx.TimeoutException as e:
         logger.error(f"Timeout during fetch: {e}")

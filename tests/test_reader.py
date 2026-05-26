@@ -45,11 +45,13 @@ def test_fetch_curl_backend():
     mock_response.raise_for_status.return_value = None
     mock_session.get.return_value = mock_response
 
+    # Mock the context manager __enter__ to return the mock_session
+    mock_session.__enter__.return_value = mock_session
+
     with patch("web_search_mcp.reader.curl_requests.Session", return_value=mock_session):
         result = _fetch_curl("https://example.com")
         assert result == "<html><body>Curl Test</body></html>"
         mock_session.get.assert_called_once()
-        mock_session.close.assert_called_once()
 
 
 def test_fetch_auto_backend_httpx_success():
@@ -141,6 +143,9 @@ def test_fetch_curl_backend_custom_timeout():
     mock_response.text = "<html><body>Timeout Test</body></html>"
     mock_response.raise_for_status.return_value = None
     mock_session.get.return_value = mock_response
+
+    # Mock the context manager __enter__ to return the mock_session
+    mock_session.__enter__.return_value = mock_session
 
     with patch("web_search_mcp.reader.curl_requests.Session", return_value=mock_session):
         result = _fetch_curl("https://example.com", timeout=60)

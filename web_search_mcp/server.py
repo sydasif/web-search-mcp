@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastmcp import FastMCP
 
-from .models import SearchRequest
+from .models import SearchRequest, FetchOutputFormat, SearchResponse, PageResponse, ErrorResponse
 from .search import ddg_search, format_search_results_markdown
 from .utils import format_error
 from .reader import fetch_page as _fetch_page
@@ -34,7 +34,7 @@ def web_search(
     page: int = 1,
     backend: Literal["auto", "legacy", "api"] = "auto",
     response_format: Literal["json", "markdown"] = "markdown",
-) -> str | dict:
+) -> str | SearchResponse | ErrorResponse:
     """
     Unified search tool for web content and news.
 
@@ -51,8 +51,8 @@ def web_search(
 
     Returns:
         str: Markdown-formatted search results (when response_format="markdown")
-        dict: Raw search results with keys: query, search_type, total_results,
-              results, has_more, next_page, and error if applicable
+        SearchResponse: Raw search results (when response_format="json")
+        ErrorResponse: Error response if applicable
     """
     try:
         req = SearchRequest(
@@ -68,8 +68,9 @@ def web_search(
         )
         result = ddg_search(req)
         if response_format == "markdown":
-            return format_search_results_markdown(result)
-        return result
+            # We cast result to SearchResponse | dict here for the formatter
+            return format_search_results_markdown(result)  # type: ignore
+        return result if result is not None else format_error("No results returned from search")
     except Exception as e:
         logger.error(f"Search failed: {e}")
         return format_error("Search failed", str(e))
@@ -86,9 +87,7 @@ def web_search(
 )
 def fetch_page(
     url: str,
-    output_format: Literal[
-        "csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"
-    ] = "txt",
+    output_format: FetchOutputFormat = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
     include_comments: bool = False,
@@ -97,7 +96,7 @@ def fetch_page(
     max_length: int = 15000,
     timeout: int = 30,
     backend: Literal["httpx", "curl", "auto"] = "auto",
-) -> dict:
+) -> PageResponse | ErrorResponse:
     """
     Extracts the full text content from a web page URL.
     Use this to read the details of a specific result found via web_search.
@@ -125,7 +124,7 @@ def fetch_page(
         max_length=max_length,
         timeout=timeout,
         backend=backend,
-    )
+    )  # type: ignore
 
 
 @mcp.tool(
@@ -137,7 +136,7 @@ def fetch_page(
         "openWorldHint": True,
     },
 )
-def search_docs(query: str, domain: str = "docs.python.org") -> dict:
+def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse | ErrorResponse:
     """
     Searches specifically for technical documentation or content on a specific domain.
 

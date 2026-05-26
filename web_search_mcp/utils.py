@@ -1,11 +1,12 @@
 import logging
 import time
 import threading
+from .models import ErrorResponse
 
 logger = logging.getLogger("web-search-mcp")
 
 
-def format_error(message: str, details: str | None = None) -> dict:
+def format_error(message: str, details: str | None = None) -> ErrorResponse:
     """Creates a unified error response dictionary.
 
     Args:
@@ -15,10 +16,10 @@ def format_error(message: str, details: str | None = None) -> dict:
     Returns:
         A dictionary containing the error message and details.
     """
-    return {
-        "error": message,
-        "details": details or "No additional details provided.",
-    }
+    return ErrorResponse(
+        error=message,
+        details=details or "No additional details provided.",
+    )
 
 
 class RateLimiter:
