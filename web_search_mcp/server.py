@@ -1,16 +1,13 @@
 import logging
-from typing import Literal, cast
+from typing import Literal
 
 from fastmcp import FastMCP
 
 from .models import SearchRequest
 from .search import ddg_search, format_search_results_markdown
 from .utils import format_error
-from .weather import get_current_weather as weather_current
-from .weather import get_forecast as weather_forecast
 from .reader import fetch_page as _fetch_page
 from .research import search_domain as _search_domain
-from .geocode import geocode_location as _geocode_location
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -76,39 +73,6 @@ def web_search(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         return format_error("Search failed", str(e))
-
-
-@mcp.tool(
-    name="get_weather",
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def get_weather(
-    latitude: float,
-    longitude: float,
-    mode: Literal["current", "forecast"] = "current",
-    days: int = 7,
-) -> dict:
-    """
-    Get current weather or forecast for a specific location.
-
-    Args:
-        latitude: Latitude of the location
-        longitude: Longitude of the location
-        mode: Type of weather data ('current' or 'forecast', default 'current')
-        days: Number of days for forecast (1-16, default 7, only used when mode='forecast')
-
-    Returns:
-        Dict containing weather data or error message
-    """
-    if mode == "current":
-        return weather_current(latitude, longitude)
-    else:
-        return weather_forecast(latitude, longitude, days)
 
 
 @mcp.tool(
@@ -185,29 +149,6 @@ def search_docs(query: str, domain: str = "docs.python.org") -> dict:
         Search results from the specified domain
     """
     return _search_domain(query, domain=domain)
-
-
-@mcp.tool(
-    name="get_location",
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def get_location(query: str, limit: int = 5) -> dict:
-    """
-    Convert location names/addresses to geographic coordinates using Nominatim (OpenStreetMap) API.
-
-    Args:
-        query: Location name or address to geocode
-        limit: Maximum number of results to return (default 5, max 40)
-
-    Returns:
-        Dict containing geocoding results with latitude, longitude, and location details
-    """
-    return cast(dict, _geocode_location(query, limit=limit))
 
 
 def main():
