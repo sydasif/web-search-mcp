@@ -3,24 +3,24 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from web_search_mcp.groq_search import browser_search
+from web_search_mcp.groq_search import web_search
 from web_search_mcp.models import ErrorResponse
 
 
-class TestBrowserSearch:
-    """Unit tests for browser_search function."""
+class TestGroqWebSearch:
+    """Unit tests for groq web_search function."""
 
     @patch("web_search_mcp.groq_search.settings")
     def test_empty_query_returns_error(self, mock_settings):
         """Empty query returns ErrorResponse."""
-        result = browser_search("")
+        result = web_search("")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
     @patch("web_search_mcp.groq_search.settings")
     def test_whitespace_query_returns_error(self, mock_settings):
         """Whitespace-only query returns ErrorResponse."""
-        result = browser_search("   ")
+        result = web_search("   ")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
@@ -28,7 +28,7 @@ class TestBrowserSearch:
     def test_missing_api_key_returns_error(self, mock_settings):
         """Missing GROQ_API_KEY returns ErrorResponse."""
         mock_settings.groq_api_key = ""
-        result = browser_search("test query")
+        result = web_search("test query")
         assert isinstance(result, ErrorResponse)
         assert "not configured" in result.error.lower()
 
@@ -49,7 +49,7 @@ class TestBrowserSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = browser_search("AI trends 2025")
+        result = web_search("AI trends 2025")
 
         assert isinstance(result, str)
         assert "AI trends" in result
@@ -66,7 +66,7 @@ class TestBrowserSearch:
         mock_client.chat.completions.create.side_effect = Exception("Rate limit exceeded")
         mock_groq_cls.return_value = mock_client
 
-        result = browser_search("test query")
+        result = web_search("test query")
         assert isinstance(result, ErrorResponse)
         assert "rate limit" in result.details.lower()
 
@@ -87,7 +87,7 @@ class TestBrowserSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = browser_search("test query")
+        result = web_search("test query")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
@@ -108,10 +108,54 @@ class TestBrowserSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        browser_search("test query", reasoning_effort="high")
+        web_search("test query", reasoning_effort="high")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["reasoning_effort"] == "high"
+
+    @patch("web_search_mcp.groq_search.Groq")
+    @patch("web_search_mcp.groq_search.settings")
+    def test_model_param_forwarded(self, mock_settings, mock_groq_cls):
+        """model param is forwarded to Groq API."""
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_message = MagicMock()
+        mock_message.content = "result"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
+        web_search("test query", model="openai/gpt-oss-120b")
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "openai/gpt-oss-120b"
+
+    @patch("web_search_mcp.groq_search.Groq")
+    @patch("web_search_mcp.groq_search.settings")
+    def test_default_model_is_oss20b(self, mock_settings, mock_groq_cls):
+        """Default model is openai/gpt-oss-20b."""
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_message = MagicMock()
+        mock_message.content = "result"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
+        web_search("test query")
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "openai/gpt-oss-20b"
 
     @patch("web_search_mcp.groq_search.Groq")
     @patch("web_search_mcp.groq_search.settings")
@@ -130,7 +174,7 @@ class TestBrowserSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        browser_search("test query")
+        web_search("test query")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["tools"] == [{"type": "browser_search"}]

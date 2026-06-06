@@ -77,21 +77,25 @@ def test_main_function(mock_mcp_instance):
 
 
 @pytest.mark.asyncio
-async def test_groq_browser_search_tool(client):
-    """Test the groq_browser_search tool calls browser_search correctly."""
-    with patch("web_search_mcp.server._groq_browser_search") as mock_browser_search:
-        mock_browser_search.return_value = "Search results about AI trends..."
+async def test_groq_web_search_tool(client):
+    """Test the groq_web_search tool calls web_search correctly."""
+    with patch("web_search_mcp.server._groq_web_search") as mock_web_search:
+        mock_web_search.return_value = "Search results about AI trends..."
         await client.call_tool(
-            "groq_browser_search",
-            {"query": "AI trends", "reasoning_effort": "low"},
+            "groq_web_search",
+            {"query": "AI trends", "model": "openai/gpt-oss-120b", "reasoning_effort": "low"},
         )
-        mock_browser_search.assert_called_once_with(query="AI trends", reasoning_effort="low")
+        mock_web_search.assert_called_once_with(
+            query="AI trends", model="openai/gpt-oss-120b", reasoning_effort="low"
+        )
 
 
 @pytest.mark.asyncio
-async def test_groq_browser_search_tool_default_reasoning(client):
-    """Test groq_browser_search uses default reasoning_effort."""
-    with patch("web_search_mcp.server._groq_browser_search") as mock_browser_search:
-        mock_browser_search.return_value = "result"
-        await client.call_tool("groq_browser_search", {"query": "test"})
-        mock_browser_search.assert_called_once_with(query="test", reasoning_effort="low")
+async def test_groq_web_search_tool_default_reasoning(client):
+    """Test groq_web_search uses default reasoning_effort."""
+    with patch("web_search_mcp.server._groq_web_search") as mock_web_search:
+        mock_web_search.return_value = "result"
+        await client.call_tool("groq_web_search", {"query": "test"})
+        mock_web_search.assert_called_once_with(
+            query="test", model="openai/gpt-oss-20b", reasoning_effort="low"
+        )

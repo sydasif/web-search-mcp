@@ -11,9 +11,12 @@ from .utils import format_error
 
 logger = logging.getLogger("web-search-mcp")
 
+SupportedModel = Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 
-def browser_search(
+
+def web_search(
     query: str,
+    model: SupportedModel = "openai/gpt-oss-20b",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
     """Perform an interactive browser search using Groq's built-in tool.
@@ -23,6 +26,7 @@ def browser_search(
 
     Args:
         query: Search question or topic.
+        model: Groq model to use ('openai/gpt-oss-20b' or 'openai/gpt-oss-120b').
         reasoning_effort: Reasoning intensity ('low', 'medium', 'high').
             'low' balances quality vs token cost; 'high' explores more pages.
 
@@ -42,7 +46,7 @@ def browser_search(
         client = Groq(api_key=settings.groq_api_key)
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": query}],
-            model="openai/gpt-oss-20b",
+            model=model,
             temperature=1,
             max_completion_tokens=2048,
             top_p=1,
@@ -56,5 +60,5 @@ def browser_search(
             return format_error("Groq returned empty content", "The model produced no response.")
         return content
     except Exception as e:
-        logger.error(f"Groq browser search failed: {e}")
+        logger.error(f"Groq browser search failed ({model}): {e}")
         return format_error("Groq browser search failed", str(e))

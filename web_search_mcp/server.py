@@ -8,7 +8,7 @@ from .search import ddg_search, format_search_results_markdown
 from .utils import format_error
 from .reader import fetch_page as _fetch_page
 from .research import search_domain as _search_domain
-from .groq_search import browser_search as _groq_browser_search
+from .groq_search import web_search as _groq_web_search
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -152,7 +152,7 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
 
 
 @mcp.tool(
-    name="groq_browser_search",
+    name="groq_web_search",
     annotations={
         "readOnlyHint": True,
         "destructiveHint": False,
@@ -160,8 +160,9 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
         "openWorldHint": True,
     },
 )
-def groq_browser_search(
+def groq_web_search(
     query: str,
+    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
     """
@@ -170,13 +171,14 @@ def groq_browser_search(
 
     Args:
         query: Search question or topic
+        model: Groq model to use ('openai/gpt-oss-20b' or 'openai/gpt-oss-120b')
         reasoning_effort: Reasoning intensity ('low', 'medium', 'high').
             'low' balances quality vs token cost; 'high' explores more pages.
 
     Returns:
         Combined results from multiple web sources
     """
-    return _groq_browser_search(query=query, reasoning_effort=reasoning_effort)
+    return _groq_web_search(query=query, model=model, reasoning_effort=reasoning_effort)
 
 
 def main():
