@@ -48,7 +48,6 @@ def browser_search(
             top_p=1,
             stream=False,
             stop=None,
-            tool_choice="required",
             reasoning_effort=reasoning_effort,
             tools=[{"type": "browser_search"}],
         )

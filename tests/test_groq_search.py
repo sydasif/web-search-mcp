@@ -134,7 +134,6 @@ class TestBrowserSearch:
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["tools"] == [{"type": "browser_search"}]
-        assert call_kwargs["tool_choice"] == "required"
 
 
 if __name__ == "__main__":
