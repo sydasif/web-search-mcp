@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     user_agent: str = "web-search-mcp/1.0"
     rate_limit_search: int = 30
     rate_limit_fetch: int = 20
+    groq_api_key: str = ""
 
 
 settings = Settings()

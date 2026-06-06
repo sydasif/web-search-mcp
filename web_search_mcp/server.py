@@ -8,6 +8,7 @@ from .search import ddg_search, format_search_results_markdown
 from .utils import format_error
 from .reader import fetch_page as _fetch_page
 from .research import search_domain as _search_domain
+from .groq_search import browser_search as _groq_browser_search
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -148,6 +149,34 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
         Search results from the specified domain
     """
     return _search_domain(query, domain=domain)
+
+
+@mcp.tool(
+    name="groq_browser_search",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def groq_browser_search(
+    query: str,
+    reasoning_effort: Literal["low", "medium", "high"] = "low",
+) -> str | ErrorResponse:
+    """
+    Interactive browser search via Groq's built-in tool.
+    Navigates websites like a human for comprehensive results.
+
+    Args:
+        query: Search question or topic
+        reasoning_effort: Reasoning intensity ('low', 'medium', 'high').
+            'low' balances quality vs token cost; 'high' explores more pages.
+
+    Returns:
+        Combined results from multiple web sources
+    """
+    return _groq_browser_search(query=query, reasoning_effort=reasoning_effort)
 
 
 def main():
