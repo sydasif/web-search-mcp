@@ -2,23 +2,23 @@
 
 from unittest.mock import MagicMock, patch
 
-from web_search_mcp.groq_compound import compound_search, visit_website
+from web_search_mcp.groq_compound import research, analyze_page
 from web_search_mcp.models import ErrorResponse
 
 
-class TestCompoundSearch:
-    """Unit tests for compound_search function."""
+class TestResearch:
+    """Unit tests for research function."""
 
     @patch("web_search_mcp.groq_compound.settings")
     def test_empty_query_returns_error(self, mock_settings):
-        result = compound_search("")
+        result = research("")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
     @patch("web_search_mcp.groq_compound.settings")
     def test_missing_api_key_returns_error(self, mock_settings):
         mock_settings.groq_api_key = ""
-        result = compound_search("test")
+        result = research("test")
         assert isinstance(result, ErrorResponse)
         assert "not configured" in result.error.lower()
 
@@ -38,7 +38,7 @@ class TestCompoundSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = compound_search("Latest AI developments")
+        result = research("Latest AI developments")
 
         assert isinstance(result, str)
         assert "Research results" in result
@@ -63,7 +63,7 @@ class TestCompoundSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        compound_search("test", model="groq/compound-mini")
+        research("test", model="groq/compound-mini")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["model"] == "groq/compound-mini"
@@ -84,7 +84,7 @@ class TestCompoundSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        compound_search("test")
+        research("test")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["compound_custom"]["tools"]["enabled_tools"] == ["web_search"]
@@ -98,7 +98,7 @@ class TestCompoundSearch:
         mock_client.chat.completions.create.side_effect = Exception("API error")
         mock_groq_cls.return_value = mock_client
 
-        result = compound_search("test")
+        result = research("test")
         assert isinstance(result, ErrorResponse)
 
     @patch("web_search_mcp.groq_compound.Groq")
@@ -117,24 +117,24 @@ class TestCompoundSearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = compound_search("test")
+        result = research("test")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
 
-class TestVisitWebsite:
-    """Unit tests for visit_website function."""
+class TestAnalyzePage:
+    """Unit tests for analyze_page function."""
 
     @patch("web_search_mcp.groq_compound.settings")
     def test_empty_url_returns_error(self, mock_settings):
-        result = visit_website("")
+        result = analyze_page("")
         assert isinstance(result, ErrorResponse)
         assert "url cannot be empty" in result.error.lower()
 
     @patch("web_search_mcp.groq_compound.settings")
     def test_missing_api_key_returns_error(self, mock_settings):
         mock_settings.groq_api_key = ""
-        result = visit_website("https://example.com")
+        result = analyze_page("https://example.com")
         assert isinstance(result, ErrorResponse)
         assert "not configured" in result.error.lower()
 
@@ -154,7 +154,7 @@ class TestVisitWebsite:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = visit_website("https://example.com")
+        result = analyze_page("https://example.com")
 
         assert isinstance(result, str)
         assert "AI trends" in result
@@ -175,7 +175,7 @@ class TestVisitWebsite:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        visit_website("https://example.com", query="Extract the table of contents")
+        analyze_page("https://example.com", query="Extract the table of contents")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         msg = call_kwargs["messages"][0]["content"]
@@ -191,5 +191,5 @@ class TestVisitWebsite:
         mock_client.chat.completions.create.side_effect = Exception("Rate limit")
         mock_groq_cls.return_value = mock_client
 
-        result = visit_website("https://example.com")
+        result = analyze_page("https://example.com")
         assert isinstance(result, ErrorResponse)

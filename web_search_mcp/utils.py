@@ -10,7 +10,7 @@ def format_error(message: str, details: str | None = None) -> ErrorResponse:
     """Creates a unified error response.
 
     Args:
-        message: A concise summary of the error.
+        message: A concise summary of the error with suggested next step.
         details: Additional details or exception messages. Defaults to None.
 
     Returns:
@@ -19,6 +19,30 @@ def format_error(message: str, details: str | None = None) -> ErrorResponse:
     return ErrorResponse(
         error=message,
         details=details or "No additional details provided.",
+    )
+
+
+def format_auth_error() -> ErrorResponse:
+    """Returns a consistent authentication error."""
+    return ErrorResponse(
+        error="Groq API key not configured",
+        details="Set SEARCH_MCP_GROQ_API_KEY in your MCP config or GROQ_API_KEY environment variable.",
+    )
+
+
+def format_empty_query_error() -> ErrorResponse:
+    """Returns a consistent empty-query error."""
+    return ErrorResponse(
+        error="Query cannot be empty",
+        details="Provide a non-empty query string. Example: 'latest AI research papers June 2026'",
+    )
+
+
+def format_empty_response_error(source: str = "Groq") -> ErrorResponse:
+    """Returns a consistent empty-content error."""
+    return ErrorResponse(
+        error=f"{source} returned empty content",
+        details="The model produced no response. Try rephrasing your query with more specific detail, or switch to a different tool (e.g. web_search for DDG results, groq_research for Compound deep research).",
     )
 
 

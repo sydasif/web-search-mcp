@@ -70,24 +70,24 @@ async def test_search_docs_tool(client):
 
 
 @pytest.mark.asyncio
-async def test_groq_compound_search_tool(client):
-    """Test the groq_compound_search tool."""
-    with patch("web_search_mcp.server._compound_search") as mock_cs:
-        mock_cs.return_value = "Deep research results..."
-        await client.call_tool("groq_compound_search", {"query": "AI trends"})
-        mock_cs.assert_called_once_with(query="AI trends", model="groq/compound")
+async def test_groq_research_tool(client):
+    """Test the groq_research tool."""
+    with patch("web_search_mcp.server._groq_research") as mock_groq_research:
+        mock_groq_research.return_value = "Deep research results..."
+        await client.call_tool("groq_research", {"query": "AI trends"})
+        mock_groq_research.assert_called_once_with(query="AI trends", model="groq/compound")
 
 
 @pytest.mark.asyncio
-async def test_groq_visit_website_tool(client):
-    """Test the groq_visit_website tool."""
-    with patch("web_search_mcp.server._visit_website") as mock_vw:
-        mock_vw.return_value = "Page analysis..."
+async def test_groq_analyze_page_tool(client):
+    """Test the groq_analyze_page tool."""
+    with patch("web_search_mcp.server._groq_analyze_page") as mock_groq_analyze:
+        mock_groq_analyze.return_value = "Page analysis..."
         await client.call_tool(
-            "groq_visit_website",
+            "groq_analyze_page",
             {"url": "https://example.com"},
         )
-        mock_vw.assert_called_once_with(
+        mock_groq_analyze.assert_called_once_with(
             url="https://example.com",
             query="Summarize the key points of this page.",
             model="groq/compound",
@@ -102,25 +102,25 @@ def test_main_function(mock_mcp_instance):
 
 
 @pytest.mark.asyncio
-async def test_groq_web_search_tool(client):
-    """Test the groq_web_search tool calls web_search correctly."""
-    with patch("web_search_mcp.server._groq_web_search") as mock_web_search:
-        mock_web_search.return_value = "Search results about AI trends..."
+async def test_groq_browse_tool(client):
+    """Test the groq_browse tool calls browse correctly."""
+    with patch("web_search_mcp.server._groq_browse") as mock_browse:
+        mock_browse.return_value = "Search results about AI trends..."
         await client.call_tool(
-            "groq_web_search",
+            "groq_browse",
             {"query": "AI trends", "model": "openai/gpt-oss-120b", "reasoning_effort": "low"},
         )
-        mock_web_search.assert_called_once_with(
+        mock_browse.assert_called_once_with(
             query="AI trends", model="openai/gpt-oss-120b", reasoning_effort="low"
         )
 
 
 @pytest.mark.asyncio
-async def test_groq_web_search_tool_default_reasoning(client):
-    """Test groq_web_search uses default reasoning_effort."""
-    with patch("web_search_mcp.server._groq_web_search") as mock_web_search:
-        mock_web_search.return_value = "result"
-        await client.call_tool("groq_web_search", {"query": "test"})
-        mock_web_search.assert_called_once_with(
+async def test_groq_browse_tool_default_reasoning(client):
+    """Test groq_browse uses default reasoning_effort."""
+    with patch("web_search_mcp.server._groq_browse") as mock_browse:
+        mock_browse.return_value = "result"
+        await client.call_tool("groq_browse", {"query": "test"})
+        mock_browse.assert_called_once_with(
             query="test", model="openai/gpt-oss-20b", reasoning_effort="low"
         )

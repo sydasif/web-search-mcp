@@ -8,19 +8,25 @@ from .search import ddg_search, format_search_results_markdown
 from .utils import format_error
 from .reader import fetch_page as _fetch_page
 from .research import search_domain as _search_domain
-from .groq_search import web_search as _groq_web_search
-from .groq_compound import compound_search as _compound_search
-from .groq_compound import visit_website as _visit_website
+from .groq_search import browse as _groq_browse
+from .groq_compound import research as _groq_research
+from .groq_compound import analyze_page as _groq_analyze_page
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
 
 mcp = FastMCP("Web Search Tools")
 
+# ─────────────────────────────────────────────────────────────
+# DuckDuckGo tools — fast, free, raw data
+# Best for: quick lookups, high-volume searches, pagination
+# ─────────────────────────────────────────────────────────────
+
 
 @mcp.tool(
     name="web_search",
     annotations={
+        "title": "Search the web via DuckDuckGo",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -38,8 +44,12 @@ def web_search(
     backend: Literal["auto", "legacy", "api"] = "auto",
     response_format: Literal["json", "markdown"] = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
-    """
-    Unified search tool for web content and news.
+    """Search the web via DuckDuckGo — free, fast, returns raw structured results.
+
+    Role: Discovery. Use this as your first-pass search for broad coverage.
+    Workflow: Feed results into groq_research for deep validation, or
+    fetch_page to get full page content. Alternative: groq_research
+    provides a synthesized answer instead of raw links.
 
     Args:
         query: Search query string
@@ -76,12 +86,16 @@ def web_search(
         return result
     except Exception as e:
         logger.error(f"Search failed: {e}")
-        return format_error("Search failed", str(e))
+        return format_error(
+            "DuckDuckGo search failed",
+            f"{e}. Try reducing max_results, switching search_type, or using a more specific query.",
+        )
 
 
 @mcp.tool(
     name="fetch_page",
     annotations={
+        "title": "Extract text content from a URL",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -100,9 +114,13 @@ def fetch_page(
     timeout: int = 30,
     backend: Literal["httpx", "curl", "auto"] = "auto",
 ) -> PageResponse | ErrorResponse:
-    """
-    Extracts the full text content from a web page URL.
-    Use this to read the details of a specific result found via web_search.
+    """Extract raw text content from a URL — fast, free, full control.
+
+    Role: Retrieval. Use this when you need the actual page content (not a
+    summary). Supports bot-detection bypass and multiple output formats.
+    Workflow: Pipe the content into groq_analyze_page for AI interpretation.
+    Alternative: groq_analyze_page fetches AND interprets in one step, but
+    costs tokens and gives you no raw content.
 
     Args:
         url: The URL to fetch and extract content from
@@ -133,6 +151,7 @@ def fetch_page(
 @mcp.tool(
     name="search_docs",
     annotations={
+        "title": "Search a domain for technical documentation",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -140,8 +159,12 @@ def fetch_page(
     },
 )
 def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse | ErrorResponse:
-    """
-    Searches specifically for technical documentation or content on a specific domain.
+    """Search a specific domain for technical documentation via DuckDuckGo.
+
+    Role: Targeted discovery. Use this when you know which site has the
+    answer (e.g. docs.python.org, react.dev). Faster and more precise than
+    general web_search. Alternative: groq_browse does interactive browsing
+    for deeper research on a specific site.
 
     Args:
         query: What you're looking for
@@ -153,23 +176,33 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
     return _search_domain(query, domain=domain)
 
 
+# ─────────────────────────────────────────────────────────────
+# Groq GPT-OSS tools — interactive browser search via GPT-OSS models
+# Best for: browsing-style search, single-page deep reads
+# ─────────────────────────────────────────────────────────────
+
+
 @mcp.tool(
-    name="groq_web_search",
+    name="groq_browse",
     annotations={
+        "title": "Browse the web interactively via Groq",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
         "openWorldHint": True,
     },
 )
-def groq_web_search(
+def groq_browse(
     query: str,
     model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
-    """
-    Interactive browser search via Groq's built-in tool.
-    Navigates websites like a human for comprehensive results.
+    """Interactive browser search via Groq — navigates websites like a human.
+
+    Role: Deep browsing. Use this when you need multi-page context or
+    the site requires interactive navigation. Alternative: search_docs for
+    simple single-domain searches, or groq_research for auto-selecting
+    the best combination of search and page reading.
 
     Args:
         query: Search question or topic
@@ -180,27 +213,37 @@ def groq_web_search(
     Returns:
         Combined results from multiple web sources
     """
-    return _groq_web_search(query=query, model=model, reasoning_effort=reasoning_effort)
+    return _groq_browse(query=query, model=model, reasoning_effort=reasoning_effort)
+
+
+# ─────────────────────────────────────────────────────────────
+# Groq Compound tools — auto-selecting AI research system
+# Best for: deep research, validation, multi-step synthesis
+# Costs tokens — use DDG tools for quick lookups
+# ─────────────────────────────────────────────────────────────
 
 
 @mcp.tool(
-    name="groq_compound_search",
+    name="groq_research",
     annotations={
+        "title": "Deep research via Groq Compound",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
         "openWorldHint": True,
     },
 )
-def groq_compound_search(
+def groq_research(
     query: str,
     model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound",
 ) -> str | ErrorResponse:
-    """
-    Deep research via Groq's Compound system.
-    Auto-selects from web search, visit website, and other built-in tools
-    to perform multi-step research. Use after web_search to validate,
-    deep-dive, or expand on initial results.
+    """Deep research via Groq Compound — auto-selects search, browsing, and tools.
+
+    Role: Validation & synthesis. Use this AFTER web_search to validate,
+    deep-dive, or expand on initial results. Compound decides whether to
+    search, visit pages, or use other tools to answer your question.
+    Alternative: web_search for fast raw results, groq_browse for a
+    simpler interactive browse.
 
     Args:
         query: Research question or topic for deep investigation
@@ -209,27 +252,30 @@ def groq_compound_search(
     Returns:
         Synthesized research results from multiple sources
     """
-    return _compound_search(query=query, model=model)
+    return _groq_research(query=query, model=model)
 
 
 @mcp.tool(
-    name="groq_visit_website",
+    name="groq_analyze_page",
     annotations={
+        "title": "Analyze a web page via Groq Compound",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
         "openWorldHint": True,
     },
 )
-def groq_visit_website(
+def groq_analyze_page(
     url: str,
     query: str = "Summarize the key points of this page.",
     model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound",
 ) -> str | ErrorResponse:
-    """
-    Visit and analyze a specific web page via Groq's Compound system.
-    Use after fetch_page to validate, interpret, or answer specific
-    questions about the page content.
+    """Visit and analyze a URL via Groq Compound — fetches AND interprets.
+
+    Role: Interpretation. Use this AFTER fetch_page when you need AI analysis
+    of the content (e.g. "Find the argument for X", "Extract the data table").
+    Alternative: fetch_page gives you raw content for free — use that when
+    you just need to read the text yourself.
 
     Args:
         url: The URL to visit and analyze
@@ -239,7 +285,7 @@ def groq_visit_website(
     Returns:
         AI analysis based on the visited page content
     """
-    return _visit_website(url=url, query=query, model=model)
+    return _groq_analyze_page(url=url, query=query, model=model)
 
 
 def main():

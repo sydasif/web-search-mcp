@@ -12,6 +12,9 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 - **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
 - **🛡️ Bot Detection Bypass**: Automatic fallback to Chrome TLS impersonation when sites block requests (Cloudflare, etc.).
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
+- **🤖 Groq Browser Search**: Interactive multi-page web browsing via Groq's GPT-OSS models.
+- **🔬 Groq Deep Research**: Auto-selecting AI research via Groq's Compound system — validates and expands on initial results.
+- **🔍 Groq Page Analysis**: Visit and interpret web pages via Groq Compound.
 
 ## 🚀 Quick Start
 
@@ -34,7 +37,8 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
       "command": "web-search-mcp",
       "env": {
         "SEARCH_MCP_RATE_LIMIT_SEARCH": "30",
-        "SEARCH_MCP_RATE_LIMIT_FETCH": "20"
+        "SEARCH_MCP_RATE_LIMIT_FETCH": "20",
+        "SEARCH_MCP_GROQ_API_KEY": "gsk_your_key_here"
       }
     }
   }
@@ -43,7 +47,8 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 
 **Available Environment Variables:**
 
-- `SEARCH_MCP_RATE_LIMIT_SEARCH`: Max search requests per minute (default: `30`).
+- `SEARCH_MCP_GROQ_API_KEY`: Groq API key for GPT-OSS and Compound tools ([get one here](https://console.groq.com/keys)).
+- `SEARCH_MCP_RATE_LIMIT_SEARCH`: Max DDG search requests per minute (default: `30`).
 - `SEARCH_MCP_RATE_LIMIT_FETCH`: Max page fetch requests per minute (default: `20`).
 
 ### Fetch Backend Options
@@ -58,11 +63,36 @@ The `fetch_page` tool supports three backend modes to handle sites with bot dete
 
 ## 🛠️ Tool Reference
 
+### DuckDuckGo Tools (free, fast, raw data)
+
 | Tool          | Description                                   | Key Parameters                                                                                                                                                                                                                         |
 | ------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `web_search`  | Universal search (Web, News)                  | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                                                         |
 | `fetch_page`  | Extract clean article text from a URL         | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout`, `backend` ("httpx", "curl", "auto") |
 | `search_docs` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                                                              |
+
+### Groq Tools (requires API key, synthesized results)
+
+| Tool                | Description                                                   | Key Parameters                                                                                                     |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `groq_browse`       | Interactive browser search via GPT-OSS models                 | `query`, `model` ("openai/gpt-oss-20b", "openai/gpt-oss-120b"), `reasoning_effort` ("low", "medium", "high")       |
+| `groq_research`     | Deep research via Compound — auto-selects search and tools    | `query`, `model` ("groq/compound", "groq/compound-mini")                                                           |
+| `groq_analyze_page` | Visit and analyze a URL via Compound — fetches AND interprets | `url`, `query` (what to extract, e.g. "Summarize the key points"), `model` ("groq/compound", "groq/compound-mini") |
+
+### Workflow Guide
+
+Use DuckDuckGo tools for **discovery** (fast, free), then Groq tools for **validation** (synthesized, comprehensive):
+
+```
+web_search("latest Python 3.13 features")
+  → feed results into →
+groq_research("Validate and expand on these findings")
+
+fetch_page("https://docs.python.org/3/whatsnew/3.13.html")
+  → feed raw content into →
+groq_analyze_page("https://docs.python.org/3/whatsnew/3.13.html",
+                   "Extract all performance improvements")
+```
 
 ## 💻 Development
 
