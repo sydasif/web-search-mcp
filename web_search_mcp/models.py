@@ -11,19 +11,6 @@ class ErrorResponse(BaseModel):
     error: str
     details: str
 
-    def __getitem__(self, item):
-        """Allow dict-like access for backward compatibility with tests."""
-        return getattr(self, item)
-
-    def get(self, item, default=None):
-        """Allow .get() access for backward compatibility with tests."""
-        return getattr(self, item, default)
-
-    def __contains__(self, item):
-        """Allow 'in' checks for backward compatibility with tests."""
-        val = getattr(self, item, None)
-        return val is not None
-
 
 class SearchResult(BaseModel):
     """A single search result item."""
@@ -32,19 +19,6 @@ class SearchResult(BaseModel):
     href: str | None = None
     url: str | None = None
     body: str | None = None
-
-    def __getitem__(self, item):
-        """Allow dict-like access for backward compatibility with tests."""
-        return getattr(self, item)
-
-    def get(self, item, default=None):
-        """Allow .get() access for backward compatibility with tests."""
-        return getattr(self, item, default)
-
-    def __contains__(self, item):
-        """Allow 'in' checks for backward compatibility with tests."""
-        val = getattr(self, item, None)
-        return val is not None
 
 
 class SearchResponse(BaseModel):
@@ -59,19 +33,6 @@ class SearchResponse(BaseModel):
     error: str | None = None
     details: str | None = None
 
-    def __getitem__(self, item):
-        """Allow dict-like access for backward compatibility with tests."""
-        return getattr(self, item)
-
-    def get(self, item, default=None):
-        """Allow .get() access for backward compatibility with tests."""
-        return getattr(self, item, default)
-
-    def __contains__(self, item):
-        """Allow 'in' checks for backward compatibility with tests."""
-        val = getattr(self, item, None)
-        return val is not None
-
 
 class PageResponse(BaseModel):
     """Structured response for page extraction."""
@@ -81,18 +42,6 @@ class PageResponse(BaseModel):
     content: str
     metadata: dict[str, str | None] | None = None
     warning: str | None = None
-
-    def __getitem__(self, item):
-        """Allow dict-like access for backward compatibility with tests."""
-        return getattr(self, item)
-
-    def get(self, item, default=None):
-        """Allow .get() access for backward compatibility with tests."""
-        return getattr(self, item, default)
-
-    def __contains__(self, item):
-        """Allow 'in' checks for backward compatibility with tests."""
-        return hasattr(self, item) or item in (self.metadata or {})
 
 
 class SearchRequest(BaseModel):

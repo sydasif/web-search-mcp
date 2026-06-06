@@ -2,8 +2,6 @@ from unittest.mock import patch
 from web_search_mcp.models import SearchRequest, SearchResponse, SearchResult, ErrorResponse
 from web_search_mcp.search import ddg_search, format_search_results_markdown
 
-# ... (existing TestDDGSearch class remains unchanged)
-
 
 class TestDDGSearch:
     """Test suite for DDG search functionality with mocked DDGS API calls."""
@@ -23,10 +21,10 @@ class TestDDGSearch:
         req = SearchRequest(query="test query", max_results=1)
         result = ddg_search(req)
 
-        assert result["query"] == "test query"
-        assert result["search_type"] == "text"
-        assert result["total_results"] == 1
-        assert len(result["results"]) == 1
+        assert result.query == "test query"
+        assert result.search_type == "text"
+        assert result.total_results == 1
+        assert len(result.results) == 1
         mock_ddgs.text.assert_called_once_with(
             "test query",
             max_results=1,
@@ -44,8 +42,8 @@ class TestDDGSearch:
         req = SearchRequest(query="test query", time_range="d", max_results=2)
         result = ddg_search(req)
 
-        assert result["search_type"] == "text"
-        assert len(result["results"]) == 0
+        assert result.search_type == "text"
+        assert len(result.results) == 0
         mock_ddgs.text.assert_called_once_with(
             "test query",
             max_results=2,
@@ -73,7 +71,7 @@ class TestDDGSearch:
         )
         result = ddg_search(req)
 
-        assert result["search_type"] == "news"
+        assert result.search_type == "news"
         mock_ddgs.news.assert_called_once_with(
             "test query",
             max_results=5,
@@ -92,8 +90,8 @@ class TestDDGSearch:
         req = SearchRequest(query="test query", max_results=1)
         result = ddg_search(req)
 
-        assert "error" in result
-        assert "Network error" in result["error"]
+        assert isinstance(result, ErrorResponse)
+        assert "Network error" in result.error
 
     @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_default_type(self, mock_ddgs_class):
@@ -104,8 +102,7 @@ class TestDDGSearch:
         req = SearchRequest(query="test")
         result = ddg_search(req)
 
-        assert result["search_type"] == "text"
-        # Check that it was called with search_type="text"
+        assert result.search_type == "text"
         mock_ddgs.text.assert_called_once()
 
     @patch("web_search_mcp.search.DDGS")
@@ -122,8 +119,8 @@ class TestDDGSearch:
             page=1,
         )
         result = ddg_search(req)
-        assert result["query"] == "test"
-        assert result["search_type"] == "text"
+        assert result.query == "test"
+        assert result.search_type == "text"
 
         # Verify that only non-None parameters are passed
         call_kwargs = mock_ddgs.text.call_args[1]
@@ -139,8 +136,8 @@ class TestDDGSearch:
         req = SearchRequest(query="")
         result = ddg_search(req)
 
-        assert "error" in result
-        assert "Query cannot be empty" in result["error"]
+        assert isinstance(result, ErrorResponse)
+        assert "Query cannot be empty" in result.error
         mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
 
     @patch("web_search_mcp.search.DDGS")
@@ -150,8 +147,8 @@ class TestDDGSearch:
         req.search_type = "invalid_type"  # type: ignore
         result = ddg_search(req)
 
-        assert "error" in result
-        assert "Unsupported search type: invalid_type" in result["error"]
+        assert isinstance(result, ErrorResponse)
+        assert "Unsupported search type: invalid_type" in result.error
         mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
 
     @patch("web_search_mcp.search.DDGS")
@@ -163,9 +160,9 @@ class TestDDGSearch:
         req = SearchRequest(query="a very specific query with no results")
         result = ddg_search(req)
 
-        assert result["total_results"] == 0
-        assert len(result["results"]) == 0
-        assert "error" not in result
+        assert isinstance(result, SearchResponse)
+        assert result.total_results == 0
+        assert len(result.results) == 0
 
     @patch("web_search_mcp.search.DDGS")
     def test_ddg_search_max_results_zero(self, mock_ddgs_class):
@@ -177,8 +174,9 @@ class TestDDGSearch:
         req.max_results = 0  # Set to 0 to bypass validation
         result = ddg_search(req)
 
-        assert result["total_results"] == 0
-        assert len(result["results"]) == 0
+        assert isinstance(result, SearchResponse)
+        assert result.total_results == 0
+        assert len(result.results) == 0
         mock_ddgs.text.assert_called_once_with(
             "test",
             max_results=0,
@@ -199,14 +197,14 @@ class TestDDGSearch:
         req = SearchRequest(query="test", max_results=2)
         result = ddg_search(req)
 
-        assert "error" not in result
-        assert result["total_results"] == 2
-        assert len(result["results"]) == 2
+        assert isinstance(result, SearchResponse)
+        assert result.total_results == 2
+        assert len(result.results) == 2
         # Check that the available data is still parsed
-        assert result["results"][0]["title"] == "Only title"
-        assert result["results"][0].get("href") is None
-        assert result["results"][1].get("title") is None
-        assert result["results"][1]["href"] == "https://example.com"
+        assert result.results[0].title == "Only title"
+        assert result.results[0].href is None
+        assert result.results[1].title is None
+        assert result.results[1].href == "https://example.com"
 
 
 class TestFormatSearchResultsMarkdown:
@@ -218,52 +216,58 @@ class TestFormatSearchResultsMarkdown:
         result = format_search_results_markdown(err)
         assert result == "**Error:** API failure"
 
-    def test_format_error_dict(self):
-        """Test formatting of error dictionaries."""
-        # Explicit error
-        assert (
-            format_search_results_markdown({"error": "Custom error"}) == "**Error:** Custom error"
-        )
-        # A dictionary without an "error" key is treated as a successful empty search
-        result = format_search_results_markdown({"something": "else"})
-        assert "# Search Results" in result
-        assert "No results found." in result
+    def test_format_error_with_details(self):
+        """Test formatting of ErrorResponse with details."""
+        err = ErrorResponse(error="Custom error", details="extra info")
+        result = format_search_results_markdown(err)
+        assert result == "**Error:** Custom error"
 
-    def test_format_minimal_dict(self):
-        """Test backward compatibility with minimal result dictionaries."""
-        results = {"query": "test", "results": []}
-        result = format_search_results_markdown(results)
+    def test_format_empty_search(self):
+        """Test formatting of empty search results."""
+        res = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=0,
+            results=[],
+            has_more=False,
+        )
+        result = format_search_results_markdown(res)
         assert "# Search Results for 'test' (text)" in result
         assert "Found 0 results." in result
         assert "No results found." in result
 
     def test_format_result_types(self):
-        """Test formatting with both SearchResult models and raw dictionaries."""
+        """Test formatting with SearchResult models."""
         results = SearchResponse(
             query="test",
             search_type="text",
             total_results=2,
             results=[
-                SearchResult(title="Model Title", href="https://model.com", body="Model body"),
-                {"title": "Dict Title", "href": "https://dict.com", "body": "Dict body"},
+                SearchResult(title="Title One", href="https://one.com", body="Body one"),
+                SearchResult(title="Title Two", href="https://two.com", body="Body two"),
             ],
             has_more=False,
             next_page=None,
         )
         result = format_search_results_markdown(results)
-        assert "**[Model Title](https://model.com)**" in result
-        assert "Model body" in result
-        assert "**[Dict Title](https://dict.com)**" in result
-        assert "Dict body" in result
+        assert "**[Title One](https://one.com)**" in result
+        assert "Body one" in result
+        assert "**[Title Two](https://two.com)**" in result
+        assert "Body two" in result
 
     def test_format_url_fallbacks(self):
         """Test URL fallback logic (href -> url -> #)."""
-        results_list = [
-            {"title": "T1", "href": "https://href.com"},
-            {"title": "T2", "url": "https://url.com"},
-            {"title": "T3"},  # Both missing
-        ]
-        results = {"query": "test", "results": results_list}
+        results = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=3,
+            results=[
+                SearchResult(title="T1", href="https://href.com"),
+                SearchResult(title="T2", url="https://url.com"),
+                SearchResult(title="T3"),  # Both missing
+            ],
+            has_more=False,
+        )
         result = format_search_results_markdown(results)
         assert "[T1](https://href.com)" in result
         assert "[T2](https://url.com)" in result
@@ -271,16 +275,20 @@ class TestFormatSearchResultsMarkdown:
 
     def test_format_body_omission(self):
         """Test that results with empty or None bodies omit the body line."""
-        results_list = [
-            {"title": "T1", "href": "https://1.com", "body": ""},
-            {"title": "T2", "href": "https://2.com", "body": None},
-            {"title": "T3", "href": "https://3.com", "body": "Exists"},
-        ]
-        results = {"query": "test", "results": results_list}
+        results = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=3,
+            results=[
+                SearchResult(title="T1", href="https://1.com", body=""),
+                SearchResult(title="T2", href="https://2.com", body=None),
+                SearchResult(title="T3", href="https://3.com", body="Exists"),
+            ],
+            has_more=False,
+        )
         result = format_search_results_markdown(results)
-        # Body for T1 and T2 should not be present (no indented line after title)
         lines = result.split("\n")
-        body_lines = [l for l in lines if l.startswith("   ")]
+        body_lines = [line for line in lines if line.startswith("   ")]
         assert len(body_lines) == 1
         assert "Exists" in body_lines[0]
 

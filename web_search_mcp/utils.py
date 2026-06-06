@@ -7,14 +7,14 @@ logger = logging.getLogger("web-search-mcp")
 
 
 def format_error(message: str, details: str | None = None) -> ErrorResponse:
-    """Creates a unified error response dictionary.
+    """Creates a unified error response.
 
     Args:
         message: A concise summary of the error.
         details: Additional details or exception messages. Defaults to None.
 
     Returns:
-        A dictionary containing the error message and details.
+        An ErrorResponse containing the error message and details.
     """
     return ErrorResponse(
         error=message,

@@ -163,8 +163,8 @@ def fetch_page(
         backend: The fetch backend to use ('httpx', 'curl', or 'auto'). Defaults to 'auto'.
 
     Returns:
-        A dictionary containing the URL, content length, and the extracted content.
-        May include a 'metadata' field or a 'warning' if metadata extraction failed.
+        A PageResponse containing the URL, content length, and the extracted content.
+        May include metadata or a warning if metadata extraction failed.
     """
     # Apply rate limiting
     fetch_rate_limiter.acquire()

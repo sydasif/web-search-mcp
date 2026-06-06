@@ -70,7 +70,7 @@ def web_search(
         if response_format == "markdown":
             # We cast result to SearchResponse | dict here for the formatter
             return format_search_results_markdown(result)  # type: ignore
-        return result if result is not None else format_error("No results returned from search")
+        return result
     except Exception as e:
         logger.error(f"Search failed: {e}")
         return format_error("Search failed", str(e))

@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
 import pytest
+from web_search_mcp.models import ErrorResponse, PageResponse
 from web_search_mcp.reader import (
     fetch_page,
     _fetch_httpx,
@@ -111,7 +112,8 @@ def test_fetch_page_with_backend_parameter():
 
         result = fetch_page("https://example.com", backend="curl")
         mock_fetch.assert_called_once_with("https://example.com", backend="curl", timeout=30)
-        assert "Extracted Content" in result["content"]
+        assert isinstance(result, PageResponse)
+        assert "Extracted Content" in result.content
 
 
 def test_fetch_page_with_auto_backend():
@@ -125,7 +127,8 @@ def test_fetch_page_with_auto_backend():
 
         result = fetch_page("https://example.com", backend="auto")
         mock_fetch.assert_called_once_with("https://example.com", backend="auto", timeout=30)
-        assert "Extracted Content" in result["content"]
+        assert isinstance(result, PageResponse)
+        assert "Extracted Content" in result.content
 
 
 def test_fetch_with_backend_unknown_raises():
@@ -194,9 +197,10 @@ def test_fetch_page_success():
         url = "https://example.com"
         result = fetch_page(url)
 
-        assert result["url"] == url
-        assert "Test Content" in result["content"]
-        assert result["length"] == len("Test Content")
+        assert isinstance(result, PageResponse)
+        assert result.url == url
+        assert "Test Content" in result.content
+        assert result.length == len("Test Content")
         mock_client.get.assert_called_once()
         mock_trafilatura.extract.assert_called_once()
 
@@ -212,8 +216,8 @@ def test_fetch_page_download_fails():
         url = "https://example.com/empty"
         result = fetch_page(url)
 
-        assert "error" in result
-        assert "Could not download content" in result["error"]
+        assert isinstance(result, ErrorResponse)
+        assert "Could not download content" in result.error
 
 
 def test_fetch_page_extraction_fails():
@@ -232,8 +236,8 @@ def test_fetch_page_extraction_fails():
         url = "https://example.com/empty"
         result = fetch_page(url)
 
-        assert "error" in result
-        assert "No readable text found" in result["error"]
+        assert isinstance(result, ErrorResponse)
+        assert "No readable text found" in result.error
 
 
 def test_fetch_page_generic_exception():
@@ -244,8 +248,8 @@ def test_fetch_page_generic_exception():
         url = "https://example.com/timeout"
         result = fetch_page(url)
 
-        assert "error" in result
-        assert "Network timeout" in result["error"]
+        assert isinstance(result, ErrorResponse)
+        assert "Network timeout" in result.error
 
 
 def test_fetch_page_with_metadata():
@@ -275,11 +279,12 @@ def test_fetch_page_with_metadata():
         url = "https://example.com"
         result = fetch_page(url, include_metadata=True)
 
-        assert result["url"] == url
-        assert "Test Content" in result["content"]
-        assert "metadata" in result
-        assert result["metadata"]["title"] == "Test Title"
-        assert result["metadata"]["author"] == "Test Author"
+        assert isinstance(result, PageResponse)
+        assert result.url == url
+        assert "Test Content" in result.content
+        assert result.metadata is not None
+        assert result.metadata["title"] == "Test Title"
+        assert result.metadata["author"] == "Test Author"
         mock_client.get.assert_called_once()
         mock_trafilatura.extract.assert_called_once()
 
@@ -302,8 +307,9 @@ def test_fetch_page_with_different_formats():
         url = "https://example.com"
         result = fetch_page(url)  # Uses default format
 
-        assert result["url"] == url
-        assert "Test Content" in result["content"]
+        assert isinstance(result, PageResponse)
+        assert result.url == url
+        assert "Test Content" in result.content
         mock_trafilatura.extract.assert_called_once()
 
         # Reset mock call count
@@ -314,8 +320,9 @@ def test_fetch_page_with_different_formats():
 
         result = fetch_page(url, output_format="markdown")
 
-        assert result["url"] == url
-        assert "# Test" in result["content"]
+        assert isinstance(result, PageResponse)
+        assert result.url == url
+        assert "# Test" in result.content
         mock_trafilatura.extract.assert_called_once()
 
 
@@ -339,8 +346,9 @@ def test_fetch_page_with_content_options():
         url = "https://example.com"
         result = fetch_page(url, include_tables=True, include_comments=True)
 
-        assert result["url"] == url
-        assert "Content with tables and comments" in result["content"]
+        assert isinstance(result, PageResponse)
+        assert result.url == url
+        assert "Content with tables and comments" in result.content
         mock_trafilatura.extract.assert_called_once()
 
 
@@ -363,9 +371,10 @@ def test_fetch_page_with_max_length():
         url = "https://example.com"
         result = fetch_page(url, max_length=100)
 
-        assert result["url"] == url
-        assert len(result["content"]) <= 100  # Should be truncated
-        assert result["length"] == len(long_content)  # Original length preserved in metadata
+        assert isinstance(result, PageResponse)
+        assert result.url == url
+        assert len(result.content) <= 100  # Should be truncated
+        assert result.length == len(long_content)  # Original length preserved in metadata
         mock_trafilatura.extract.assert_called_once()
 
 
@@ -379,8 +388,8 @@ class TestFetchPageErrors:
         with patch("web_search_mcp.reader._fetch_with_backend") as mock_fetch:
             mock_fetch.side_effect = httpx.TimeoutException("Request timed out")
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "Request timed out after" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "Request timed out after" in result.error
 
     def test_fetch_page_request_error(self):
         """Test handling of httpx.RequestError."""
@@ -389,8 +398,8 @@ class TestFetchPageErrors:
         with patch("web_search_mcp.reader._fetch_with_backend") as mock_fetch:
             mock_fetch.side_effect = httpx.ConnectError("Connection failed")
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "HTTP request failed" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "HTTP request failed" in result.error
 
     def test_fetch_page_http_status_error(self):
         """Test handling of httpx.HTTPStatusError (e.g., 500)."""
@@ -403,8 +412,8 @@ class TestFetchPageErrors:
                 "Internal Server Error", request=MagicMock(), response=mock_response
             )
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "HTTP request failed with status 500" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "HTTP request failed with status 500" in result.error
 
     def test_fetch_page_curl_error(self):
         """Test handling of CurlError."""
@@ -413,16 +422,16 @@ class TestFetchPageErrors:
         with patch("web_search_mcp.reader._fetch_with_backend") as mock_fetch:
             mock_fetch.side_effect = CurlError("Curl internal error")
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "HTTP request failed" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "HTTP request failed" in result.error
 
     def test_fetch_page_generic_exception(self):
         """Test handling of an unexpected exception."""
         with patch("web_search_mcp.reader._fetch_with_backend") as mock_fetch:
             mock_fetch.side_effect = RuntimeError("Something went wrong")
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "Something went wrong" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "Something went wrong" in result.error
 
     def test_fetch_page_extraction_none(self):
         """Test when trafilatura.extract returns None."""
@@ -433,8 +442,8 @@ class TestFetchPageErrors:
             mock_fetch.return_value = "<html><body>Empty</body></html>"
             mock_extract.return_value = None
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "No readable text found" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "No readable text found" in result.error
 
     def test_fetch_page_extraction_empty_string(self):
         """Test when trafilatura.extract returns an empty string."""
@@ -445,8 +454,8 @@ class TestFetchPageErrors:
             mock_fetch.return_value = "<html><body>Empty</body></html>"
             mock_extract.return_value = ""
             result = fetch_page("https://example.com")
-            assert "error" in result
-            assert "No readable text found" in result["error"]
+            assert isinstance(result, ErrorResponse)
+            assert "No readable text found" in result.error
 
     def test_fetch_page_metadata_missing(self):
         """Test when include_metadata=True but no metadata is found."""
@@ -458,6 +467,6 @@ class TestFetchPageErrors:
             # Return a tuple (content, metadata) where metadata is None
             mock_extract.return_value = ("Extracted Content", None)
             result = fetch_page("https://example.com", include_metadata=True)
-            assert "warning" in result
-            assert result["warning"] == "Could not extract metadata."
-            assert result["content"] == "Extracted Content"
+            assert isinstance(result, PageResponse)
+            assert result.warning == "Could not extract metadata."
+            assert result.content == "Extracted Content"

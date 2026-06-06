@@ -14,8 +14,8 @@ def search_domain(query: str, domain: str = "docs.python.org") -> SearchResponse
         domain: The domain to restrict the search to. Defaults to 'docs.python.org'.
 
     Returns:
-        A SearchResponse object containing the search results from the specified domain,
-        or a formatted error dictionary on failure.
+        A SearchResponse containing the search results from the specified domain,
+        or an ErrorResponse on failure.
     """
     enhanced_query = f"site:{domain} {query}"
 
