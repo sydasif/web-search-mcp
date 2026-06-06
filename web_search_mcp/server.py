@@ -7,7 +7,6 @@ from .models import SearchRequest, FetchOutputFormat, SearchResponse, PageRespon
 from .search import ddg_search, format_search_results_markdown
 from .utils import format_error
 from .reader import fetch_page as _fetch_page
-from .research import search_domain as _search_domain
 from .groq_search import browse as _groq_browse
 from .groq_compound import research as _groq_research
 from .groq_compound import analyze_page as _groq_analyze_page
@@ -173,7 +172,18 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
     Returns:
         Search results from the specified domain
     """
-    return _search_domain(query, domain=domain)
+    enhanced_query = f"site:{domain} {query}"
+
+    try:
+        req = SearchRequest(
+            query=enhanced_query,
+            search_type="text",
+            max_results=5,
+        )
+        return ddg_search(req)
+    except Exception as e:
+        logger.error(f"Domain search failed for query '{query}' on domain '{domain}': {e}")
+        return format_error("Search failed", str(e))
 
 
 # ─────────────────────────────────────────────────────────────

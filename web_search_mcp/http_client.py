@@ -15,16 +15,11 @@ def _get_ssl_context() -> ssl.SSLContext | None:
         return None
 
 
-def _create_client() -> httpx.Client:
-    """Create a shared HTTP client with proper configuration."""
-    ssl_context = _get_ssl_context()
-    return httpx.Client(
-        timeout=30.0,
-        headers={"User-Agent": settings.user_agent},
-        follow_redirects=True,
-        verify=ssl_context if ssl_context else True,
-    )
-
-
 # Global shared client instance
-http_client = _create_client()
+ssl_context = _get_ssl_context()
+http_client = httpx.Client(
+    timeout=30.0,
+    headers={"User-Agent": settings.user_agent},
+    follow_redirects=True,
+    verify=ssl_context if ssl_context else True,
+)

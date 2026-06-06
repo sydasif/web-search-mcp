@@ -57,16 +57,20 @@ async def test_fetch_page_tool(client):
 @pytest.mark.asyncio
 async def test_search_docs_tool(client):
     """Test the search_docs tool."""
-    with patch("web_search_mcp.server._search_domain") as mock_search_domain:
-        mock_search_domain.return_value = SearchResponse(
-            query="testing site:react.dev",
+    with patch("web_search_mcp.server.ddg_search") as mock_ddg_search:
+        mock_ddg_search.return_value = SearchResponse(
+            query="site:react.dev testing",
             search_type="text",
             total_results=0,
             results=[],
             has_more=False,
         )
         await client.call_tool("search_docs", {"query": "testing", "domain": "react.dev"})
-        mock_search_domain.assert_called_once_with("testing", domain="react.dev")
+        mock_ddg_search.assert_called_once()
+        call_args = mock_ddg_search.call_args[0][0]
+        assert call_args.query == "site:react.dev testing"
+        assert call_args.search_type == "text"
+        assert call_args.max_results == 5
 
 
 @pytest.mark.asyncio
