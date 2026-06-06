@@ -9,6 +9,8 @@ from .utils import format_error
 from .reader import fetch_page as _fetch_page
 from .research import search_domain as _search_domain
 from .groq_search import web_search as _groq_web_search
+from .groq_compound import compound_search as _compound_search
+from .groq_compound import visit_website as _visit_website
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -179,6 +181,65 @@ def groq_web_search(
         Combined results from multiple web sources
     """
     return _groq_web_search(query=query, model=model, reasoning_effort=reasoning_effort)
+
+
+@mcp.tool(
+    name="groq_compound_search",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def groq_compound_search(
+    query: str,
+    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound",
+) -> str | ErrorResponse:
+    """
+    Deep research via Groq's Compound system.
+    Auto-selects from web search, visit website, and other built-in tools
+    to perform multi-step research. Use after web_search to validate,
+    deep-dive, or expand on initial results.
+
+    Args:
+        query: Research question or topic for deep investigation
+        model: Compound system ('groq/compound' for full, 'groq/compound-mini' for lower latency)
+
+    Returns:
+        Synthesized research results from multiple sources
+    """
+    return _compound_search(query=query, model=model)
+
+
+@mcp.tool(
+    name="groq_visit_website",
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def groq_visit_website(
+    url: str,
+    query: str = "Summarize the key points of this page.",
+    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound",
+) -> str | ErrorResponse:
+    """
+    Visit and analyze a specific web page via Groq's Compound system.
+    Use after fetch_page to validate, interpret, or answer specific
+    questions about the page content.
+
+    Args:
+        url: The URL to visit and analyze
+        query: What to do with the page content (default: summarize key points)
+        model: Compound system ('groq/compound' for full, 'groq/compound-mini' for lower latency)
+
+    Returns:
+        AI analysis based on the visited page content
+    """
+    return _visit_website(url=url, query=query, model=model)
 
 
 def main():

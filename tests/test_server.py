@@ -69,6 +69,31 @@ async def test_search_docs_tool(client):
         mock_search_domain.assert_called_once_with("testing", domain="react.dev")
 
 
+@pytest.mark.asyncio
+async def test_groq_compound_search_tool(client):
+    """Test the groq_compound_search tool."""
+    with patch("web_search_mcp.server._compound_search") as mock_cs:
+        mock_cs.return_value = "Deep research results..."
+        await client.call_tool("groq_compound_search", {"query": "AI trends"})
+        mock_cs.assert_called_once_with(query="AI trends", model="groq/compound")
+
+
+@pytest.mark.asyncio
+async def test_groq_visit_website_tool(client):
+    """Test the groq_visit_website tool."""
+    with patch("web_search_mcp.server._visit_website") as mock_vw:
+        mock_vw.return_value = "Page analysis..."
+        await client.call_tool(
+            "groq_visit_website",
+            {"url": "https://example.com"},
+        )
+        mock_vw.assert_called_once_with(
+            url="https://example.com",
+            query="Summarize the key points of this page.",
+            model="groq/compound",
+        )
+
+
 @patch("web_search_mcp.server.mcp")
 def test_main_function(mock_mcp_instance):
     """Test that the main function calls mcp.run()."""
