@@ -14,11 +14,10 @@ The application follows a modular architecture with clear separation of concerns
 
 - **server.py**: FastMCP server entry point, defines 6 MCP tools exposed to clients
 - **search.py**: DuckDuckGo search logic (`ddg_search` function) with text/news search capabilities
-- **research.py**: Technical documentation search functionality for specific domains
 - **reader.py**: Web content extraction using `trafilatura` with support for multiple formats
 - **groq_search.py**: Groq GPT-OSS interactive browser search (`browse` function)
 - **groq_compound.py**: Groq Compound system tools — `research` (auto-selecting search) and `analyze_page` (URL visit + interpretation)
-- **models.py**: Pydantic models for request/response validation (includes Groq input models)
+- **models.py**: Pydantic models for request/response validation (ErrorResponse, SearchRequest, PageResponse, SearchResult)
 - **config.py**: Application settings via pydantic-settings (includes `groq_api_key`)
 - **utils.py**: Shared utility functions for consistent error formatting, auth errors, and rate limiting
 

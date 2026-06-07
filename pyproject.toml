@@ -40,9 +40,7 @@ line-length = 100
 
 [tool.ruff.lint]
 # S101: assert is standard in pytest tests
-# S323: SSL insecure context is intentional for development fallback
 ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["S101"]
-"web_search_mcp/weather.py" = ["S323"]
