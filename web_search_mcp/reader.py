@@ -96,12 +96,12 @@ def _fetch_auto(url: str, timeout: int = 30) -> str:
     except httpx.HTTPStatusError as e:
         status = e.response.status_code if e.response is not None else None
         if status == 403:
-            logger.info(f"httpx got 403 for {url}; retrying with curl backend")
+            logger.info("httpx got 403 for %s; retrying with curl backend", url)
             return _fetch_curl(url, timeout=timeout)
         raise
 
     if _is_cloudflare_challenge_body(html):
-        logger.info(f"httpx got Cloudflare challenge for {url}; retrying with curl backend")
+        logger.info("httpx got Cloudflare challenge for %s; retrying with curl backend", url)
         return _fetch_curl(url, timeout=timeout)
 
     return html
@@ -230,18 +230,18 @@ def fetch_page(
         return response
 
     except httpx.TimeoutException as e:
-        logger.error(f"Timeout during fetch: {e}")
+        logger.error("Timeout during fetch: %s", e)
         return format_error(f"Request timed out after {timeout}s: {str(e)}")
     except httpx.RequestError as e:
-        logger.error(f"HTTP error during fetch: {e}")
+        logger.error("HTTP error during fetch: %s", e)
         return format_error(f"HTTP request failed: {str(e)}")
     except httpx.HTTPStatusError as e:
         status = e.response.status_code if e.response is not None else None
-        logger.error(f"HTTP status error during fetch: {e}")
+        logger.error("HTTP status error during fetch: %s", e)
         return format_error(f"HTTP request failed with status {status}: {str(e)}")
     except CurlError as e:
-        logger.error(f"Curl error during fetch: {e}")
+        logger.error("Curl error during fetch: %s", e)
         return format_error(f"HTTP request failed: {str(e)}")
     except Exception as e:
-        logger.error(f"Reader error: {e}")
+        logger.error("Reader error: %s", e)
         return format_error(str(e))

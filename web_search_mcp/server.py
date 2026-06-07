@@ -84,7 +84,7 @@ def web_search(
             return format_search_results_markdown(result)  # type: ignore
         return result
     except Exception as e:
-        logger.error(f"Search failed: {e}")
+        logger.error("Search failed: %s", e)
         return format_error(
             "DuckDuckGo search failed",
             f"{e}. Try reducing max_results, switching search_type, or using a more specific query.",
@@ -182,7 +182,7 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
         )
         return ddg_search(req)
     except Exception as e:
-        logger.error(f"Domain search failed for query '{query}' on domain '{domain}': {e}")
+        logger.error("Domain search failed for query %r on domain %r: %s", query, domain, e)
         return format_error("Search failed", str(e))
 
 

@@ -72,7 +72,7 @@ def browse(
             return format_empty_response_error("Groq browse")
         return content
     except Exception as e:
-        logger.error(f"Groq browse failed ({model}): {e}")
+        logger.error("Groq browse failed (%s): %s", model, e)
         return format_error(
             f"Groq browse failed ({model})",
             f"{e}. Try switching to a different model (e.g. openai/gpt-oss-120b) or use web_search instead.",

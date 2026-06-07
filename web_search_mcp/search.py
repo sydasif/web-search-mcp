@@ -88,5 +88,5 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
                 next_page=request.page + 1 if has_more else None,
             )
     except Exception as e:
-        logger.exception(f"DuckDuckGo search failed for query '{request.query}': {e}")
+        logger.exception("DuckDuckGo search failed for query %r", request.query)
         return format_error(str(e))

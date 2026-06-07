@@ -11,7 +11,7 @@ def _get_ssl_context() -> ssl.SSLContext | None:
     try:
         return ssl.create_default_context()
     except Exception as e:
-        logger.warning(f"Failed to create default SSL context: {e}")
+        logger.warning("Failed to create default SSL context: %s", e)
         return None
 
 

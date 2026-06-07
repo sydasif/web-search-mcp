@@ -84,7 +84,7 @@ def research(
             return format_empty_response_error("Groq research")
         return content
     except Exception as e:
-        logger.error(f"Groq research failed ({model}): {e}")
+        logger.error("Groq research failed (%s): %s", model, e)
         return format_error(
             f"Groq research failed ({model})",
             f"{e}. Try using web_search for raw results or groq_analyze_page if you need to examine a specific URL.",
@@ -149,7 +149,7 @@ def analyze_page(
             return format_empty_response_error("Groq analyze page")
         return content
     except Exception as e:
-        logger.error(f"Groq analyze page failed ({model}): {e}")
+        logger.error("Groq analyze page failed (%s): %s", model, e)
         return format_error(
             f"Groq analyze page failed ({model})",
             f"{e}. Try using fetch_page to get raw content instead, or check that the URL is publicly accessible.",
