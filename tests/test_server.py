@@ -79,7 +79,7 @@ async def test_groq_research_tool(client):
     with patch("web_search_mcp.server._groq_research") as mock_groq_research:
         mock_groq_research.return_value = "Deep research results..."
         await client.call_tool("groq_research", {"query": "AI trends"})
-        mock_groq_research.assert_called_once_with(query="AI trends", model="groq/compound")
+        mock_groq_research.assert_called_once_with(query="AI trends", model="groq/compound-mini")
 
 
 @pytest.mark.asyncio
@@ -94,7 +94,7 @@ async def test_groq_analyze_page_tool(client):
         mock_groq_analyze.assert_called_once_with(
             url="https://example.com",
             query="Summarize the key points of this page.",
-            model="groq/compound",
+            model="groq/compound-mini",
         )
 
 

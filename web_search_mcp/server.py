@@ -245,7 +245,7 @@ def groq_browse(
 )
 def groq_research(
     query: str,
-    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound",
+    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
 ) -> str | ErrorResponse:
     """Deep research via Groq Compound — auto-selects search, browsing, and tools.
 
@@ -255,9 +255,13 @@ def groq_research(
     Alternative: web_search for fast raw results, groq_browse for a
     simpler interactive browse.
 
+    Note: Long queries may be truncated to fit Groq's internal search limit.
+    Keep queries concise (under 150 characters) for best results.
+
     Args:
         query: Research question or topic for deep investigation
-        model: Compound system ('groq/compound' for full, 'groq/compound-mini' for lower latency)
+        model: Compound system ('groq/compound-mini' for lower latency and
+               reliability, 'groq/compound' for multi-step research)
 
     Returns:
         Synthesized research results from multiple sources
@@ -278,7 +282,7 @@ def groq_research(
 def groq_analyze_page(
     url: str,
     query: str = "Summarize the key points of this page.",
-    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound",
+    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
 ) -> str | ErrorResponse:
     """Visit and analyze a URL via Groq Compound — fetches AND interprets.
 
@@ -287,10 +291,14 @@ def groq_analyze_page(
     Alternative: fetch_page gives you raw content for free — use that when
     you just need to read the text yourself.
 
+    Note: Large pages may hit Groq's internal request-body limit. If so,
+    use fetch_page first, then ask a specific question about the content.
+
     Args:
         url: The URL to visit and analyze
         query: What to do with the page content (default: summarize key points)
-        model: Compound system ('groq/compound' for full, 'groq/compound-mini' for lower latency)
+        model: Compound system ('groq/compound-mini' for lower latency and
+               reliability, 'groq/compound' for deeper analysis)
 
     Returns:
         AI analysis based on the visited page content

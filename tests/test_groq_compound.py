@@ -2,8 +2,58 @@
 
 from unittest.mock import MagicMock, patch
 
-from web_search_mcp.groq_compound import research, analyze_page
+from web_search_mcp.groq_compound import (
+    research,
+    analyze_page,
+    _truncate_query,
+    _is_request_too_large,
+)
 from web_search_mcp.models import ErrorResponse
+
+
+class TestTruncateQuery:
+    """Unit tests for _truncate_query helper."""
+
+    def test_short_query_unchanged(self):
+        result = _truncate_query("What is Python?")
+        assert result == "What is Python?"
+
+    def test_whitespace_normalized(self):
+        result = _truncate_query("  What   is   Python?  ")
+        assert result == "What is Python?"
+
+    def test_long_query_truncated(self):
+        long_query = "x " * 5000  # ~10000 bytes
+        result = _truncate_query(long_query, max_bytes=3000)
+        assert len(result.encode("utf-8")) <= 3000
+
+    def test_unicode_query_truncated(self):
+        # Non-ASCII chars expand in UTF-8 — é = 2 bytes
+        query = "é" * 2000  # ~4000 bytes UTF-8
+        result = _truncate_query(query, max_bytes=3000)
+        assert len(result.encode("utf-8")) <= 3000
+
+    def test_no_mid_character_split(self):
+        query = "ä" * 1000  # ä = 2 bytes UTF-8
+        result = _truncate_query(query, max_bytes=3001)
+        # Should not throw UnicodeDecodeError on encode
+        assert len(result.encode("utf-8")) <= 3001
+
+
+class TestIsRequestTooLarge:
+    """Unit tests for _is_request_too_large helper."""
+
+    def test_413_in_message(self):
+        assert _is_request_too_large(Exception("Error code: 413")) is True
+
+    def test_request_too_large_in_message(self):
+        assert _is_request_too_large(Exception("request_too_large")) is True
+
+    def test_entity_too_large_in_message(self):
+        assert _is_request_too_large(Exception("Request Entity Too Large")) is True
+
+    def test_unrelated_error(self):
+        assert _is_request_too_large(Exception("Rate limit exceeded")) is False
 
 
 class TestResearch:
@@ -49,28 +99,7 @@ class TestResearch:
 
     @patch("web_search_mcp.groq_compound.Groq")
     @patch("web_search_mcp.groq_compound.settings")
-    def test_compound_mini_model(self, mock_settings, mock_groq_cls):
-        mock_settings.groq_api_key = "gsk_test123"
-
-        mock_message = MagicMock()
-        mock_message.content = "quick result"
-        mock_choice = MagicMock()
-        mock_choice.message = mock_message
-        mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
-
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
-        mock_groq_cls.return_value = mock_client
-
-        research("test", model="groq/compound-mini")
-
-        call_kwargs = mock_client.chat.completions.create.call_args[1]
-        assert call_kwargs["model"] == "groq/compound-mini"
-
-    @patch("web_search_mcp.groq_compound.Groq")
-    @patch("web_search_mcp.groq_compound.settings")
-    def test_enabled_tools_in_call(self, mock_settings, mock_groq_cls):
+    def test_default_model_is_compound_mini(self, mock_settings, mock_groq_cls):
         mock_settings.groq_api_key = "gsk_test123"
 
         mock_message = MagicMock()
@@ -87,7 +116,50 @@ class TestResearch:
         research("test")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
-        assert call_kwargs["compound_custom"]["tools"]["enabled_tools"] == ["web_search"]
+        assert call_kwargs["model"] == "groq/compound-mini"
+
+    @patch("web_search_mcp.groq_compound.Groq")
+    @patch("web_search_mcp.groq_compound.settings")
+    def test_compound_full_model(self, mock_settings, mock_groq_cls):
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_message = MagicMock()
+        mock_message.content = "result"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
+        research("test", model="groq/compound")
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "groq/compound"
+
+    @patch("web_search_mcp.groq_compound.Groq")
+    @patch("web_search_mcp.groq_compound.settings")
+    def test_no_compound_custom_in_call(self, mock_settings, mock_groq_cls):
+        """Compound models auto-select tools; compound_custom is not sent."""
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_message = MagicMock()
+        mock_message.content = "result"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
+        research("test")
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert "compound_custom" not in call_kwargs
 
     @patch("web_search_mcp.groq_compound.Groq")
     @patch("web_search_mcp.groq_compound.settings")
@@ -120,6 +192,46 @@ class TestResearch:
         result = research("test")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
+
+    @patch("web_search_mcp.groq_compound.Groq")
+    @patch("web_search_mcp.groq_compound.settings")
+    def test_413_error_returns_helpful_message(self, mock_settings, mock_groq_cls):
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = Exception(
+            "Error code: 413 - {'error': {'message': 'Request Entity Too Large'}}"
+        )
+        mock_groq_cls.return_value = mock_client
+
+        result = research("test")
+        assert isinstance(result, ErrorResponse)
+        assert "limit exceeded" in result.error.lower()
+
+    @patch("web_search_mcp.groq_compound.Groq")
+    @patch("web_search_mcp.groq_compound.settings")
+    def test_long_query_truncated(self, mock_settings, mock_groq_cls):
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_message = MagicMock()
+        mock_message.content = "result"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
+        long_query = (
+            "What is the latest version of Python and what new features does it introduce? " * 100
+        )
+        research(long_query)
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        sent_query = call_kwargs["messages"][0]["content"]
+        assert len(sent_query.encode("utf-8")) <= 3000
 
 
 class TestAnalyzePage:
@@ -193,3 +305,39 @@ class TestAnalyzePage:
 
         result = analyze_page("https://example.com")
         assert isinstance(result, ErrorResponse)
+
+    @patch("web_search_mcp.groq_compound.Groq")
+    @patch("web_search_mcp.groq_compound.settings")
+    def test_413_error_returns_helpful_message(self, mock_settings, mock_groq_cls):
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = Exception(
+            "Error code: 413 - {'error': {'message': 'Request Entity Too Large'}}"
+        )
+        mock_groq_cls.return_value = mock_client
+
+        result = analyze_page("https://example.com")
+        assert isinstance(result, ErrorResponse)
+        assert "too large" in result.error.lower()
+
+    @patch("web_search_mcp.groq_compound.Groq")
+    @patch("web_search_mcp.groq_compound.settings")
+    def test_default_model_is_compound_mini(self, mock_settings, mock_groq_cls):
+        mock_settings.groq_api_key = "gsk_test123"
+
+        mock_message = MagicMock()
+        mock_message.content = "result"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_groq_cls.return_value = mock_client
+
+        analyze_page("https://example.com")
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "groq/compound-mini"
