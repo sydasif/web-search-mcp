@@ -12,18 +12,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The application follows a modular architecture with clear separation of concerns:
 
-- **server.py**: FastMCP server entry point, defines 6 MCP tools exposed to clients
-- **search.py**: DuckDuckGo search logic (`ddg_search` function) with text/news search capabilities
-- **reader.py**: Web content extraction using `trafilatura` with support for multiple formats
-- **groq_search.py**: Groq GPT-OSS interactive browser search (`browse` function)
-- **groq_compound.py**: Groq Compound system tools — `research` (auto-selecting search) and `analyze_page` (URL visit + interpretation)
+- **server.py**: FastMCP server entry point, defines 10 MCP tools exposed to clients
+- **ddg.py**: DuckDuckGo search + web content extraction (`ddg_search`, `fetch_page`) using `trafilatura` — consolidated from the former `search.py` and `reader.py`
+- **reddit/**: Keyless Reddit search via RSS + shreddit enrichment (`reddit_search_tool`)
+- **hackernews.py**: Hacker News search via Algolia API (`search_hackernews`)
+- **github.py**: GitHub Issues/PRs search (`search_github`)
+- **polymarket.py**: Polymarket prediction market search via Gamma API (`search_polymarket`)
+- **groq_tools.py**: Groq-powered tools — `browse` (GPT-OSS interactive search), `research` (auto-selecting compound search), `analyze_page` (URL visit + interpretation)
+- **groq_client.py**: Shared Groq API client wrapper
+- **http_client.py**: Shared HTTP client for keyless API calls
 - **models.py**: Pydantic models for request/response validation (ErrorResponse, SearchRequest, PageResponse, SearchResult)
 - **config.py**: Application settings via pydantic-settings (includes `groq_api_key`)
 - **utils.py**: Shared utility functions for consistent error formatting, auth errors, and rate limiting
 
 ## MCP Tool Definitions
 
-The server exposes six main tools across three engines:
+The server exposes ten tools across six engines:
 
 ### DuckDuckGo (free, fast, raw)
 
@@ -35,12 +39,21 @@ The server exposes six main tools across three engines:
 
 - `reddit_search`: Search Reddit via keyless RSS + shreddit enrichment. Great for community sentiment, discussions, and real user experiences. Supports subreddit targeting, depth control, and time filters.
 
-### Groq GPT-OSS (requires API key, synthesized)
+### Hacker News (free, tech discourse)
+
+- `hackernews_search`: Search Hacker News via Algolia API. Great for developer opinions, startup discussions, and technical news. No API key needed.
+
+### GitHub (free, code discussions)
+
+- `github_search`: Search GitHub Issues and PRs. Great for bug reports, feature requests, and community sentiment on open-source projects. Optionally authenticates via `GITHUB_TOKEN` or `gh` CLI.
+
+### Polymarket (free, prediction signals)
+
+- `polymarket_search`: Search Polymarket prediction markets via Gamma API. Great for odds, market signals, and crowd-sourced probability estimates. No API key needed.
+
+### Groq (requires API key)
 
 - `groq_browse`: Interactive browser search via GPT-OSS models
-
-### Groq Compound (requires API key, auto-selecting)
-
 - `groq_research`: Deep research — auto-selects search and tools to validate findings
 - `groq_analyze_page`: Visit and analyze a URL — fetches and interprets in one step
 
@@ -56,13 +69,13 @@ uv sync
 uv run pytest
 
 # Run a single test file
-uv run pytest tests/test_search.py
+uv run pytest tests/test_ddg_functional.py
 
 # Run a single test
-uv run pytest tests/test_search.py::TestDDGSearch::test_ddg_search_basic_text
+uv run pytest tests/test_ddg_functional.py::TestDDGSearch::test_ddg_search_basic_text
 
-# Run Groq-specific tests
-uv run pytest tests/test_groq_search.py tests/test_groq_compound.py
+# Run source-specific tests
+uv run pytest tests/test_reddit.py tests/test_hackernews.py tests/test_github.py tests/test_polymarket.py
 
 # Run with coverage
 uv run pytest --cov=web_search_mcp
@@ -90,11 +103,14 @@ uv run web-search-mcp
 - Use `_alias` pattern for imports in server.py to avoid name collisions with tool functions:
 
 ```python
-from .search import ddg_search
-from .reader import fetch_page as _fetch_page
-from .groq_search import browse as _groq_browse
-from .groq_compound import research as _groq_research
-from .groq_compound import analyze_page as _groq_analyze_page
+from .ddg import ddg_search
+from .ddg import fetch_page as _fetch_page
+from .groq_tools import browse as _groq_browse
+from .groq_tools import research as _groq_research
+from .groq_tools import analyze_page as _groq_analyze_page
+from .reddit import reddit_search_tool as _reddit_search_tool
+from .hackernews import search_hackernews as _search_hn
+from .polymarket import search_polymarket as _search_pm
 ```
 
 ### Formatting
@@ -172,7 +188,7 @@ def tool_name(param: type, optional: type = default) -> str | dict:
 ### Testing
 
 - Use `unittest.mock.patch` for external API calls
-- Mock at the class level: `@patch("web_search_mcp.search.DDGS")` or `@patch("web_search_mcp.groq_search.Groq")`
+- Mock at the class level: `@patch("web_search_mcp.ddg.DDGS")` or `@patch("web_search_mcp.groq_client.Groq")`
 - Test classes inherit from `unittest.TestCase` (optional, pytest can run functions too)
 - Group related tests in classes with descriptive names: `TestDDGSearch`, `TestGroqBrowse`, `TestResearch`
 - Use `assert` for assertions (S101 allowed in tests per ruff config)
@@ -181,8 +197,8 @@ def tool_name(param: type, optional: type = default) -> str | dict:
 ### Groq Tools Testing Pattern
 
 ```python
-@patch("web_search_mcp.groq_search.Groq")
-@patch("web_search_mcp.groq_search.settings")
+@patch("web_search_mcp.groq_client.Groq")
+@patch("web_search_mcp.groq_client.settings")
 def test_groq_search_success(self, mock_settings, mock_groq_cls):
     mock_settings.groq_api_key = "gsk_test123"
     mock_message = MagicMock()

@@ -4,7 +4,7 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-A comprehensive, production-ready research server for the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Provide your LLM clients with real-time access to the web and more.
+10 MCP tools for web search, content extraction, and research. Give your LLM clients real-time access to the web — from raw search to community discussions to AI-powered synthesis.
 
 ## ✨ Features
 
@@ -13,6 +13,9 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 - **🛡️ Bot Detection Bypass**: Automatic fallback to Chrome TLS impersonation when sites block requests (Cloudflare, etc.).
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
 - **🚩 Reddit Search**: Keyless search for community sentiment and real user experiences. Uses a multi-tier RSS + HTML pipeline with query expansion and parallel fan-out for high-signal results.
+- **💬 Hacker News Search**: Search tech discourse via the Algolia API. Find developer opinions, startup discussions, and technical news.
+- **🐙 GitHub Search**: Search Issues and PRs across repositories — bug reports, feature requests, community sentiment on open-source projects.
+- **📊 Polymarket Search**: Search prediction markets for odds, market signals, and crowd-sourced probability estimates via Gamma API.
 - **🤖 Groq Browser Search**: Interactive multi-page web browsing via Groq's GPT-OSS models.
 - **🔬 Groq Deep Research**: Auto-selecting AI research via Groq's Compound system — validates and expands on initial results.
 - **🔍 Groq Page Analysis**: Visit and interpret web pages via Groq Compound.
@@ -77,6 +80,24 @@ The `fetch_page` tool supports three backend modes to handle sites with bot dete
 | Tool            | Description                                 | Key Parameters                                                                                                                                |
 | --------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `reddit_search` | Search Reddit for discussions and sentiment | `query`, `subreddits` (list), `depth` ("quick", "default", "deep"), `time_range` ("d", "w", "m", "y"), `response_format` ("json", "markdown") |
+
+### Hacker News Tools (free, tech discourse)
+
+| Tool                | Description                             | Key Parameters                                                                                       |
+| ------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `hackernews_search` | Search Hacker News for tech discussions | `query`, `max_results`, `depth` ("quick", "default", "deep"), `response_format` ("json", "markdown") |
+
+### GitHub Tools (free, code discussions)
+
+| Tool            | Description                               | Key Parameters                                                                                                           |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `github_search` | Search GitHub Issues and PRs across repos | `query`, `max_results`, `depth` ("quick", "default", "deep"), `token` (optional), `response_format` ("json", "markdown") |
+
+### Polymarket Tools (free, prediction signals)
+
+| Tool                | Description                          | Key Parameters                                                                                       |
+| ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `polymarket_search` | Search Polymarket prediction markets | `topic`, `max_results`, `depth` ("quick", "default", "deep"), `response_format` ("json", "markdown") |
 
 ### Groq Tools (requires API key, synthesized results)
 
