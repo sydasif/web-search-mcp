@@ -13,6 +13,7 @@ and are backfilled during shreddit enrichment. Output dicts match the normalized
 shape so downstream code is unaffected.
 """
 
+import re
 import sys
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
@@ -120,10 +121,8 @@ def _parse_feed(xml_text: str, query: str = "") -> List[Dict[str, Any]]:
         selftext = ""
         if content_el is not None and content_el.text:
             # Strip the simplest HTML; renderer only needs an excerpt.
-            import re as _re
-
-            selftext = _re.sub(r"<[^>]+>", " ", content_el.text)
-            selftext = _re.sub(r"\s+", " ", selftext).strip()[:500]
+            selftext = re.sub(r"<[^>]+>", " ", content_el.text)
+            selftext = re.sub(r"\s+", " ", selftext).strip()[:500]
 
         relevance = round(token_overlap_relevance(query, title), 3) if query else 0.0
 

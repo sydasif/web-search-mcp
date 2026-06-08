@@ -5,6 +5,257 @@ from unittest.mock import patch
 
 from web_search_mcp.reddit import reddit_search_tool
 from web_search_mcp.models import ErrorResponse
+from web_search_mcp.reddit_search import (
+    expand_queries,
+    search_and_enrich,
+    _extract_core_subject,
+    _infer_query_intent,
+    _merge_dedupe,
+)
+
+
+class TestQueryExpansion(unittest.TestCase):
+    """Tests for query expansion logic (ported from last30days-skill)."""
+
+    def test_extract_core_subject_strips_noise(self):
+        """Should strip common noise words and meta phrases."""
+        self.assertEqual(
+            _extract_core_subject("what are the best Python async tips"), "python async"
+        )
+        self.assertEqual(_extract_core_subject("how to use Docker"), "docker")
+        self.assertEqual(_extract_core_subject("best practices for React"), "react")
+
+    def test_extract_core_subject_preserves_entities(self):
+        """Should preserve proper nouns and multi-word product names."""
+        self.assertEqual(_extract_core_subject("Claude Code"), "claude code")
+        self.assertEqual(_extract_core_subject("FastAPI vs Flask"), "fastapi vs flask")
+
+    def test_extract_core_subject_strips_punctuation(self):
+        """Should strip trailing punctuation."""
+        self.assertEqual(_extract_core_subject("Python async issues!"), "python async issues")
+
+    def test_expand_queries_empty_core_returns_original(self):
+        """Empty topic falls back to original."""
+        queries = expand_queries("", depth="quick")
+        self.assertEqual(len(queries), 1)
+
+    def test_infer_query_intent_comparison(self):
+        """Should detect comparison intent."""
+        self.assertEqual(_infer_query_intent("Claude Code vs Copilot"), "comparison")
+        self.assertEqual(_infer_query_intent("FastAPI versus Flask comparison"), "comparison")
+        self.assertEqual(_infer_query_intent("difference between React and Vue"), "comparison")
+
+    def test_infer_query_intent_how_to(self):
+        """Should detect how-to intent."""
+        self.assertEqual(_infer_query_intent("how to use Docker"), "how_to")
+        self.assertEqual(_infer_query_intent("tutorial for FastAPI"), "how_to")
+        self.assertEqual(_infer_query_intent("troubleshoot async errors"), "how_to")
+
+    def test_infer_query_intent_opinion(self):
+        """Should detect opinion intent."""
+        self.assertEqual(_infer_query_intent("thoughts on Claude Code"), "opinion")
+        self.assertEqual(_infer_query_intent("is FastAPI worth it"), "opinion")
+        self.assertEqual(_infer_query_intent("should i use React"), "opinion")
+
+    def test_infer_query_intent_general(self):
+        """Should default to general."""
+        self.assertEqual(_infer_query_intent("Python async"), "general")
+        self.assertEqual(_infer_query_intent("React patterns"), "general")
+
+    def test_expand_queries_single_for_simple_topic(self):
+        """Simple topics produce 1 query."""
+        queries = expand_queries("Python async", depth="quick")
+        self.assertEqual(len(queries), 1)
+        self.assertIn("python async", queries[0].lower())
+
+    def test_expand_queries_product_topic(self):
+        """Product topics add review variant."""
+        queries = expand_queries("Claude Code features", depth="default")
+        self.assertGreaterEqual(len(queries), 2)
+        self.assertTrue(any("review" in q.lower() for q in queries))
+
+    def test_expand_queries_comparison_topic(self):
+        """Comparison topics add vs variant."""
+        queries = expand_queries("Claude Code vs Copilot", depth="default")
+        self.assertGreaterEqual(len(queries), 2)
+        self.assertTrue(any("vs" in q.lower() or "worth it" in q.lower() for q in queries))
+
+    def test_expand_queries_deep_adds_issues_variant(self):
+        """Deep depth adds issues/problems variant for how_to topics."""
+        queries = expand_queries("how to deploy FastAPI", depth="deep")
+        self.assertTrue(any("issues" in q.lower() or "problems" in q.lower() for q in queries))
+
+    def test_expand_queries_no_duplicates(self):
+        """Should never produce duplicate queries."""
+        queries = expand_queries("Claude Code vs Copilot", depth="deep")
+        self.assertEqual(len(queries), len(set(q.lower() for q in queries)))
+
+    def test_expand_queries_includes_original_when_different(self):
+        """Should include original topic if different from core subject."""
+        queries = expand_queries("what are the best Python async libraries", depth="default")
+        self.assertTrue(any("best" in q.lower() for q in queries))
+
+
+class TestMergeDedupe(unittest.TestCase):
+    """Tests for cross-query deduplication."""
+
+    def test_merge_dedupe_removes_duplicates(self):
+        """Same URL across batches should appear only once."""
+        post_a = {"url": "https://reddit.com/r/test/1", "title": "Post 1"}
+        post_b = {"url": "https://reddit.com/r/test/1", "title": "Post 1 dupe"}
+        post_c = {"url": "https://reddit.com/r/test/2", "title": "Post 2"}
+
+        result = _merge_dedupe([[post_a], [post_b, post_c]])
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["title"], "Post 1")  # first occurrence wins
+
+    def test_merge_dedupe_empty_batches(self):
+        """Empty batches produce empty result."""
+        self.assertEqual(_merge_dedupe([[], []]), [])
+
+    def test_merge_dedupe_preserves_order(self):
+        """First batch order preserved, then second batch appends."""
+        p1 = {"url": "https://r/1", "title": "A"}
+        p2 = {"url": "https://r/2", "title": "B"}
+        p3 = {"url": "https://r/3", "title": "C"}
+        result = _merge_dedupe([[p1, p2], [p3]])
+        self.assertEqual([r["title"] for r in result], ["A", "B", "C"])
+
+
+class TestFanOutPipeline(unittest.TestCase):
+    """Integration tests for search_and_enrich fan-out and merge."""
+
+    @patch("web_search_mcp.reddit_search._run_single_pipeline")
+    def test_multi_query_fanout_merges_and_dedupes(self, mock_pipeline):
+        """Multiple query variants should be merged and deduped by URL."""
+        # Query 1 returns posts A, B, C
+        # Query 2 returns posts B, C, D (B, C overlap)
+        mock_pipeline.side_effect = [
+            [
+                {
+                    "url": "https://r/1",
+                    "title": "A",
+                    "score": 10,
+                    "num_comments": 0,
+                    "engagement": {"score": 10, "num_comments": 0},
+                    "relevance": 0.5,
+                    "date": "2026-06-01",
+                },
+                {
+                    "url": "https://r/2",
+                    "title": "B",
+                    "score": 5,
+                    "num_comments": 0,
+                    "engagement": {"score": 5, "num_comments": 0},
+                    "relevance": 0.3,
+                    "date": "2026-06-01",
+                },
+                {
+                    "url": "https://r/3",
+                    "title": "C",
+                    "score": 3,
+                    "num_comments": 0,
+                    "engagement": {"score": 3, "num_comments": 0},
+                    "relevance": 0.2,
+                    "date": "2026-06-01",
+                },
+            ],
+            [
+                {
+                    "url": "https://r/2",
+                    "title": "B",
+                    "score": 5,
+                    "num_comments": 0,
+                    "engagement": {"score": 5, "num_comments": 0},
+                    "relevance": 0.3,
+                    "date": "2026-06-01",
+                },
+                {
+                    "url": "https://r/3",
+                    "title": "C",
+                    "score": 3,
+                    "num_comments": 0,
+                    "engagement": {"score": 3, "num_comments": 0},
+                    "relevance": 0.2,
+                    "date": "2026-06-01",
+                },
+                {
+                    "url": "https://r/4",
+                    "title": "D",
+                    "score": 8,
+                    "num_comments": 0,
+                    "engagement": {"score": 8, "num_comments": 0},
+                    "relevance": 0.4,
+                    "date": "2026-06-01",
+                },
+            ],
+        ]
+
+        result = search_and_enrich(
+            "Claude Code features",
+            from_date="2026-06-01",
+            to_date="2026-06-08",
+            depth="quick",
+        )
+
+        # Should have 4 unique posts (A, B, C, D) — deduped
+        urls = [p["url"] for p in result]
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertGreaterEqual(len(result), 3)  # at least 3 unique
+
+    @patch("web_search_mcp.reddit_search._run_single_pipeline")
+    def test_single_pipeline_failure_doesnt_sink_run(self, mock_pipeline):
+        """If one pipeline variant fails, others still contribute."""
+        mock_pipeline.side_effect = [
+            Exception("network error"),  # query 1 fails
+            [  # query 2 succeeds
+                {
+                    "url": "https://r/5",
+                    "title": "E",
+                    "score": 15,
+                    "num_comments": 0,
+                    "engagement": {"score": 15, "num_comments": 0},
+                    "relevance": 0.6,
+                    "date": "2026-06-01",
+                },
+            ],
+        ]
+
+        result = search_and_enrich(
+            "Claude Code features",
+            from_date="2026-06-01",
+            to_date="2026-06-08",
+            depth="quick",
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["title"], "E")
+
+    @patch("web_search_mcp.reddit_search._run_single_pipeline")
+    def test_single_query_skips_threadpool(self, mock_pipeline):
+        """When expand_queries returns 1 query, thread pool is not used."""
+        mock_pipeline.return_value = [
+            {
+                "url": "https://r/6",
+                "title": "F",
+                "score": 20,
+                "num_comments": 0,
+                "engagement": {"score": 20, "num_comments": 0},
+                "relevance": 0.7,
+                "date": "2026-06-01",
+            },
+        ]
+
+        result = search_and_enrich(
+            "Python async",
+            from_date="2026-06-01",
+            to_date="2026-06-08",
+            depth="quick",
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["title"], "F")
+        mock_pipeline.assert_called_once()
 
 
 class TestRedditSearch(unittest.TestCase):
