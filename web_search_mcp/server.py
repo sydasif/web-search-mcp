@@ -4,12 +4,14 @@ from typing import Literal
 from fastmcp import FastMCP
 
 from .models import SearchRequest, FetchOutputFormat, SearchResponse, PageResponse, ErrorResponse
-from .search import ddg_search, format_search_results_markdown
+from .ddg import ddg_search, format_search_results_markdown
 from .utils import format_error
-from .reader import fetch_page as _fetch_page
-from .groq_search import browse as _groq_browse
-from .groq_compound import research as _groq_research
-from .groq_compound import analyze_page as _groq_analyze_page
+from .ddg import fetch_page as _fetch_page
+from .groq_tools import (
+    browse as _groq_browse,
+    research as _groq_research,
+    analyze_page as _groq_analyze_page,
+)
 from .reddit import reddit_search_tool as _reddit_search_tool
 
 # Set up logging
@@ -229,7 +231,7 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
-        "openWorldHint": True,
+        "openWorldHInt": True,
     },
 )
 def reddit_search(
@@ -306,7 +308,7 @@ def groq_browse(
     model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
-    """Interactive browser search via Groq — navigates websites like a human.
+    """Interactive browser search via Groq — navigates pages like a human.
 
     Role: Deep browsing. Use this when you need multi-page context or
     the site requires interactive navigation. Alternative: search_docs for
@@ -364,12 +366,13 @@ def groq_research(
     simpler interactive browse.
 
     Note: Long queries may be truncated to fit Groq's internal search limit.
-    Keep queries concise (under 150 characters) for best results.
+    Keep queries concise for best results.
 
     Args:
         query: Research question or topic for deep investigation
-        model: Compound system ('groq/compound-mini' for lower latency and
-               reliability, 'groq/compound' for multi-step research)
+        model: Compound system to use. 'groq/compound-mini' (default) has ~3x
+               lower latency but limits to 1 tool call; 'groq/compound' supports
+               up to 10 tool calls.
 
     Returns:
         str: Synthesized research results from multiple sources
@@ -401,7 +404,7 @@ def groq_analyze_page(
     query: str = "Summarize the key points of this page.",
     model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
 ) -> str | ErrorResponse:
-    """Visit and analyze a URL via Groq Compound — fetches AND interprets.
+    """Visit and analyze a URL via Groq Compound — fetches and interprets content.
 
     Role: Interpretation. Use this AFTER fetch_page when you need AI analysis
     of the content (e.g. "Find the argument for X", "Extract the data table").
@@ -414,8 +417,8 @@ def groq_analyze_page(
     Args:
         url: The URL to visit and analyze
         query: What to do with the page content (default: summarize key points)
-        model: Compound system ('groq/compound-mini' for lower latency and
-               reliability, 'groq/compound' for multi-step research)
+        model: Compound system to use. 'groq/compound-mini' (default) is more
+               reliable; 'groq/compound' may hit request-body limits on large pages.
 
     Returns:
         str: AI analysis based on the visited page content

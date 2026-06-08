@@ -1,12 +1,12 @@
 from unittest.mock import patch
 from web_search_mcp.models import SearchRequest, SearchResponse, SearchResult, ErrorResponse
-from web_search_mcp.search import ddg_search, format_search_results_markdown
+from web_search_mcp.ddg import ddg_search, format_search_results_markdown
 
 
 class TestDDGSearch:
     """Test suite for DDG search functionality with mocked DDGS API calls."""
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_basic_text(self, mock_ddgs_class):
         """Test basic text search functionality."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
@@ -33,7 +33,7 @@ class TestDDGSearch:
             backend="auto",
         )
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_with_time_filter(self, mock_ddgs_class):
         """Test search with time range filter."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
@@ -53,7 +53,7 @@ class TestDDGSearch:
             backend="auto",
         )
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_with_all_common_params(self, mock_ddgs_class):
         """Test search with all common parameters."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
@@ -82,7 +82,7 @@ class TestDDGSearch:
             backend="api",
         )
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_error_handling(self, mock_ddgs_class):
         """Test error handling when DDG API fails."""
         mock_ddgs_class.return_value.__enter__.side_effect = Exception("Network error")
@@ -93,7 +93,7 @@ class TestDDGSearch:
         assert isinstance(result, ErrorResponse)
         assert "Network error" in result.error
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_default_type(self, mock_ddgs_class):
         """Test that default search type is 'text'."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
@@ -105,7 +105,7 @@ class TestDDGSearch:
         assert result.search_type == "text"
         mock_ddgs.text.assert_called_once()
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_none_params_not_passed(self, mock_ddgs_class):
         """Test that None parameters are not passed to DDG."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
@@ -125,12 +125,11 @@ class TestDDGSearch:
         # Verify that only non-None parameters are passed
         call_kwargs = mock_ddgs.text.call_args[1]
         assert "max_results" in call_kwargs
-        assert "timelimit" not in call_kwargs  # None parameter should be filtered
-        assert "region" not in call_kwargs  # None parameter should be filtered
-        # But defaults should still be present
+        assert "timelimit" not in call_kwargs
+        assert "region" not in call_kwargs
         assert "safesearch" in call_kwargs
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_empty_query(self, mock_ddgs_class):
         """Test that an empty query returns an error."""
         req = SearchRequest(query="")
@@ -140,7 +139,7 @@ class TestDDGSearch:
         assert "Query cannot be empty" in result.error
         mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_invalid_search_type(self, mock_ddgs_class):
         """Test that an invalid search_type returns an error."""
         req = SearchRequest(query="test", search_type="text")
@@ -151,7 +150,7 @@ class TestDDGSearch:
         assert "Unsupported search type: invalid_type" in result.error
         mock_ddgs_class.return_value.__enter__.return_value.text.assert_not_called()
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_no_results(self, mock_ddgs_class):
         """Test that the search handles no results from the API."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
@@ -164,14 +163,14 @@ class TestDDGSearch:
         assert result.total_results == 0
         assert len(result.results) == 0
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_max_results_zero(self, mock_ddgs_class):
         """Test that max_results=0 is handled correctly."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
         mock_ddgs.text.return_value = []
 
-        req = SearchRequest(query="test", max_results=1)  # Create with valid value
-        req.max_results = 0  # Set to 0 to bypass validation
+        req = SearchRequest(query="test", max_results=1)
+        req.max_results = 0
         result = ddg_search(req)
 
         assert isinstance(result, SearchResponse)
@@ -185,13 +184,13 @@ class TestDDGSearch:
             backend="auto",
         )
 
-    @patch("web_search_mcp.search.DDGS")
+    @patch("web_search_mcp.ddg.DDGS")
     def test_ddg_search_malformed_api_response(self, mock_ddgs_class):
         """Test robustness against malformed API responses."""
         mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
         mock_ddgs.text.return_value = [
-            {"title": "Only title"},  # Missing href and body
-            {"href": "https://example.com"},  # Missing title and body
+            {"title": "Only title"},
+            {"href": "https://example.com"},
         ]
 
         req = SearchRequest(query="test", max_results=2)
@@ -200,7 +199,6 @@ class TestDDGSearch:
         assert isinstance(result, SearchResponse)
         assert result.total_results == 2
         assert len(result.results) == 2
-        # Check that the available data is still parsed
         assert result.results[0].title == "Only title"
         assert result.results[0].href is None
         assert result.results[1].title is None
@@ -264,7 +262,7 @@ class TestFormatSearchResultsMarkdown:
             results=[
                 SearchResult(title="T1", href="https://href.com"),
                 SearchResult(title="T2", url="https://url.com"),
-                SearchResult(title="T3"),  # Both missing
+                SearchResult(title="T3"),
             ],
             has_more=False,
         )
@@ -294,7 +292,6 @@ class TestFormatSearchResultsMarkdown:
 
     def test_format_pagination(self):
         """Test the pagination footer."""
-        # Pagination active
         res_active = SearchResponse(
             query="test",
             search_type="text",
@@ -305,7 +302,6 @@ class TestFormatSearchResultsMarkdown:
         )
         assert "More results available. See page 2." in format_search_results_markdown(res_active)
 
-        # Pagination inactive
         res_inactive = SearchResponse(
             query="test",
             search_type="text",

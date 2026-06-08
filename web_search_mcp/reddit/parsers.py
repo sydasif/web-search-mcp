@@ -5,6 +5,7 @@ Consolidates RSS/Atom feed parsing and Shreddit HTML parsing.
 import re
 import sys
 import xml.etree.ElementTree as ET
+import html as _html
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -228,9 +229,7 @@ def _svc_url(subreddit: str, post_id: str) -> str:
 
 def _attr(tag: str, name: str) -> str:
     m = re.search(rf'\b{name}="([^"]*)"', tag)
-    return (
-        _html.unescape(m.group(1)) if m else "" if "import html as _html" in globals() else ""
-    )  # simplified
+    return _html.unescape(m.group(1)) if m else ""
 
 
 def _body_for(html_text: str, thing_id: str) -> str:
@@ -248,10 +247,8 @@ def _body_for(html_text: str, thing_id: str) -> str:
     paras = _PARA.findall(window)
     if not paras:
         return ""
-    # Using a manual unescape here since I didn't import html as _html correctly in the snippet
-    # I'll fix the import.
     text = " ".join(_TAG.sub("", p) for p in paras)
-    return _WS.sub(" ", text).strip()
+    return _WS.sub(" ", _html.unescape(text)).strip()
 
 
 def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> List[Dict[str, Any]]:
