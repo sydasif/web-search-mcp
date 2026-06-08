@@ -1,9 +1,22 @@
 import logging
+import re
 import time
 import threading
 from .models import ErrorResponse
 
 logger = logging.getLogger("web-search-mcp")
+
+
+def token_overlap_relevance(query: str, text: str) -> float:
+    """Simple token overlap relevance score (0.0 to 1.0)."""
+    if not query or not text:
+        return 0.0
+    q_tokens = set(re.findall(r"\w+", query.lower()))
+    t_tokens = set(re.findall(r"\w+", text.lower()))
+    if not q_tokens or not t_tokens:
+        return 0.0
+    intersection = q_tokens & t_tokens
+    return len(intersection) / len(q_tokens)
 
 
 def format_error(message: str, details: str | None = None) -> ErrorResponse:

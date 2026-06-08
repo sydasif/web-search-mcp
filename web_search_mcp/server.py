@@ -10,6 +10,7 @@ from .reader import fetch_page as _fetch_page
 from .groq_search import browse as _groq_browse
 from .groq_compound import research as _groq_research
 from .groq_compound import analyze_page as _groq_analyze_page
+from .reddit import reddit_search_tool as _reddit_search_tool
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -184,6 +185,65 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
     except Exception as e:
         logger.error("Domain search failed for query %r on domain %r: %s", query, domain, e)
         return format_error("Search failed", str(e))
+
+
+# ─────────────────────────────────────────────────────────────
+# Reddit tools — keyless, free Reddit search
+# Best for: community discussions, opinions, real user experiences
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="reddit_search",
+    annotations={
+        "title": "Search Reddit via keyless RSS + shreddit enrichment",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def reddit_search(
+    query: str,
+    search_type: Literal["text", "news"] = "text",
+    max_results: int = 25,
+    time_range: str | None = None,
+    depth: Literal["quick", "default", "deep"] = "default",
+    subreddits: list[str] | None = None,
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | SearchResponse | ErrorResponse:
+    """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed.
+
+    Role: Discovery. Use this for Reddit-specific discussions, opinions, and
+    community insights. Alternative: web_search for general web results,
+    groq_research for synthesized multi-source research.
+
+    Workflow: Three-tier keyless pipeline:
+    - Tier 0: Legacy .json search (often 403, tried once)
+    - Tier 1: RSS discovery (load-bearing, robust)
+    - Tier 2: Shreddit comment enrichment for top posts
+
+    Args:
+        query: Search query string
+        search_type: Type of search (only 'text' supported for Reddit)
+        max_results: Max results (capped by depth: quick=10, default=25, deep=50)
+        time_range: Time filter ('d', 'w', 'm', 'y') — mapped to date range
+        depth: Search depth — controls result limits and enrichment
+        subreddits: Optional list of subreddit names to target (without r/)
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        SearchResponse with Reddit posts including scores, comments, and insights
+    """
+    return _reddit_search_tool(
+        query=query,
+        search_type=search_type,
+        max_results=max_results,
+        time_range=time_range,
+        depth=depth,
+        subreddits=subreddits,
+        response_format=response_format,
+    )
 
 
 # ─────────────────────────────────────────────────────────────
