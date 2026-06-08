@@ -13,6 +13,8 @@ from .groq_tools import (
     analyze_page as _groq_analyze_page,
 )
 from .reddit import reddit_search_tool as _reddit_search_tool
+from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
+from .polymarket import search_polymarket as _search_pm
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -285,6 +287,249 @@ def reddit_search(
         subreddits=subreddits,
         response_format=response_format,
     )
+
+
+# ─────────────────────────────────────────────────────────────
+# Hacker News tools — free, tech discourse
+# Best for: tech news, startup discussions, developer opinions
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="hackernews_search",
+    annotations={
+        "title": "Search Hacker News via Algolia API",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def hackernews_search(
+    query: str,
+    max_results: int = 30,
+    depth: Literal["quick", "default", "deep"] = "default",
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | list[dict]:
+    """Search Hacker News via Algolia API — free, no API key needed.
+
+    Role: Tech discourse. Use this for developer news, startup discussions,
+    and technical opinions. Alternative: web_search for general results,
+    groq_research for synthesized multi-source research.
+
+    Args:
+        query: Search query string
+        max_results: Max results (capped by depth: quick=15, default=30, deep=60)
+        depth: Search depth — controls result limits and comment enrichment
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        list: Hacker News stories with engagement scores and optional comments
+        str: Markdown-formatted results (when response_format="markdown")
+
+    Examples:
+        - "What are people saying about the new Claude models"
+        - "Is Rust production-ready in 2026"
+        - "Best practices for building MCP servers"
+
+    Error Handling:
+        - Empty results: Try a more general query or broaden the search terms.
+    """
+    try:
+        items = _search_hn(query, depth=depth)[:max_results]
+        items = _enrich_hn(items, depth=depth)
+        if response_format == "markdown":
+            return _format_hn_markdown(items, query)
+        return items
+    except Exception as e:
+        logger.error("Hacker News search failed: %s", e)
+        return {"error": f"Hacker News search failed: {e}"}
+
+
+def _format_hn_markdown(items: list[dict], query: str) -> str:
+    """Format HN results as markdown."""
+    if not items:
+        return f"No Hacker News results found for '{query}'."
+    lines = [f"# Hacker News Results for '{query}'", f"Found {len(items)} stories.", ""]
+    for i, item in enumerate(items, 1):
+        points = item.get("engagement", {}).get("points", 0)
+        comments = item.get("engagement", {}).get("comments", 0)
+        hn_url = item.get("hn_url", item.get("url", "#"))
+        lines.append(f"{i}. **[{item.get('title', 'Untitled')}]({hn_url})**")
+        lines.append(f"   {points} points, {comments} comments | {item.get('date', '')}")
+        if item.get("top_comments"):
+            lines.append("   Top comments:")
+            for c in item["top_comments"][:2]:
+                lines.append(f"   > {c.get('text', '')[:200]}...")
+        lines.append("")
+    return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────
+# Polymarket tools — free, prediction markets
+# Best for: odds, predictions, market signals
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="polymarket_search",
+    annotations={
+        "title": "Search Polymarket prediction markets",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def polymarket_search(
+    topic: str,
+    max_results: int = 15,
+    depth: Literal["quick", "default", "deep"] = "default",
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | list[dict]:
+    """Search Polymarket prediction markets via Gamma API — free, no API key needed.
+
+    Role: Prediction signals. Use this for odds, market movements, and
+    crowd-sourced probability estimates. Alternative: web_search for
+    general news, groq_research for synthesized multi-source research.
+
+    Args:
+        topic: Search topic (e.g. 'NVIDIA', 'presidential election', 'Fed rate cut')
+        max_results: Max results (capped by depth: quick=5, default=15, deep=25)
+        depth: Search depth — controls query expansion and result limits
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        list: Polymarket events with outcome prices, volume, and liquidity
+        str: Markdown-formatted results (when response_format="markdown")
+
+    Examples:
+        - "Will the Fed cut rates in 2026"
+        - "NVIDIA stock price"
+        - "US presidential election"
+
+    Error Handling:
+        - Empty results: Try a broader topic or different phrasing.
+    """
+    try:
+        items = _search_pm(topic, depth=depth)[:max_results]
+        if response_format == "markdown":
+            return _format_pm_markdown(items, topic)
+        return items
+    except Exception as e:
+        logger.error("Polymarket search failed: %s", e)
+        return {"error": f"Polymarket search failed: {e}"}
+
+
+def _format_pm_markdown(items: list[dict], topic: str) -> str:
+    """Format Polymarket results as markdown."""
+    if not items:
+        return f"No Polymarket results found for '{topic}'."
+    lines = [f"# Polymarket Results for '{topic}'", f"Found {len(items)} markets.", ""]
+    for i, item in enumerate(items, 1):
+        lines.append(f"{i}. **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**")
+        outcomes = item.get("outcome_prices", [])
+        if outcomes:
+            odds_str = ", ".join(f"{name}: {p:.0%}" for name, p in outcomes)
+            lines.append(f"   Odds: {odds_str}")
+        vol = item.get("volume1mo") or item.get("volume24hr") or 0
+        if vol:
+            lines.append(f"   Volume: ${vol:,.0f}")
+        if item.get("price_movement"):
+            lines.append(f"   Movement: {item['price_movement']}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────
+# GitHub tools — issues/PRs search, auth via GITHUB_TOKEN or gh
+# Best for: code discussions, bug reports, feature requests
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="github_search",
+    annotations={
+        "title": "Search GitHub Issues and PRs",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def github_search(
+    query: str,
+    max_results: int = 30,
+    depth: Literal["quick", "default", "deep"] = "default",
+    token: str | None = None,
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | list[dict]:
+    """Search GitHub Issues and PRs via the GitHub Search API.
+
+    Role: Code & issues. Use this for bug discussions, feature requests,
+    and community sentiment on GitHub projects. Alternative: web_search
+    for general results, search_docs for documentation.
+
+    Note: Requires GITHUB_TOKEN env var or `gh` CLI installed and authenticated.
+    Without auth, returns empty results.
+
+    Args:
+        query: Search query (e.g. 'uv package manager', 'pydantic v2 migration')
+        max_results: Max results (capped by depth: quick=15, default=30, deep=60)
+        depth: Search depth — controls result limits and comment enrichment
+        token: Optional GitHub token (falls back to GITHUB_TOKEN env or gh CLI)
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        list: GitHub issues/PRs with reactions, labels, and optional comments
+        str: Markdown-formatted results (when response_format="markdown")
+
+    Examples:
+        - "uv package manager" — find top-voted issues
+        - "FastAPI websocket" — find discussions about websockets
+        - "pydantic v2 migration" — find migration-related issues/PRs
+
+    Error Handling:
+        - No token: Set GITHUB_TOKEN env var or install gh CLI.
+        - 403 rate limit: Wait or use a token with higher limits.
+        - Empty results: Try a broader query or different keywords.
+    """
+    try:
+        from .github import search_github as _search_gh
+        from .github import enrich_with_comments as _enrich_gh
+
+        items = _search_gh(query, depth=depth, token=token)[:max_results]
+        items = _enrich_gh(items, depth=depth, token=token)
+        if response_format == "markdown":
+            return _format_gh_markdown(items, query)
+        return items
+    except Exception as e:
+        logger.error("GitHub search failed: %s", e)
+        return {"error": f"GitHub search failed: {e}"}
+
+
+def _format_gh_markdown(items: list[dict], query: str) -> str:
+    """Format GitHub results as markdown."""
+    if not items:
+        return f"No GitHub results found for '{query}'."
+    lines = [f"# GitHub Results for '{query}'", f"Found {len(items)} issues/PRs.", ""]
+    for i, item in enumerate(items, 1):
+        emoji = "🔀" if item.get("is_pr") else "🐛"
+        repo = item.get("repository", "")
+        lines.append(f"{i}. {emoji} **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**")
+        lines.append(f"   {repo} | {item.get('author', '')} | {item.get('date', '')}")
+        reactions = item.get("engagement", {}).get("reactions", 0)
+        comments = item.get("engagement", {}).get("comments", 0)
+        lines.append(f"   ❤️ {reactions} reactions, 💬 {comments} comments")
+        labels = item.get("labels", [])
+        if labels:
+            lines.append(f"   Labels: {', '.join(labels[:5])}")
+        if item.get("top_comments"):
+            lines.append("   Top comment:")
+            for c in item["top_comments"][:1]:
+                lines.append(f"   > {c.get('excerpt', '')[:200]}...")
+        lines.append("")
+    return "\n".join(lines)
 
 
 # ─────────────────────────────────────────────────────────────
