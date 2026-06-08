@@ -12,6 +12,7 @@ A comprehensive, production-ready research server for the [Model Context Protoco
 - **📄 Content Extraction**: Read clutter-free full text from any URL using `trafilatura`. Supports multiple output formats (text, markdown, JSON), metadata extraction, and content filtering.
 - **🛡️ Bot Detection Bypass**: Automatic fallback to Chrome TLS impersonation when sites block requests (Cloudflare, etc.).
 - **💻 Technical Docs**: Targeted search for developer documentation (Python, React, etc.).
+- **🚩 Reddit Search**: Keyless search for community sentiment and real user experiences. Uses a multi-tier RSS + HTML pipeline with query expansion and parallel fan-out for high-signal results.
 - **🤖 Groq Browser Search**: Interactive multi-page web browsing via Groq's GPT-OSS models.
 - **🔬 Groq Deep Research**: Auto-selecting AI research via Groq's Compound system — validates and expands on initial results.
 - **🔍 Groq Page Analysis**: Visit and interpret web pages via Groq Compound.
@@ -70,6 +71,12 @@ The `fetch_page` tool supports three backend modes to handle sites with bot dete
 | `web_search`  | Universal search (Web, News)                  | `query`, `search_type` ("text", "news"), `max_results`, `time_range`, `region`, `page`, `response_format` ("json", "markdown")                                                                                                         |
 | `fetch_page`  | Extract clean article text from a URL         | `url`, `output_format` ("csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"), `include_metadata`, `include_tables`, `include_comments`, `include_images`, `max_length`, `timeout`, `backend` ("httpx", "curl", "auto") |
 | `search_docs` | Search specific tech documentation or domains | `query`, `domain` (e.g., "docs.python.org", "github.com")                                                                                                                                                                              |
+
+### Reddit Tools (free, keyless, community signal)
+
+| Tool            | Description                                 | Key Parameters                                                                                                                                |
+| --------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reddit_search` | Search Reddit for discussions and sentiment | `query`, `subreddits` (list), `depth` ("quick", "default", "deep"), `time_range` ("d", "w", "m", "y"), `response_format` ("json", "markdown") |
 
 ### Groq Tools (requires API key, synthesized results)
 

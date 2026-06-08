@@ -31,6 +31,10 @@ The server exposes six main tools across three engines:
 - `fetch_page`: Extract clean text from URLs
 - `search_docs`: Targeted search on specific domains (e.g., docs.python.org)
 
+### Reddit (free, keyless, community signal)
+
+- `reddit_search`: Search Reddit via keyless RSS + shreddit enrichment. Great for community sentiment, discussions, and real user experiences. Supports subreddit targeting, depth control, and time filters.
+
 ### Groq GPT-OSS (requires API key, synthesized)
 
 - `groq_browse`: Interactive browser search via GPT-OSS models
