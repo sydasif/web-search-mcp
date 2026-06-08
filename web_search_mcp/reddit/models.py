@@ -10,8 +10,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from . import reddit_http
-from .utils import token_overlap_relevance
+from . import client
+from ..utils import token_overlap_relevance
 
 # Listing sorts pulled per subreddit (in addition to search), for volume.
 LISTING_SORTS = {
@@ -129,7 +129,7 @@ def _fetch_listing(subreddit: str, sort: str, depth: str, query: str) -> List[Di
     """Fetch and parse one listing page. Never raises."""
     try:
         url = f"https://www.reddit.com/r/{subreddit}/{sort}/?t=month"
-        text = reddit_http.get_text(url, timeout=FEED_TIMEOUT, accept="text/html")
+        text = client.get_text(url, timeout=FEED_TIMEOUT, accept="text/html")
         return _parse_listing(text, subreddit, query) if text else []
     except Exception as e:
         _log(f"listing fetch failed for r/{subreddit}/{sort}: {e}")

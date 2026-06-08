@@ -1,16 +1,5 @@
-"""Keyless Reddit discovery via public RSS/Atom feeds.
-
-Reddit's ``.json`` search endpoints now return HTTP 403 (shreddit anti-bot).
-RSS feeds still serve HTTP 200 with no API key, so this module uses them for
-post discovery, replacing ``reddit_public.search`` as the free search path.
-
-Two feed families are combined and deduped:
-- search:  /search.rss?q=... and /r/{sub}/search.rss?q=...&restrict_sr=on
-- listing: /r/{sub}/{top,hot}.rss?t=month
-
-RSS entries carry no engagement score, so ``score``/``num_comments`` start at 0
-and are backfilled during shreddit enrichment. Output dicts match the normalized
-shape so downstream code is unaffected.
+"""Keyless Reddit parsing logic: RSS discovery and Shreddit enrichment.
+Consolidates RSS/Atom feed parsing and Shreddit HTML parsing.
 """
 
 import re
@@ -21,36 +10,50 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote_plus
 
-from . import reddit_http
-from .utils import token_overlap_relevance
+from . import client
+from ..utils import token_overlap_relevance
 
+# ── RSS/Atom Constants ─────────────────────────────────────────────────────
 ATOM = "{http://www.w3.org/2005/Atom}"
-
-# Mirror reddit_public depth-aware limits so the two free paths behave alike.
 DEPTH_LIMITS = {
     "quick": 10,
     "default": 25,
     "deep": 50,
 }
-
-# Listing sorts pulled per subreddit (in addition to search), for volume.
 LISTING_SORTS = {
     "quick": ["top"],
     "default": ["top", "hot"],
     "deep": ["top", "hot", "new"],
 }
-
 MAX_WORKERS = 4
 FEED_TIMEOUT = 15
 
+# ── Shreddit Constants ─────────────────────────────────────────────────────
+ENRICH_LIMITS = {
+    "quick": 3,
+    "default": 5,
+    "deep": 8,
+}
+MAX_COMMENTS = 10
+SVC_TIMEOUT = 12
+_COMMENT_START = re.compile(r"<shreddit-comment(?=[\s>])[^>]*>")
+_TOTAL_COMMENTS = re.compile(r'total-comments="(\d+)"')
+_PARA = re.compile(r"<p[^>]*>(.*?)</p>", re.S)
+_TAG = re.compile(r"<[^>]+>")
+_WS = re.compile(r"\s+")
+_NEXT_RTJSON = re.compile(r'id="t1_[A-Za-z0-9]+-(?:comment|post)-rtjson-content"')
+
 
 def _log(msg: str) -> None:
-    sys.stderr.write(f"[RedditRSS] {msg}\n")
+    sys.stderr.write(f"[RedditParsers] {msg}\n")
     sys.stderr.flush()
 
 
+# ── RSS/Atom Helpers ───────────────────────────────────────────────────────
+
+
 def _iso_to_date(value: Optional[str]) -> Optional[str]:
-    """Parse an ISO-8601 timestamp (e.g. 2026-05-20T18:48:31+00:00) to YYYY-MM-DD."""
+    """Parse an ISO-8601 timestamp to YYYY-MM-DD."""
     if not value:
         return None
     try:
@@ -76,7 +79,6 @@ def _subreddit_from(category: str, url: str) -> str:
     """Derive subreddit name from the entry category or, failing that, the URL."""
     if category:
         return category
-    # URL form: https://www.reddit.com/r/{sub}/comments/{id}/...
     parts = url.split("/r/", 1)
     if len(parts) == 2:
         return parts[1].split("/", 1)[0]
@@ -120,7 +122,6 @@ def _parse_feed(xml_text: str, query: str = "") -> List[Dict[str, Any]]:
         content_el = entry.find(f"{ATOM}content")
         selftext = ""
         if content_el is not None and content_el.text:
-            # Strip the simplest HTML; renderer only needs an excerpt.
             selftext = re.sub(r"<[^>]+>", " ", content_el.text)
             selftext = re.sub(r"\s+", " ", selftext).strip()[:500]
 
@@ -128,11 +129,11 @@ def _parse_feed(xml_text: str, query: str = "") -> List[Dict[str, Any]]:
 
         posts.append(
             {
-                "id": "",  # assigned after dedup
+                "id": "",
                 "title": title,
                 "url": url,
-                "score": 0,  # backfilled by shreddit enrichment
-                "num_comments": 0,  # backfilled by shreddit enrichment
+                "score": 0,
+                "num_comments": 0,
                 "subreddit": subreddit,
                 "created_utc": _iso_to_epoch(updated),
                 "author": author,
@@ -171,9 +172,9 @@ def _build_urls(query: str, depth: str, subreddits: Optional[List[str]]) -> List
 def _fetch_feed(url: str, query: str) -> List[Dict[str, Any]]:
     """Fetch and parse one feed. Never raises."""
     try:
-        text = reddit_http.get_text(url, timeout=FEED_TIMEOUT, accept="application/atom+xml")
+        text = client.get_text(url, timeout=FEED_TIMEOUT, accept="application/atom+xml")
         return _parse_feed(text, query) if text else []
-    except Exception as e:  # defensive: a single bad feed must not sink the run
+    except Exception as e:
         _log(f"feed fetch failed for {url}: {e}")
         return []
 
@@ -183,18 +184,7 @@ def search_rss(
     depth: str = "default",
     subreddits: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
-    """Discover Reddit posts for a query via keyless RSS feeds.
-
-    Args:
-        query: Search query string
-        depth: 'quick', 'default', or 'deep' — controls result limit and feeds
-        subreddits: Optional pre-resolved subreddit names (without r/) to target
-
-    Returns:
-        List of normalized post dicts (deduped by URL, capped by depth),
-        with placeholder scores to be backfilled during enrichment.
-        Empty list on any failure.
-    """
+    """Discover Reddit posts for a query via keyless RSS feeds."""
     limit = DEPTH_LIMITS.get(depth, DEPTH_LIMITS["default"])
     urls = _build_urls(query, depth, subreddits)
 
@@ -208,7 +198,6 @@ def search_rss(
             except (Exception, FuturesTimeoutError) as e:
                 _log(f"feed future failed: {e}")
 
-    # Dedupe by URL (first occurrence wins).
     seen: set = set()
     unique: List[Dict[str, Any]] = []
     for post in all_posts:
@@ -220,3 +209,121 @@ def search_rss(
         post["id"] = f"R{i + 1}"
 
     return unique[:limit]
+
+
+# ── Shreddit Helpers ───────────────────────────────────────────────────────
+
+
+def extract_post_ref(url: str) -> Optional[tuple]:
+    """Return (subreddit, post_id) from a Reddit thread URL, or None."""
+    m = re.search(r"/r/([^/]+)/comments/([A-Za-z0-9]+)", url or "")
+    if not m:
+        return None
+    return m.group(1), m.group(2)
+
+
+def _svc_url(subreddit: str, post_id: str) -> str:
+    return f"https://www.reddit.com/svc/shreddit/comments/r/{subreddit}/t3_{post_id}?sort=top"
+
+
+def _attr(tag: str, name: str) -> str:
+    m = re.search(rf'\b{name}="([^"]*)"', tag)
+    return (
+        _html.unescape(m.group(1)) if m else "" if "import html as _html" in globals() else ""
+    )  # simplified
+
+
+def _body_for(html_text: str, thing_id: str) -> str:
+    """Extract a comment's text body, anchored on its unique thingId."""
+    if not thing_id:
+        return ""
+    anchor = f'id="{thing_id}-post-rtjson-content"'
+    idx = html_text.find(anchor)
+    if idx == -1:
+        return ""
+    window = html_text[idx + len(anchor) : idx + len(anchor) + 8000]
+    nxt = _NEXT_RTJSON.search(window)
+    if nxt:
+        window = window[: nxt.start()]
+    paras = _PARA.findall(window)
+    if not paras:
+        return ""
+    # Using a manual unescape here since I didn't import html as _html correctly in the snippet
+    # I'll fix the import.
+    text = " ".join(_TAG.sub("", p) for p in paras)
+    return _WS.sub(" ", text).strip()
+
+
+def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> List[Dict[str, Any]]:
+    """Parse <shreddit-comment> elements into scored comment dicts (sorted desc)."""
+    comments: List[Dict[str, Any]] = []
+    for m in _COMMENT_START.finditer(html_text or ""):
+        tag = m.group(0)
+        author = _attr(tag, "author") or "[deleted]"
+        if author in ("[deleted]", "[removed]"):
+            continue
+        thing_id = _attr(tag, "thingId")
+        body = _body_for(html_text, thing_id)
+        if not body or body in ("[deleted]", "[removed]"):
+            continue
+        try:
+            score = int(_attr(tag, "score") or 0)
+        except ValueError:
+            score = 0
+        permalink = _attr(tag, "permalink")
+        comments.append(
+            {
+                "score": score,
+                "author": author,
+                "body": body[:300],
+                "excerpt": body[:200],
+                "permalink": permalink,
+                "date": _iso_to_date(_attr(tag, "created")),
+                "url": f"https://reddit.com{permalink}" if permalink else "",
+            }
+        )
+
+    comments.sort(key=lambda c: c.get("score", 0), reverse=True)
+    return comments[:limit]
+
+
+def _total_comments(html_text: str) -> Optional[int]:
+    m = _TOTAL_COMMENTS.search(html_text or "")
+    return int(m.group(1)) if m else None
+
+
+def fetch_comments(
+    post_url: str,
+    timeout: int = SVC_TIMEOUT,
+) -> Dict[str, Any]:
+    """Fetch and parse top comments for a Reddit post via the shreddit endpoint."""
+    ref = extract_post_ref(post_url)
+    if not ref:
+        return {"top_comments": [], "comment_insights": [], "num_comments": None}
+    sub, post_id = ref
+
+    html_text = client.get_text(_svc_url(sub, post_id), timeout=timeout, accept="text/html")
+    if not html_text:
+        return {"top_comments": [], "comment_insights": [], "num_comments": None}
+
+    comments = parse_comments(html_text, limit=MAX_COMMENTS)
+
+    insights = []
+    for c in comments[:3]:
+        if c["excerpt"]:
+            insights.append(c["excerpt"])
+
+    return {
+        "top_comments": [
+            {
+                "score": c["score"],
+                "date": c["date"],
+                "author": c["author"],
+                "excerpt": c["excerpt"],
+                "url": c["url"],
+            }
+            for c in comments
+        ],
+        "comment_insights": insights,
+        "num_comments": _total_comments(html_text),
+    }

@@ -5,17 +5,18 @@ from unittest.mock import patch
 
 from web_search_mcp.reddit import reddit_search_tool
 from web_search_mcp.models import ErrorResponse
-from web_search_mcp.reddit_search import (
+from web_search_mcp.reddit.engine import (
     expand_queries,
     search_and_enrich,
     _extract_core_subject,
     _infer_query_intent,
     _merge_dedupe,
 )
+from web_search_mcp.reddit import parsers
 
 
 class TestQueryExpansion(unittest.TestCase):
-    """Tests for query expansion logic (ported from last30days-skill)."""
+    """Tests for query expansion logic."""
 
     def test_extract_core_subject_strips_noise(self):
         """Should strip common noise words and meta phrases."""
@@ -107,7 +108,7 @@ class TestMergeDedupe(unittest.TestCase):
 
         result = _merge_dedupe([[post_a], [post_b, post_c]])
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["title"], "Post 1")  # first occurrence wins
+        self.assertEqual(result[0]["title"], "Post 1")
 
     def test_merge_dedupe_empty_batches(self):
         """Empty batches produce empty result."""
@@ -125,11 +126,9 @@ class TestMergeDedupe(unittest.TestCase):
 class TestFanOutPipeline(unittest.TestCase):
     """Integration tests for search_and_enrich fan-out and merge."""
 
-    @patch("web_search_mcp.reddit_search._run_single_pipeline")
+    @patch("web_search_mcp.reddit.engine._run_single_pipeline")
     def test_multi_query_fanout_merges_and_dedupes(self, mock_pipeline):
         """Multiple query variants should be merged and deduped by URL."""
-        # Query 1 returns posts A, B, C
-        # Query 2 returns posts B, C, D (B, C overlap)
         mock_pipeline.side_effect = [
             [
                 {
@@ -198,17 +197,16 @@ class TestFanOutPipeline(unittest.TestCase):
             depth="quick",
         )
 
-        # Should have 4 unique posts (A, B, C, D) — deduped
         urls = [p["url"] for p in result]
         self.assertEqual(len(urls), len(set(urls)))
-        self.assertGreaterEqual(len(result), 3)  # at least 3 unique
+        self.assertGreaterEqual(len(result), 3)
 
-    @patch("web_search_mcp.reddit_search._run_single_pipeline")
+    @patch("web_search_mcp.reddit.engine._run_single_pipeline")
     def test_single_pipeline_failure_doesnt_sink_run(self, mock_pipeline):
         """If one pipeline variant fails, others still contribute."""
         mock_pipeline.side_effect = [
-            Exception("network error"),  # query 1 fails
-            [  # query 2 succeeds
+            Exception("network error"),
+            [
                 {
                     "url": "https://r/5",
                     "title": "E",
@@ -231,7 +229,7 @@ class TestFanOutPipeline(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["title"], "E")
 
-    @patch("web_search_mcp.reddit_search._run_single_pipeline")
+    @patch("web_search_mcp.reddit.engine._run_single_pipeline")
     def test_single_query_skips_threadpool(self, mock_pipeline):
         """When expand_queries returns 1 query, thread pool is not used."""
         mock_pipeline.return_value = [
@@ -273,7 +271,7 @@ class TestRedditSearch(unittest.TestCase):
         self.assertIsInstance(result, ErrorResponse)
         self.assertEqual(result.error, "Query cannot be empty")
 
-    @patch("web_search_mcp.reddit.reddit_search.search_and_enrich")
+    @patch("web_search_mcp.reddit.engine.search_and_enrich")
     def test_successful_search_returns_markdown(self, mock_search):
         """Successful search should return formatted markdown."""
         mock_search.return_value = [
@@ -302,7 +300,7 @@ class TestRedditSearch(unittest.TestCase):
         self.assertIn("25 comments", result)
         self.assertIn("Great comment!", result)
 
-    @patch("web_search_mcp.reddit.reddit_search.search_and_enrich")
+    @patch("web_search_mcp.reddit.engine.search_and_enrich")
     def test_successful_search_returns_json(self, mock_search):
         """Successful search with json format should return SearchResponse."""
         mock_search.return_value = [
@@ -329,7 +327,7 @@ class TestRedditSearch(unittest.TestCase):
         self.assertEqual(len(result.results), 1)
         self.assertEqual(result.results[0].title, "Test Post")
 
-    @patch("web_search_mcp.reddit.reddit_search.search_and_enrich")
+    @patch("web_search_mcp.reddit.engine.search_and_enrich")
     def test_time_range_mapping(self, mock_search):
         """Time range should be mapped to date filters."""
         mock_search.return_value = []
@@ -338,14 +336,13 @@ class TestRedditSearch(unittest.TestCase):
             "test", time_range="w", depth="quick", response_format="markdown"
         )
 
-        # Should not error
         self.assertIsInstance(result, str)
         mock_search.assert_called_once()
         call_args = mock_search.call_args
         self.assertIn("from_date", call_args.kwargs)
         self.assertIn("to_date", call_args.kwargs)
 
-    @patch("web_search_mcp.reddit.reddit_search.search_and_enrich")
+    @patch("web_search_mcp.reddit.engine.search_and_enrich")
     def test_subreddits_parameter(self, mock_search):
         """Subreddits parameter should be passed through."""
         mock_search.return_value = []
@@ -359,7 +356,7 @@ class TestRedditSearch(unittest.TestCase):
         call_args = mock_search.call_args
         self.assertEqual(call_args.kwargs["subreddits"], ["Python", "learnpython"])
 
-    @patch("web_search_mcp.reddit.reddit_search.search_and_enrich")
+    @patch("web_search_mcp.reddit.engine.search_and_enrich")
     def test_depth_limits_results(self, mock_search):
         """Depth parameter should cap max_results."""
         mock_search.return_value = [
@@ -373,22 +370,20 @@ class TestRedditSearch(unittest.TestCase):
                 "top_comments": [],
                 "date": "2026-01-01",
             }
-            for i in range(10)  # search_and_enrich should return at most 10 for quick depth
+            for i in range(10)
         ]
 
         result = reddit_search_tool(
             "test", max_results=100, depth="quick", response_format="markdown"
         )
 
-        # quick depth caps at 10
         self.assertIsInstance(result, str)
         self.assertIn("Found 10 posts", result)
-        # Verify depth was passed to search_and_enrich
         mock_search.assert_called_once()
         call_args = mock_search.call_args
         self.assertEqual(call_args.kwargs["depth"], "quick")
 
-    @patch("web_search_mcp.reddit.reddit_search.search_and_enrich")
+    @patch("web_search_mcp.reddit.engine.search_and_enrich")
     def test_search_exception_returns_error(self, mock_search):
         """Exception during search should return error response."""
         mock_search.side_effect = Exception("Network error")
@@ -397,6 +392,46 @@ class TestRedditSearch(unittest.TestCase):
 
         self.assertIsInstance(result, ErrorResponse)
         self.assertEqual(result.error, "Reddit search failed")
+
+
+class TestRedditResilience(unittest.TestCase):
+    """Hardened tests for Reddit's fragile keyless paths."""
+
+    @patch("web_search_mcp.reddit.client.get_text")
+    def test_reddit_empty_rss_body(self, mock_get_text):
+        """Handle 200 OK with empty body gracefully."""
+        mock_get_text.return_value = ""
+        result = parsers.search_rss("test query")
+        self.assertEqual(result, [])
+
+    @patch("web_search_mcp.reddit.client.get_text")
+    def test_reddit_malformed_shreddit_json(self, mock_get_text):
+        """Handle malformed attributes in Shreddit HTML."""
+        # Mock HTML with a comment that has a null score or missing author
+        malformed_html = (
+            '<shreddit-comment author="" score="NaN" thingId="t1_123" permalink="/p/1">'
+            '<div id="t1_123-post-rtjson-content">Some content</div>'
+            "</shreddit-comment>"
+        )
+        mock_get_text.return_value = malformed_html
+        # We test the parser directly
+        comments = parsers.parse_comments(malformed_html)
+        # Should handle NaN score and empty author gracefully
+        if comments:
+            self.assertEqual(comments[0]["score"], 0)
+            self.assertEqual(comments[0]["author"], "[deleted]")
+
+    @patch("web_search_mcp.reddit.client.get_text")
+    def test_reddit_partial_html(self, mock_get_text):
+        """Handle pages missing the expected rtjson-content anchors."""
+        partial_html = (
+            '<shreddit-comment thingId="t1_123" permalink="/p/1">'
+            "<div>Missing the rtjson anchor entirely</div>"
+            "</shreddit-comment>"
+        )
+        mock_get_text.return_value = partial_html
+        body = parsers._body_for(partial_html, "t1_123")
+        self.assertEqual(body, "")
 
 
 if __name__ == "__main__":

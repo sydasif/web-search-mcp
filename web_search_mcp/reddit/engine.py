@@ -7,8 +7,8 @@ first; enrichment then runs on whatever was discovered:
           but a residential machine (where the skill usually runs) may still
           get 200, so it is worth one cheap try. Honors the "brute-force .json"
           intent without depending on it.
-  Tier 1  RSS discovery (reddit_rss) — keyless, robust, the load-bearing path.
-  Tier 2  shreddit comment + count enrichment (reddit_shreddit) for top posts.
+  Tier 1  RSS discovery (reddit_parsers) — keyless, robust, the load-bearing path.
+  Tier 2  shreddit comment + count enrichment (reddit_parsers) for top posts.
 
 Returns ``[]`` (never raises) so the caller can fall through to other sources
 when every keyless tier comes up empty.
@@ -21,9 +21,9 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
-from . import reddit_rss, reddit_shreddit, reddit_listing
+from . import parsers, models, client
 
-ENRICH_LIMITS = reddit_shreddit.ENRICH_LIMITS
+ENRICH_LIMITS = parsers.ENRICH_LIMITS
 ENRICH_BUDGET = 45  # seconds total across all enrichment threads
 MAX_ENRICH_WORKERS = 4
 MAX_DERIVED_SUBS = 5  # subreddits derived from RSS results for score backfill
@@ -199,9 +199,7 @@ def _log(msg: str) -> None:
 def _tier0_json(topic: str, depth: str) -> List[Dict[str, Any]]:
     """One cheap global ``.json`` discovery attempt. Returns [] on the 403 wall."""
     try:
-        from . import reddit_public
-
-        return reddit_public.search(topic, depth=depth) or []
+        return client.search_json(topic, depth=depth) or []
     except Exception as e:  # never let the demoted tier sink the run
         _log(f"Tier 0 (.json) unavailable: {e}")
         return []
@@ -229,12 +227,12 @@ def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[D
 
     # Tier 1: keyless discovery. RSS gives breadth (incl. global keyword search);
     # the listing partials give real upvote scores.
-    rss_posts = reddit_rss.search_rss(topic, depth=depth, subreddits=subreddits)
+    rss_posts = parsers.search_rss(topic, depth=depth, subreddits=subreddits)
 
     if subreddits:
-        # Targeted run: the caller chose these subreddits, so their listing cards
+        # Targeted run: the caller chose these subreddits, their listing cards
         # are on-topic — include them as scored discovery AND as a score source.
-        listing_posts = reddit_listing.fetch_listings(subreddits, depth=depth, query=topic)
+        listing_posts = models.fetch_listings(subreddits, depth=depth, query=topic)
         score_source = listing_posts
     else:
         # Bare global run: subreddits derived from noisy RSS results are NOT
@@ -243,7 +241,7 @@ def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[D
         # would flood results with high-upvote but irrelevant posts.
         listing_posts = []
         derived = _top_subreddits(rss_posts)
-        score_source = reddit_listing.fetch_listings(derived, depth=depth, query=topic)
+        score_source = models.fetch_listings(derived, depth=depth, query=topic)
     _log(
         f"Tier 1 (RSS) {len(rss_posts)} posts; "
         f"{'listing discovery ' + str(len(listing_posts)) if subreddits else 'score-only'}; "
@@ -268,7 +266,7 @@ def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[D
     for p in rss_posts:
         if p["url"] in seen:
             continue
-        pid = reddit_listing._post_id(p["url"])
+        pid = models._post_id(p["url"])
         if pid in score_map:
             _apply_scores(p, score_map[pid])
         seen.add(p["url"])
@@ -279,7 +277,7 @@ def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[D
 def _enrich_one(post: Dict[str, Any]) -> Dict[str, Any]:
     """Attach shreddit comments + real comment count. Never raises."""
     try:
-        data = reddit_shreddit.fetch_comments(post.get("url", ""))
+        data = parsers.fetch_comments(post.get("url", ""))
         if data.get("top_comments"):
             post["top_comments"] = data["top_comments"]
         if data.get("comment_insights"):
@@ -324,12 +322,7 @@ def _enrich(posts: List[Dict[str, Any]], depth: str) -> List[Dict[str, Any]]:
 
 
 def _slot_priority(topic: str, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Order posts for enrichment slots: higher score first.
-
-    Simplified version that just preserves the score-first sort order.
-    The relevance-aware slot allocation from last30days-skill is omitted
-    for simplicity in this initial integration.
-    """
+    """Order posts for enrichment slots: higher score first."""
     return posts
 
 
@@ -371,24 +364,7 @@ def search_and_enrich(
     depth: str = "default",
     subreddits: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
-    """Full keyless Reddit pipeline with query expansion + parallel fan-out.
-
-    Generates 1-4 query variants from the topic, runs them concurrently
-    (max 2 workers), merges and dedupes results, then enriches top posts
-    with comment data via shreddit.
-
-    Args:
-        topic: Search topic
-        from_date: Start date (YYYY-MM-DD)
-        to_date: End date (YYYY-MM-DD)
-        depth: 'quick', 'default', or 'deep'
-        subreddits: Optional pre-resolved subreddit names (without r/)
-
-    Returns:
-        List of normalized item dicts with top_comments/comment_insights
-        attached on enriched posts. Capped by depth limit.
-        Empty list when all keyless tiers fail.
-    """
+    """Full keyless Reddit pipeline with query expansion + parallel fan-out."""
     queries = expand_queries(topic, depth)
     _log(f"expanded {len(queries)} queries: {queries}")
 
@@ -402,7 +378,6 @@ def search_and_enrich(
                 executor.submit(_run_single_pipeline, q, from_date, to_date, depth, subreddits): q
                 for q in queries
             }
-            # Wait with timeout to prevent indefinite blocking on stuck threads.
             done, not_done = concurrent.futures.wait(futures, timeout=ENRICH_BUDGET)
             for future in not_done:
                 q = futures[future]
@@ -419,7 +394,6 @@ def search_and_enrich(
     if not posts:
         return []
 
-    # Rank by real upvote score, then relevance, then recency.
     posts.sort(
         key=lambda p: (
             p.get("engagement", {}).get("score", 0) or 0,
@@ -429,12 +403,10 @@ def search_and_enrich(
         reverse=True,
     )
 
-    # Enrich top posts with shreddit comments.
     posts = _enrich(_slot_priority(topic, posts), depth)
 
     for i, post in enumerate(posts):
         post["id"] = f"R{i + 1}"
 
-    # Cap results by depth limit
     depth_limits = {"quick": 10, "default": 25, "deep": 50}
     return posts[: depth_limits.get(depth, depth_limits["default"])]

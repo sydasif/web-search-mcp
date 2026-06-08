@@ -4,9 +4,9 @@ import logging
 from datetime import datetime
 from typing import List, Optional, Literal
 
-from .models import SearchResponse, SearchResult, ErrorResponse
-from .utils import format_error
-from . import reddit_search, reddit_rss
+from ..models import SearchResponse, SearchResult, ErrorResponse
+from ..utils import format_error
+from . import engine, parsers
 
 logger = logging.getLogger("web-search-mcp")
 
@@ -14,7 +14,7 @@ logger = logging.getLogger("web-search-mcp")
 def _convert_to_search_results(
     posts: List[dict], query: str, search_type: Literal["text", "news"] = "text"
 ) -> SearchResponse:
-    """Convert reddit_search output to SearchResponse format."""
+    """Convert reddit_engine output to SearchResponse format."""
     results = []
     for post in posts:
         # Build body from title + selftext + top comments if available
@@ -102,7 +102,7 @@ def reddit_search_tool(
     max_results = min(max_results, depth_limits.get(depth, 25))
 
     try:
-        posts = reddit_search.search_and_enrich(
+        posts = engine.search_and_enrich(
             topic=query,
             from_date=from_date,
             to_date=to_date,
@@ -161,4 +161,4 @@ def reddit_rss_search(
     depth_limits = {"quick": 10, "default": 25, "deep": 50}
     max_results = min(max_results, depth_limits.get(depth, 25))
 
-    return reddit_rss.search_rss(query=query, depth=depth, subreddits=subreddits)[:max_results]
+    return parsers.search_rss(query=query, depth=depth, subreddits=subreddits)[:max_results]

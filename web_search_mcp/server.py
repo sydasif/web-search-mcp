@@ -66,6 +66,15 @@ def web_search(
         str: Markdown-formatted search results (when response_format="markdown")
         SearchResponse: Raw search results (when response_format="json")
         ErrorResponse: Error response if applicable
+
+    Examples:
+        - "Latest NVIDIA H200 benchmarks"
+        - "How to install uv on macOS"
+        - "Current state of Llama 3.1 vs GPT-4o"
+
+    Error Handling:
+        - 429 Too Many Requests: Try reducing max_results or wait 60s.
+        - Empty Results: Try a more general query or change search_type.
     """
     try:
         req = SearchRequest(
@@ -133,6 +142,18 @@ def fetch_page(
         max_length: Maximum length of content to return (default 15000)
         timeout: Request timeout in seconds (default 30)
         backend: HTTP backend to use ('httpx' for lightweight, 'curl' to bypass bot detection, 'auto' to try httpx first then fallback to curl)
+
+    Returns:
+        PageResponse: Extracted content and metadata
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "https://docs.python.org/3/library/os.html"
+        - "https://www.nature.com/articles/s41586-024-00000-0"
+
+    Error Handling:
+        - HTTP 403 Forbidden: The site is blocking the request. Try changing the backend to 'curl'.
+        - Timeout: The page is taking too long to respond. Increase the timeout parameter.
     """
     return _fetch_page(
         url=url,
@@ -171,7 +192,15 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
         domain: The domain to search (e.g. 'docs.python.org', 'stackoverflow.com')
 
     Returns:
-        Search results from the specified domain
+        SearchResponse: Search results from the specified domain
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - query="asyncio event loop", domain="docs.python.org"
+        - query="useEffect cleanup", domain="react.dev"
+
+    Error Handling:
+        - Empty results: Try a more general query or verify the domain is correct.
     """
     enhanced_query = f"site:{domain} {query}"
 
@@ -233,7 +262,17 @@ def reddit_search(
         response_format: Output format ('json' or 'markdown')
 
     Returns:
-        SearchResponse with Reddit posts including scores, comments, and insights
+        str: Markdown-formatted Reddit posts (when response_format="markdown")
+        SearchResponse: Raw Reddit posts with scores and comments (when response_format="json")
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "What are the best mechanical keyboards 2024"
+        - "Thoughts on the new Claude 4 models", subreddits=["LocalLLaMA", "ArtificialInteligence"]
+        - "How to fix memory leak in Python", depth="deep"
+
+    Error Handling:
+        - Reddit 403/429: The free keyless path is rate-limited. Try a different query, target specific subreddits, or wait.
     """
     return _reddit_search_tool(
         query=query,
@@ -281,7 +320,16 @@ def groq_browse(
             'low' balances quality vs token cost; 'high' explores more pages.
 
     Returns:
-        Combined results from multiple web sources
+        str: Combined results from multiple web sources
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "Compare the performance of React vs Vue in 2026, focusing on hydration patterns"
+        - "Find the latest pricing for NVIDIA H200 across three different vendors"
+
+    Error Handling:
+        - API Key Missing: Ensure GROQ_API_KEY is set in your environment.
+        - Rate Limit: Groq API limit reached. Wait a few minutes before retrying.
     """
     return _groq_browse(query=query, model=model, reasoning_effort=reasoning_effort)
 
@@ -324,7 +372,16 @@ def groq_research(
                reliability, 'groq/compound' for multi-step research)
 
     Returns:
-        Synthesized research results from multiple sources
+        str: Synthesized research results from multiple sources
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "Analyze the current state of quantum computing breakthroughs in 2026"
+        - "Investigation into the impact of Llama 3 on open-source software development"
+
+    Error Handling:
+        - Request too long: Keep your query under 150 characters.
+        - Synthesis failure: The model could not find enough data to synthesize a result.
     """
     return _groq_research(query=query, model=model)
 
@@ -358,10 +415,19 @@ def groq_analyze_page(
         url: The URL to visit and analyze
         query: What to do with the page content (default: summarize key points)
         model: Compound system ('groq/compound-mini' for lower latency and
-               reliability, 'groq/compound' for deeper analysis)
+               reliability, 'groq/compound' for multi-step research)
 
     Returns:
-        AI analysis based on the visited page content
+        str: AI analysis based on the visited page content
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - url="https://openai.com/blog/sora", query="What are the key limitations of Sora?"
+        - url="https://arxiv.org/pdf/2401.00000.pdf", query="Extract the main findings of the results section"
+
+    Error Handling:
+        - Page too large: The content exceeds Groq's context window. Use fetch_page first.
+        - Access Denied: The page is behind a paywall or blocking the analyzer.
     """
     return _groq_analyze_page(url=url, query=query, model=model)
 
