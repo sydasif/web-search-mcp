@@ -276,16 +276,12 @@ def _search_single_query(query: str, page: int = 1) -> dict:
 
 def search_polymarket(
     topic: str,
-    from_date: str | None = None,
-    to_date: str | None = None,
     depth: str = "default",
 ) -> list[dict]:
     """Search Polymarket via Gamma API with query expansion.
 
     Args:
         topic: Search topic
-        from_date: Optional start date (YYYY-MM-DD)
-        to_date: Optional end date (YYYY-MM-DD)
         depth: 'quick', 'default', or 'deep'
 
     Returns:

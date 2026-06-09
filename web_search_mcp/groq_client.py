@@ -3,6 +3,7 @@ Handles authentication, resilience, and request-size constraints.
 """
 
 import logging
+import re
 from typing import Any, Optional
 from groq import Groq
 
@@ -23,10 +24,9 @@ _MAX_QUERY_BYTES = 3000
 class GroqClientError(Exception):
     """Base exception for Groq client errors."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None, body: Optional[str] = None):
+    def __init__(self, message: str, status_code: Optional[int] = None):
         super().__init__(message)
         self.status_code = status_code
-        self.body = body
 
 
 def _retry_if_not_fatal(exception: Exception) -> bool:
@@ -110,8 +110,6 @@ def call_groq_api(
         if hasattr(e, "status_code"):
             status_code = e.status_code
         elif "HTTP" in msg:
-            import re
-
             match = re.search(r"HTTP (\d{3})", msg)
             if match:
                 status_code = int(match.group(1))

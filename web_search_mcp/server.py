@@ -234,7 +234,7 @@ def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse |
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
-        "openWorldHInt": True,
+        "openWorldHint": True,
     },
 )
 def reddit_search(
