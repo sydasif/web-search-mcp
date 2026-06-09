@@ -23,6 +23,9 @@ web-search-mcp = "web_search_mcp.server:main"
 where = ["."]
 include = ["web_search_mcp*"]
 
+[tool.setuptools.package-data]
+"web_search_mcp" = ["vendor/**/*"]
+
 [tool.uv]
 package = true
 
