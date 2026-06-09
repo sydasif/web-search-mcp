@@ -15,6 +15,7 @@ from .groq_tools import (
 from .reddit import reddit_search_tool as _reddit_search_tool
 from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
 from .polymarket import search_polymarket as _search_pm
+from .x import search_x as _search_x  # noqa: F401 — used by x_search tool
 
 # Set up logging
 logger = logging.getLogger("web-search-mcp")
@@ -678,6 +679,99 @@ def groq_analyze_page(
         - Access Denied: The page is behind a paywall or blocking the analyzer.
     """
     return _groq_analyze_page(url=url, query=query, model=model)
+
+
+# ─────────────────────────────────────────────────────────────
+# X/Twitter tools — requires AUTH_TOKEN + CT0 cookies
+# Best for: real-time discourse, breaking news, community signal
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="x_search",
+    annotations={
+        "title": "Search X/Twitter via Bird CLI",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def x_search(
+    query: str,
+    from_date: str | None = None,
+    max_results: int = 30,
+    depth: Literal["quick", "default", "deep"] = "default",
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | list[dict]:
+    """Search X/Twitter via Bird CLI — requires AUTH_TOKEN and CT0 cookies.
+
+    Role: Real-time discourse. Use this for breaking news, community
+    reactions, and engagement signals from X/Twitter.
+
+    Authentication: Set AUTH_TOKEN and CT0 environment variables. Extract
+    these from your browser cookies after logging in to x.com. These are
+    session cookies that expire periodically.
+
+    Args:
+        query: Search query string
+        from_date: Start date (YYYY-MM-DD). Defaults to 30 days ago.
+        max_results: Max results (capped by depth: quick=12, default=30, deep=60)
+        depth: Search depth — 'quick', 'default', or 'deep'
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        list: Tweets with text, url, author_handle, date, and engagement metrics
+        str: Markdown-formatted results (when response_format="markdown")
+
+    Examples:
+        - "Claude Code" — find recent posts about Claude Code
+        - "OpenAI news" — find breaking news about OpenAI
+        - "from:sama" — search posts from a specific user
+
+    Error Handling:
+        - Missing credentials: Set AUTH_TOKEN and CT0 env vars.
+        - Node.js missing: Install Node.js 22+ for the vendored Bird CLI.
+    """
+
+    try:
+        items = _search_x(query=query, from_date=from_date, depth=depth)[:max_results]
+        if response_format == "markdown":
+            return _format_x_markdown(items, query)
+        return items
+    except Exception as e:
+        logger.error("X search failed: %s", e)
+        return {"error": f"X search failed: {e}"}
+
+
+def _format_x_markdown(items: list[dict], query: str) -> str:
+    """Format X results as markdown."""
+    if not items:
+        return f"No X results found for '{query}'."
+    # Check for auth errors
+    if len(items) == 1 and "error" in items[0]:
+        return f"⚠️ {items[0]['error']}"
+    lines = [f"# X/Twitter Results for '{query}'", f"Found {len(items)} posts.", ""]
+    for i, item in enumerate(items, 1):
+        handle = item.get("author_handle", "unknown")
+        url = item.get("url", "#")
+        text = (item.get("text", "") or "")[:200]
+        lines.append(f"{i}. **@{handle}** · [{url}]({url})")
+        lines.append(f"   {text}{'...' if len(item.get('text', '') or '') > 200 else ''}")
+        eng = item.get("engagement", {}) or {}
+        eng_parts = []
+        if eng.get("likes"):
+            eng_parts.append(f"❤️ {eng['likes']}")
+        if eng.get("retweets"):
+            eng_parts.append(f"🔁 {eng['retweets']}")
+        if eng.get("replies"):
+            eng_parts.append(f"💬 {eng['replies']}")
+        if eng_parts:
+            lines.append(f"   {' '.join(eng_parts)}")
+        if item.get("date"):
+            lines.append(f"   {item['date']}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def main():

@@ -12,12 +12,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The application follows a modular architecture with clear separation of concerns:
 
-- **server.py**: FastMCP server entry point, defines 10 MCP tools exposed to clients
+- **server.py**: FastMCP server entry point, defines 11 MCP tools exposed to clients
 - **ddg.py**: DuckDuckGo search + web content extraction (`ddg_search`, `fetch_page`) using `trafilatura` — consolidated from the former `search.py` and `reader.py`
 - **reddit/**: Keyless Reddit search via RSS + shreddit enrichment (`reddit_search_tool`)
 - **hackernews.py**: Hacker News search via Algolia API (`search_hackernews`)
 - **github.py**: GitHub Issues/PRs search (`search_github`)
 - **polymarket.py**: Polymarket prediction market search via Gamma API (`search_polymarket`)
+- **x.py**: X/Twitter search via vendored Bird CLI (`search_x`) — requires `AUTH_TOKEN` + `CT0` cookies
 - **groq_tools.py**: Groq-powered tools — `browse` (GPT-OSS interactive search), `research` (auto-selecting compound search), `analyze_page` (URL visit + interpretation)
 - **groq_client.py**: Shared Groq API client wrapper
 - **http_client.py**: Shared HTTP client for keyless API calls
@@ -27,7 +28,7 @@ The application follows a modular architecture with clear separation of concerns
 
 ## MCP Tool Definitions
 
-The server exposes ten tools across six engines:
+The server exposes eleven tools across seven engines:
 
 ### DuckDuckGo (free, fast, raw)
 
@@ -50,6 +51,10 @@ The server exposes ten tools across six engines:
 ### Polymarket (free, prediction signals)
 
 - `polymarket_search`: Search Polymarket prediction markets via Gamma API. Great for odds, market signals, and crowd-sourced probability estimates. No API key needed.
+
+### X/Twitter (requires AUTH_TOKEN + CT0 cookies)
+
+- `x_search`: Search X/Twitter via vendored Bird CLI. Great for real-time discourse, breaking news, and community engagement signals. Requires `AUTH_TOKEN` and `CT0` environment variables from browser cookies.
 
 ### Groq (requires API key)
 
