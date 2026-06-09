@@ -116,6 +116,7 @@ from .groq_tools import analyze_page as _groq_analyze_page
 from .reddit import reddit_search_tool as _reddit_search_tool
 from .hackernews import search_hackernews as _search_hn
 from .polymarket import search_polymarket as _search_pm
+from .x import search_x as _search_x
 ```
 
 ### Formatting

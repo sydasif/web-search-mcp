@@ -4,7 +4,7 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-10 MCP tools for web search, content extraction, and research. Give your LLM clients real-time access to the web — from raw search to community discussions to AI-powered synthesis.
+11 MCP tools for web search, content extraction, and research. Give your LLM clients real-time access to the web — from raw search to social media to AI-powered synthesis.
 
 ## ✨ Features
 
@@ -15,6 +15,7 @@
 - **🚩 Reddit Search**: Keyless search for community sentiment and real user experiences. Uses a multi-tier RSS + HTML pipeline with query expansion and parallel fan-out for high-signal results.
 - **💬 Hacker News Search**: Search tech discourse via the Algolia API. Find developer opinions, startup discussions, and technical news.
 - **🐙 GitHub Search**: Search Issues and PRs across repositories — bug reports, feature requests, community sentiment on open-source projects.
+- **🐦 X/Twitter Search**: Search X/Twitter via vendored Bird CLI for real-time discourse, breaking news, and community engagement signals. Requires `AUTH_TOKEN` and `CT0` cookies from a logged-in X session.
 - **📊 Polymarket Search**: Search prediction markets for odds, market signals, and crowd-sourced probability estimates via Gamma API.
 - **🤖 Groq Browser Search**: Interactive multi-page web browsing via Groq's GPT-OSS models.
 - **🔬 Groq Deep Research**: Auto-selecting AI research via Groq's Compound system — validates and expands on initial results.
@@ -42,7 +43,9 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
       "env": {
         "SEARCH_MCP_RATE_LIMIT_SEARCH": "30",
         "SEARCH_MCP_RATE_LIMIT_FETCH": "20",
-        "SEARCH_MCP_GROQ_API_KEY": "gsk_your_key_here"
+        "SEARCH_MCP_GROQ_API_KEY": "gsk_your_key_here",
+        "AUTH_TOKEN": "your_x_auth_token",
+        "CT0": "your_x_ct0_cookie"
       }
     }
   }
@@ -54,6 +57,10 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 - `SEARCH_MCP_GROQ_API_KEY`: Groq API key for GPT-OSS and Compound tools ([get one here](https://console.groq.com/keys)).
 - `SEARCH_MCP_RATE_LIMIT_SEARCH`: Max DDG search requests per minute (default: `30`).
 - `SEARCH_MCP_RATE_LIMIT_FETCH`: Max page fetch requests per minute (default: `20`).
+- `AUTH_TOKEN`: X/Twitter `auth_token` cookie for `x_search` tool.
+- `CT0`: X/Twitter `ct0` cookie for `x_search` tool.
+
+> **Getting X/Twitter cookies:** Log into [x.com](https://x.com), open DevTools (F12) → Application → Cookies → x.com, and copy the `auth_token` and `ct0` values. These are session cookies — refresh them when searches stop working.
 
 ### Fetch Backend Options
 
@@ -98,6 +105,18 @@ The `fetch_page` tool supports three backend modes to handle sites with bot dete
 | Tool                | Description                          | Key Parameters                                                                                       |
 | ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | `polymarket_search` | Search Polymarket prediction markets | `topic`, `max_results`, `depth` ("quick", "default", "deep"), `response_format` ("json", "markdown") |
+
+### Polymarket Tools (free, prediction signals)
+
+| Tool                | Description                          | Key Parameters                                                                                       |
+| ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `polymarket_search` | Search Polymarket prediction markets | `topic`, `max_results`, `depth` ("quick", "default", "deep"), `response_format` ("json", "markdown") |
+
+### X/Twitter Tools (requires cookies)
+
+| Tool       | Description                              | Key Parameters                                                                                                  |
+| ---------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `x_search` | Search X/Twitter for real-time discourse | `query`, `from_date` (YYYY-MM-DD), `depth` ("quick", "default", "deep"), `response_format` ("json", "markdown") |
 
 ### Groq Tools (requires API key, synthesized results)
 
