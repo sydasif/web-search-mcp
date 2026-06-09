@@ -207,7 +207,7 @@ def _format_price_movement(market: dict) -> str | None:
     abs_change, raw_change, period = changes[0]
     if abs_change < 0.01:
         return None
-    direction = "up" if raw_change > 0 else "down"
+    direction = "up" if (raw_change or 0) > 0 else "down"
     pct = abs_change * 100
     return f"{direction} {pct:.1f}% {period}"
 

@@ -4,8 +4,12 @@ Handles authentication, resilience, and request-size constraints.
 
 import logging
 import re
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from groq import Groq
+from groq._exceptions import APIStatusError
+from groq.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+from groq.types.chat.completion_create_params import CompletionCreateParams
+from groq._types import NotGiven, omit
 
 from tenacity import (
     retry,
@@ -29,7 +33,7 @@ class GroqClientError(Exception):
         self.status_code = status_code
 
 
-def _retry_if_not_fatal(exception: Exception) -> bool:
+def _retry_if_not_fatal(exception: BaseException) -> bool:
     """
     Determine if a Groq API error should be retried.
 
@@ -65,15 +69,15 @@ def _retry_if_not_fatal(exception: Exception) -> bool:
     retry=retry_if_exception(_retry_if_not_fatal),
 )
 def call_groq_api(
-    messages: list,
+    messages: list[ChatCompletionMessageParam],
     model: str,
     temperature: float = 1.0,
     max_tokens: int = 2048,
     top_p: float = 1.0,
     stream: bool = False,
-    stop: Optional[list] = None,
-    reasoning_effort: Optional[str] = None,
-    tools: Optional[list] = None,
+    stop: Optional[list[str]] = None,
+    reasoning_effort: Optional[Literal["none", "default", "low", "medium", "high"]] = None,
+    tools: Optional[list[ChatCompletionToolParam]] = None,
 ) -> Any:
     """Unified wrapper for Groq API calls with professional resilience."""
     if not settings.groq_api_key:
@@ -85,21 +89,17 @@ def call_groq_api(
             default_headers={"Groq-Model-Version": "latest"},
         )
 
-        kwargs = {
-            "messages": messages,
-            "model": model,
-            "temperature": temperature,
-            "max_completion_tokens": max_tokens,
-            "top_p": top_p,
-            "stream": stream,
-            "stop": stop,
-        }
-        if reasoning_effort:
-            kwargs["reasoning_effort"] = reasoning_effort
-        if tools:
-            kwargs["tools"] = tools
-
-        response = client.chat.completions.create(**kwargs)
+        response = client.chat.completions.create(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_completion_tokens=max_tokens,
+            top_p=top_p,
+            stream=stream,
+            stop=stop,
+            reasoning_effort=reasoning_effort if reasoning_effort is not None else omit,
+            tools=tools,
+        )
         return response
     except Exception as e:
         msg = str(e)
@@ -107,7 +107,9 @@ def call_groq_api(
             raise GroqClientError(f"Request too large: {msg}", status_code=413)
 
         status_code = None
-        if hasattr(e, "status_code"):
+        if isinstance(e, APIStatusError):
+            status_code = e.status_code
+        elif hasattr(e, "status_code"):
             status_code = e.status_code
         elif "HTTP" in msg:
             match = re.search(r"HTTP (\d{3})", msg)

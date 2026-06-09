@@ -14,6 +14,7 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
     retry_if_exception_type,
+    retry_if_exception,
 )
 from ..utils import token_overlap_relevance
 
@@ -40,11 +41,11 @@ def _is_dns_failure(err: urllib.error.URLError) -> bool:
     return isinstance(getattr(err, "reason", None), socket.gaierror)
 
 
-def _should_retry_http(exception: Exception) -> bool:
+def _should_retry_http(exception: BaseException) -> bool:
     """Retry on rate limits (429) or server errors (5xx)."""
     if isinstance(exception, HTTPError):
         return exception.status_code == 429 or (
-            exception.status_code and exception.status_code >= 500
+            exception.status_code is not None and exception.status_code >= 500
         )
     if isinstance(exception, urllib.error.URLError) and _is_dns_failure(exception):
         return True
@@ -54,10 +55,7 @@ def _should_retry_http(exception: Exception) -> bool:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(HTTPError) | retry_if_exception_type(urllib.error.URLError),
-    # We only want to retry specific status codes, so we use a custom filter in a wrapper or just check inside
-    # Note: tenacity's retry_if_exception_type is broad. We'll refine this by raising a
-    # specific RetryableHTTPError if needed, or just use the filter logic.
+    retry=retry_if_exception(_should_retry_http),
 )
 def request(
     method: str,

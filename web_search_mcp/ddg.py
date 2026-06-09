@@ -39,11 +39,11 @@ def _is_cloudflare_challenge_body(html: str) -> bool:
     return any(sig.casefold() in sample for sig in _CLOUDFLARE_BODY_SIGNALS)
 
 
-def _should_retry_ddg(exception: Exception) -> bool:
+def _should_retry_ddg(exception: BaseException) -> bool:
     """Retry on rate limits (429) or server errors (5xx)."""
     if isinstance(exception, httpx.HTTPStatusError):
         status = exception.response.status_code if exception.response is not None else None
-        return status == 429 or (status and status >= 500)
+        return status == 429 or (status is not None and status >= 500)
     if isinstance(exception, (httpx.TimeoutException, httpx.RequestError)):
         return True
     return False

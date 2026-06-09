@@ -95,8 +95,7 @@ def web_search(
         )
         result = ddg_search(req)
         if response_format == "markdown":
-            # We cast result to SearchResponse | dict here for the formatter
-            return format_search_results_markdown(result)  # type: ignore
+            return format_search_results_markdown(result)
         return result
     except Exception as e:
         logger.error("Search failed: %s", e)
@@ -171,7 +170,7 @@ def fetch_page(
         max_length=max_length,
         timeout=timeout,
         backend=backend,
-    )  # type: ignore
+    )
 
 
 @mcp.tool(
@@ -311,7 +310,7 @@ def hackernews_search(
     max_results: int = 30,
     depth: Literal["quick", "default", "deep"] = "default",
     response_format: Literal["json", "markdown"] = "markdown",
-) -> str | list[dict]:
+) -> str | list[dict] | ErrorResponse:
     """Search Hacker News via Algolia API — free, no API key needed.
 
     Role: Tech discourse. Use this for developer news, startup discussions,
@@ -344,7 +343,7 @@ def hackernews_search(
         return items
     except Exception as e:
         logger.error("Hacker News search failed: %s", e)
-        return {"error": f"Hacker News search failed: {e}"}
+        return format_error(f"Hacker News search failed: {e}")
 
 
 def _format_hn_markdown(items: list[dict], query: str) -> str:
@@ -387,7 +386,7 @@ def polymarket_search(
     max_results: int = 15,
     depth: Literal["quick", "default", "deep"] = "default",
     response_format: Literal["json", "markdown"] = "markdown",
-) -> str | list[dict]:
+) -> str | list[dict] | ErrorResponse:
     """Search Polymarket prediction markets via Gamma API — free, no API key needed.
 
     Role: Prediction signals. Use this for odds, market movements, and
@@ -419,7 +418,7 @@ def polymarket_search(
         return items
     except Exception as e:
         logger.error("Polymarket search failed: %s", e)
-        return {"error": f"Polymarket search failed: {e}"}
+        return format_error(f"Polymarket search failed: {e}")
 
 
 def _format_pm_markdown(items: list[dict], topic: str) -> str:
@@ -464,7 +463,7 @@ def github_search(
     depth: Literal["quick", "default", "deep"] = "default",
     token: str | None = None,
     response_format: Literal["json", "markdown"] = "markdown",
-) -> str | list[dict]:
+) -> str | list[dict] | ErrorResponse:
     """Search GitHub Issues and PRs via the GitHub Search API.
 
     Role: Code & issues. Use this for bug discussions, feature requests,
@@ -506,7 +505,7 @@ def github_search(
         return items
     except Exception as e:
         logger.error("GitHub search failed: %s", e)
-        return {"error": f"GitHub search failed: {e}"}
+        return format_error(f"GitHub search failed: {e}")
 
 
 def _format_gh_markdown(items: list[dict], query: str) -> str:
@@ -703,7 +702,7 @@ def x_search(
     max_results: int = 30,
     depth: Literal["quick", "default", "deep"] = "default",
     response_format: Literal["json", "markdown"] = "markdown",
-) -> str | list[dict]:
+) -> str | list[dict] | ErrorResponse:
     """Search X/Twitter via Bird CLI — requires AUTH_TOKEN and CT0 cookies.
 
     Role: Real-time discourse. Use this for breaking news, community
@@ -741,7 +740,7 @@ def x_search(
         return items
     except Exception as e:
         logger.error("X search failed: %s", e)
-        return {"error": f"X search failed: {e}"}
+        return format_error(f"X search failed: {e}")
 
 
 def _format_x_markdown(items: list[dict], query: str) -> str:

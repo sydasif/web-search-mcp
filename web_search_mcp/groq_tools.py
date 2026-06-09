@@ -23,7 +23,7 @@ CompoundModel = Literal["groq/compound", "groq/compound-mini"]
 DEFAULT_COMPOUND_MODEL: CompoundModel = "groq/compound-mini"
 
 
-def _unwrap_error(e: Exception) -> Exception:
+def _unwrap_error(e: BaseException) -> BaseException:
     """Unwrap tenacity.RetryError to get the original underlying exception."""
     if isinstance(e, RetryError):
         # .exception() returns the original exception or None, avoiding the re-raise of .result()

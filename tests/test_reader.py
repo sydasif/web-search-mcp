@@ -131,8 +131,8 @@ def test_fetch_with_backend_unknown_raises():
     # In ddg.py, _request_with_fallback handles backend.
 
     with (
-        patch("web_search_mcp.ddg._fetch_httpx") as mock_httpx,
-        patch("web_search_mcp.ddg._fetch_curl") as mock_curl,
+        patch("web_search_mcp.ddg._fetch_httpx"),
+        patch("web_search_mcp.ddg._fetch_curl"),
     ):
         # The current _request_with_fallback doesn't raise ValueError for unknown backends,
         # it just defaults to 'auto' or fails.
@@ -245,7 +245,6 @@ def test_fetch_page_with_metadata():
         mock_metadata.author = "Test Author"
         mock_metadata.date = "2023-01-01"
         mock_metadata.description = "Test Description"
-        mock_metadataL = "abc123"
         mock_metadata.fingerprint = "abc123"
         mock_trafilatura.extract.return_value = ("Test Content", mock_metadata)
 
