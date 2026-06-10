@@ -311,3 +311,104 @@ class TestFormatSearchResultsMarkdown:
             next_page=None,
         )
         assert "More results available" not in format_search_results_markdown(res_inactive)
+
+    def test_format_result_with_special_characters(self):
+        """Test formatting results with special characters and Unicode."""
+        results = SearchResponse(
+            query="café ☕",
+            search_type="text",
+            total_results=1,
+            results=[
+                SearchResult(
+                    title="Café ☕ Shop",
+                    href="https://example.com/café",
+                    body="Best coffee in town ☕✨",
+                )
+            ],
+            has_more=False,
+        )
+        result = format_search_results_markdown(results)
+        assert "Café ☕ Shop" in result
+        assert "https://example.com/café" in result
+        assert "Best coffee in town ☕✨" in result
+
+    def test_format_multiple_results_no_bodies(self):
+        """Test formatting with multiple results that all have no bodies."""
+        results = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=3,
+            results=[
+                SearchResult(title="Result 1", href="https://example.com/1"),
+                SearchResult(title="Result 2", href="https://example.com/2"),
+                SearchResult(title="Result 3", href="https://example.com/3"),
+            ],
+            has_more=False,
+        )
+        result = format_search_results_markdown(results)
+        lines = result.split("\n")
+        body_lines = [line for line in lines if line.startswith("   ")]
+        assert len(body_lines) == 0, (
+            "No body lines should appear when all results have empty/None bodies"
+        )
+
+    def test_format_result_with_special_characters_and_unicode(self):
+        """Test formatting results with mixed special characters and Unicode."""
+        results = SearchResponse(
+            query="AI & ML: neural networks",
+            search_type="text",
+            total_results=1,
+            results=[
+                SearchResult(
+                    title="AI & ML Research",
+                    href="https://example.com/ai-ml-research",
+                    body="Deep learning and neural networks 🚀✨",
+                )
+            ],
+            has_more=False,
+        )
+        result = format_search_results_markdown(results)
+        assert "AI & ML Research" in result
+        assert "https://example.com/ai-ml-research" in result
+        assert "Deep learning and neural networks 🚀✨" in result
+
+    def test_format_error_with_special_characters(self):
+        """Test error formatting with special characters."""
+        err = ErrorResponse(error="Error: Invalid input ☕", details="Special chars: áéíóú")
+        result = format_search_results_markdown(err)
+        assert "Error: Invalid input ☕" in result
+
+    def test_format_result_url_edge_cases(self):
+        """Test URL edge cases in result formatting."""
+        # Test empty href, valid url
+        results1 = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=1,
+            results=[SearchResult(title="Test", url="https://url.com")],
+            has_more=False,
+        )
+        result1 = format_search_results_markdown(results1)
+        assert "[Test](https://url.com)" in result1
+
+        # Test both href and url empty
+        results2 = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=1,
+            results=[SearchResult(title="Test")],
+            has_more=False,
+        )
+        result2 = format_search_results_markdown(results2)
+        assert "[Test](#)" in result2
+
+        # Test href with empty string
+        results3 = SearchResponse(
+            query="test",
+            search_type="text",
+            total_results=1,
+            results=[SearchResult(title="Test", href="")],
+            has_more=False,
+        )
+        result3 = format_search_results_markdown(results3)
+        assert "[Test](#)" in result3
