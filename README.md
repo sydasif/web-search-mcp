@@ -60,7 +60,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 - `AUTH_TOKEN`: X/Twitter `auth_token` cookie for `x_search` tool.
 - `CT0`: X/Twitter `ct0` cookie for `x_search` tool.
 
-> **Getting X/Twitter cookies:** Log into [x.com](https://x.com), open DevTools (F12) → Application → Cookies → x.com, and copy the `auth_token` and `ct0` values. These are session cookies — refresh them when searches stop working.
+> **Getting X/Twitter cookies:** Log into [x.com](https://x.com), open DevTools (F12) → Storage → Cookies → x.com, filter and copy the `auth_token` and `ct0` values as environment variables. These are session cookies for 24 hours — refresh them when searches stop working.
 
 ### Fetch Backend Options
 
