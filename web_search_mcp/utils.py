@@ -4,7 +4,7 @@ import time
 import threading
 from .models import ErrorResponse
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 
 def token_overlap_relevance(query: str, text: str) -> float:

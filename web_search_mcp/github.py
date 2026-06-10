@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 SEARCH_URL = "https://api.github.com/search/issues"
 REPO_API = "https://api.github.com/repos"

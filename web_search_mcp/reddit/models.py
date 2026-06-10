@@ -5,13 +5,16 @@ cards with upvote scores in data attributes. This module fetches those pages
 and extracts scores to backfill RSS-discovered posts. No API key required.
 """
 
+import html as _html
+import logging
 import re
-import sys
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from . import client
 from ..utils import token_overlap_relevance
+
+logger = logging.getLogger(__name__)
 
 # Listing sorts pulled per subreddit (in addition to search), for volume.
 LISTING_SORTS = {
@@ -24,12 +27,7 @@ MAX_WORKERS = 3
 FEED_TIMEOUT = 15
 
 
-def _log(msg: str) -> None:
-    sys.stderr.write(f"[RedditListing] {msg}\n")
-    sys.stderr.flush()
-
-
-def _iso_to_date(value: Optional[str]) -> Optional[str]:
+def _iso_to_date(value: str | None) -> str | None:
     """Parse an ISO-8601 timestamp to YYYY-MM-DD."""
     if not value:
         return None
@@ -40,7 +38,7 @@ def _iso_to_date(value: Optional[str]) -> Optional[str]:
         return None
 
 
-def _iso_to_epoch(value: Optional[str]) -> Optional[float]:
+def _iso_to_epoch(value: str | None) -> float | None:
     if not value:
         return None
     try:
@@ -58,12 +56,12 @@ def _post_id(url: str) -> str:
     return m.group(1) if m else ""
 
 
-def _parse_listing(html_text: str, subreddit: str, query: str) -> List[Dict[str, Any]]:
+def _parse_listing(html_text: str, subreddit: str, query: str) -> list[dict[str, Any]]:
     """Parse a listing page HTML into post dicts with real scores. Never raises."""
     if not html_text:
         return []
 
-    posts: List[Dict[str, Any]] = []
+    posts: list[dict[str, Any]] = []
 
     # Reddit listing page structure: each post is in a shreddit-post element
     # with data attributes for score, comment count, etc.
@@ -84,13 +82,15 @@ def _parse_listing(html_text: str, subreddit: str, query: str) -> List[Dict[str,
         if not pid:
             continue
 
-        title = title_match.group(1) if title_match else ""
-        score = int(score_match.group(1)) if score_match and score_match.group(1).isdigit() else 0
-        num_comments = (
-            int(comments_match.group(1))
-            if comments_match and comments_match.group(1).isdigit()
-            else 0
-        )
+        title = _html.unescape(title_match.group(1)) if title_match else ""
+        try:
+            score = int(score_match.group(1)) if score_match else 0
+        except (ValueError, TypeError):
+            score = 0
+        try:
+            num_comments = int(comments_match.group(1)) if comments_match else 0
+        except (ValueError, TypeError):
+            num_comments = 0
         author = author_match.group(1) if author_match else "[deleted]"
         permalink = permalink_match.group(1) if permalink_match else ""
         created = created_match.group(1) if created_match else ""
@@ -125,22 +125,22 @@ def _parse_listing(html_text: str, subreddit: str, query: str) -> List[Dict[str,
     return posts
 
 
-def _fetch_listing(subreddit: str, sort: str, depth: str, query: str) -> List[Dict[str, Any]]:
+def _fetch_listing(subreddit: str, sort: str, depth: str, query: str) -> list[dict[str, Any]]:
     """Fetch and parse one listing page. Never raises."""
     try:
         url = f"https://www.reddit.com/r/{subreddit}/{sort}/?t=month"
         text = client.get_text(url, timeout=FEED_TIMEOUT, accept="text/html")
         return _parse_listing(text, subreddit, query) if text else []
     except Exception as e:
-        _log(f"listing fetch failed for r/{subreddit}/{sort}: {e}")
+        logger.debug("listing fetch failed for r/%s/%s: %s", subreddit, sort, e)
         return []
 
 
 def fetch_listings(
-    subreddits: List[str],
+    subreddits: list[str],
     depth: str = "default",
     query: str = "",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Fetch listing cards for multiple subreddits to backfill scores.
 
     Args:
@@ -153,7 +153,7 @@ def fetch_listings(
     """
     sorts = LISTING_SORTS.get(depth, LISTING_SORTS["default"])
 
-    all_posts: List[Dict[str, Any]] = []
+    all_posts: list[dict[str, Any]] = []
     from concurrent.futures import ThreadPoolExecutor
 
     tasks = []
@@ -172,11 +172,11 @@ def fetch_listings(
                 all_posts.extend(future.result(timeout=FEED_TIMEOUT + 5))
             except Exception as e:
                 sub, sort = futures[future]
-                _log(f"listing future failed for r/{sub}/{sort}: {e}")
+                logger.debug("listing future failed for r/%s/%s: %s", sub, sort, e)
 
     # Dedupe by post_id in metadata
     seen: set = set()
-    unique: List[Dict[str, Any]] = []
+    unique: list[dict[str, Any]] = []
     for post in all_posts:
         pid = post.get("metadata", {}).get("post_id", "")
         if pid and pid not in seen:

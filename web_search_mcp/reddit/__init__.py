@@ -2,17 +2,17 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Literal
+from typing import Literal
 
 from ..models import SearchResponse, SearchResult, ErrorResponse
 from ..utils import format_error
 from . import engine, parsers
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 
 def _convert_to_search_results(
-    posts: List[dict], query: str, search_type: Literal["text", "news"] = "text"
+    posts: list[dict], query: str, search_type: Literal["text", "news"] = "text"
 ) -> SearchResponse:
     """Convert reddit_engine output to SearchResponse format."""
     results = []
@@ -49,9 +49,9 @@ def reddit_search_tool(
     query: str,
     search_type: Literal["text", "news"] = "text",
     max_results: int = 25,
-    time_range: Optional[str] = None,
+    time_range: str | None = None,
     depth: Literal["quick", "default", "deep"] = "default",
-    subreddits: Optional[List[str]] = None,
+    subreddits: list[str] | None = None,
     response_format: Literal["json", "markdown"] = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed.
@@ -141,9 +141,9 @@ def reddit_search_tool(
 def reddit_rss_search(
     query: str,
     depth: Literal["quick", "default", "deep"] = "default",
-    subreddits: Optional[List[str]] = None,
+    subreddits: list[str] | None = None,
     max_results: int = 25,
-) -> List[dict]:
+) -> list[dict]:
     """Direct access to Reddit RSS discovery (Tier 1 only, no enrichment).
 
     Faster but no comment enrichment or score backfill. Use when you need

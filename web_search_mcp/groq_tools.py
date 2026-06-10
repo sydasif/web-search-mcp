@@ -15,7 +15,7 @@ from .utils import (
     format_error,
 )
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 # Model Type Aliases
 SupportedModel = Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"]

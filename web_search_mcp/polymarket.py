@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 GAMMA_SEARCH_URL = "https://gamma-api.polymarket.com/public-search"
 

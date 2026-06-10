@@ -6,14 +6,13 @@ import json
 import socket
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from urllib.parse import quote_plus, urlencode
 
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
     retry_if_exception,
 )
 from ..utils import token_overlap_relevance
@@ -30,7 +29,7 @@ BROWSER_USER_AGENT = (
 class HTTPError(Exception):
     """HTTP request error with status code."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None, body: Optional[str] = None):
+    def __init__(self, message: str, status_code: int | None = None, body: str | None = None):
         super().__init__(message)
         self.status_code = status_code
         self.body = body
@@ -60,12 +59,12 @@ def _should_retry_http(exception: BaseException) -> bool:
 def request(
     method: str,
     url: str,
-    headers: Optional[Dict[str, str]] = None,
-    json_data: Optional[Dict[str, Any]] = None,
-    params: Optional[Dict[str, Any]] = None,
+    headers: dict[str, str] | None = None,
+    json_data: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None,
     timeout: int = DEFAULT_TIMEOUT,
     raw: bool = False,
-) -> Union[Dict[str, Any], str]:
+) -> dict[str, Any] | str:
     """Make an HTTP request with exponential backoff for 429/5xx errors."""
     headers = headers or {}
     headers.setdefault("User-Agent", USER_AGENT)
@@ -116,7 +115,7 @@ def request(
         raise HTTPError(f"Connection error: {type(e).__name__}: {e}")
 
 
-def get(url: str, headers: Optional[Dict[str, str]] = None, **kwargs) -> Dict[str, Any]:
+def get(url: str, headers: dict[str, str] | None = None, **kwargs) -> dict[str, Any]:
     """Make a GET request."""
     try:
         result = request("GET", url, headers=headers, **kwargs)
@@ -129,8 +128,8 @@ def get_text(
     url: str,
     timeout: int = DEFAULT_TIMEOUT,
     accept: str = "*/*",
-    headers: Optional[Dict[str, str]] = None,
-) -> Optional[str]:
+    headers: dict[str, str] | None = None,
+) -> str | None:
     """Fetch a URL and return decoded text, or None on any failure."""
     merged = {
         "User-Agent": BROWSER_USER_AGENT,
@@ -149,9 +148,9 @@ def get_text(
 # ── Legacy .json search logic (formerly reddit_public.py) ──────────────────
 
 
-def _parse_json_posts(data: Dict[str, Any], query: str = "") -> List[Dict[str, Any]]:
+def _parse_json_posts(data: dict[str, Any], query: str = "") -> list[dict[str, Any]]:
     """Parse Reddit .json response into normalized post dicts."""
-    posts: List[Dict[str, Any]] = []
+    posts: list[dict[str, Any]] = []
     try:
         children = data.get("data", {}).get("children", [])
         for child in children:
@@ -204,7 +203,7 @@ def _parse_json_posts(data: Dict[str, Any], query: str = "") -> List[Dict[str, A
     return posts
 
 
-def search_json(topic: str, depth: str = "default") -> List[Dict[str, Any]]:
+def search_json(topic: str, depth: str = "default") -> list[dict[str, Any]]:
     """One-shot global .json search. Returns [] on any failure (403, timeout, etc.)."""
     depth_limits = {"quick": 10, "default": 25, "deep": 50}
     limit = depth_limits.get(depth, depth_limits["default"])

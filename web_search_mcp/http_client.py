@@ -3,7 +3,7 @@ import ssl
 import httpx
 from .config import settings
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 
 def _get_ssl_context() -> ssl.SSLContext | None:

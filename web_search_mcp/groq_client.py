@@ -4,12 +4,11 @@ Handles authentication, resilience, and request-size constraints.
 
 import logging
 import re
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from groq import Groq
 from groq._exceptions import APIStatusError
 from groq.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
-from groq.types.chat.completion_create_params import CompletionCreateParams
-from groq._types import NotGiven, omit
+from groq._types import omit
 
 from tenacity import (
     retry,
@@ -19,7 +18,7 @@ from tenacity import (
 )
 from .config import settings
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 # Groq's internal web_search tool has a ~4 KB request-body size limit.
 _MAX_QUERY_BYTES = 3000
@@ -28,7 +27,7 @@ _MAX_QUERY_BYTES = 3000
 class GroqClientError(Exception):
     """Base exception for Groq client errors."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None):
+    def __init__(self, message: str, status_code: int | None = None):
         super().__init__(message)
         self.status_code = status_code
 
@@ -75,9 +74,9 @@ def call_groq_api(
     max_tokens: int = 2048,
     top_p: float = 1.0,
     stream: bool = False,
-    stop: Optional[list[str]] = None,
-    reasoning_effort: Optional[Literal["none", "default", "low", "medium", "high"]] = None,
-    tools: Optional[list[ChatCompletionToolParam]] = None,
+    stop: list[str] | None = None,
+    reasoning_effort: Literal["none", "default", "low", "medium", "high"] | None = None,
+    tools: list[ChatCompletionToolParam] | None = None,
 ) -> Any:
     """Unified wrapper for Groq API calls with professional resilience."""
     if not settings.groq_api_key:
@@ -117,14 +116,6 @@ def call_groq_api(
                 status_code = int(match.group(1))
 
         raise GroqClientError(f"Groq API error: {msg}", status_code=status_code)
-
-
-def get_client() -> Groq:
-    """Return a configured Groq client."""
-    return Groq(
-        api_key=settings.groq_api_key,
-        default_headers={"Groq-Model-Version": "latest"},
-    )
 
 
 def truncate_query(query: str, max_bytes: int = _MAX_QUERY_BYTES) -> str:

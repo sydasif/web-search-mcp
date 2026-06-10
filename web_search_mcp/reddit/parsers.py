@@ -2,17 +2,19 @@
 Consolidates RSS/Atom feed parsing and Shreddit HTML parsing.
 """
 
+import logging
 import re
-import sys
 import xml.etree.ElementTree as ET
 import html as _html
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import quote_plus
 
 from . import client
 from ..utils import token_overlap_relevance
+
+logger = logging.getLogger(__name__)
 
 # ── RSS/Atom Constants ─────────────────────────────────────────────────────
 ATOM = "{http://www.w3.org/2005/Atom}"
@@ -45,15 +47,10 @@ _WS = re.compile(r"\s+")
 _NEXT_RTJSON = re.compile(r'id="t1_[A-Za-z0-9]+-(?:comment|post)-rtjson-content"')
 
 
-def _log(msg: str) -> None:
-    sys.stderr.write(f"[RedditParsers] {msg}\n")
-    sys.stderr.flush()
-
-
 # ── RSS/Atom Helpers ───────────────────────────────────────────────────────
 
 
-def _iso_to_date(value: Optional[str]) -> Optional[str]:
+def _iso_to_date(value: str | None) -> str | None:
     """Parse an ISO-8601 timestamp to YYYY-MM-DD."""
     if not value:
         return None
@@ -64,7 +61,7 @@ def _iso_to_date(value: Optional[str]) -> Optional[str]:
         return None
 
 
-def _iso_to_epoch(value: Optional[str]) -> Optional[float]:
+def _iso_to_epoch(value: str | None) -> float | None:
     if not value:
         return None
     try:
@@ -86,17 +83,17 @@ def _subreddit_from(category: str, url: str) -> str:
     return ""
 
 
-def _parse_feed(xml_text: str, query: str = "") -> List[Dict[str, Any]]:
+def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
     """Parse an Atom feed string into normalized post dicts. Never raises."""
     if not xml_text:
         return []
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError as e:
-        _log(f"feed parse error: {e}")
+        logger.debug("feed parse error: %s", e)
         return []
 
-    posts: List[Dict[str, Any]] = []
+    posts: list[dict[str, Any]] = []
     for entry in root.iter(f"{ATOM}entry"):
         link_el = entry.find(f"{ATOM}link")
         url = link_el.get("href", "").strip() if link_el is not None else ""
@@ -154,10 +151,10 @@ def _parse_feed(xml_text: str, query: str = "") -> List[Dict[str, Any]]:
     return posts
 
 
-def _build_urls(query: str, depth: str, subreddits: Optional[List[str]]) -> List[str]:
+def _build_urls(query: str, depth: str, subreddits: list[str] | None) -> list[str]:
     """Build the keyless RSS feed URLs to fan out across."""
     q = quote_plus(query)
-    urls: List[str] = [f"https://www.reddit.com/search.rss?q={q}&sort=relevance&t=month"]
+    urls: list[str] = [f"https://www.reddit.com/search.rss?q={q}&sort=relevance&t=month"]
     for raw_sub in subreddits or []:
         sub = raw_sub.removeprefix("r/").strip()
         if not sub:
@@ -170,26 +167,26 @@ def _build_urls(query: str, depth: str, subreddits: Optional[List[str]]) -> List
     return urls
 
 
-def _fetch_feed(url: str, query: str) -> List[Dict[str, Any]]:
+def _fetch_feed(url: str, query: str) -> list[dict[str, Any]]:
     """Fetch and parse one feed. Never raises."""
     try:
         text = client.get_text(url, timeout=FEED_TIMEOUT, accept="application/atom+xml")
         return _parse_feed(text, query) if text else []
     except Exception as e:
-        _log(f"feed fetch failed for {url}: {e}")
+        logger.debug("feed fetch failed for %s: %s", url, e)
         return []
 
 
 def search_rss(
     query: str,
     depth: str = "default",
-    subreddits: Optional[List[str]] = None,
-) -> List[Dict[str, Any]]:
+    subreddits: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """Discover Reddit posts for a query via keyless RSS feeds."""
     limit = DEPTH_LIMITS.get(depth, DEPTH_LIMITS["default"])
     urls = _build_urls(query, depth, subreddits)
 
-    all_posts: List[Dict[str, Any]] = []
+    all_posts: list[dict[str, Any]] = []
     workers = min(MAX_WORKERS, len(urls)) or 1
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(_fetch_feed, url, query): url for url in urls}
@@ -197,10 +194,10 @@ def search_rss(
             try:
                 all_posts.extend(future.result(timeout=FEED_TIMEOUT + 5))
             except (Exception, FuturesTimeoutError) as e:
-                _log(f"feed future failed: {e}")
+                logger.debug("feed future failed: %s", e)
 
     seen: set = set()
-    unique: List[Dict[str, Any]] = []
+    unique: list[dict[str, Any]] = []
     for post in all_posts:
         if post["url"] not in seen:
             seen.add(post["url"])
@@ -215,7 +212,7 @@ def search_rss(
 # ── Shreddit Helpers ───────────────────────────────────────────────────────
 
 
-def extract_post_ref(url: str) -> Optional[tuple]:
+def extract_post_ref(url: str) -> tuple | None:
     """Return (subreddit, post_id) from a Reddit thread URL, or None."""
     m = re.search(r"/r/([^/]+)/comments/([A-Za-z0-9]+)", url or "")
     if not m:
@@ -251,9 +248,9 @@ def _body_for(html_text: str, thing_id: str) -> str:
     return _WS.sub(" ", _html.unescape(text)).strip()
 
 
-def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> List[Dict[str, Any]]:
+def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> list[dict[str, Any]]:
     """Parse <shreddit-comment> elements into scored comment dicts (sorted desc)."""
-    comments: List[Dict[str, Any]] = []
+    comments: list[dict[str, Any]] = []
     for m in _COMMENT_START.finditer(html_text or ""):
         tag = m.group(0)
         author = _attr(tag, "author") or "[deleted]"
@@ -284,7 +281,7 @@ def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> List[Dict[str, 
     return comments[:limit]
 
 
-def _total_comments(html_text: str) -> Optional[int]:
+def _total_comments(html_text: str) -> int | None:
     m = _TOTAL_COMMENTS.search(html_text or "")
     return int(m.group(1)) if m else None
 
@@ -292,7 +289,7 @@ def _total_comments(html_text: str) -> Optional[int]:
 def fetch_comments(
     post_url: str,
     timeout: int = SVC_TIMEOUT,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fetch and parse top comments for a Reddit post via the shreddit endpoint."""
     ref = extract_post_ref(post_url)
     if not ref:

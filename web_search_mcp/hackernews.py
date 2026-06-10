@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 ALGOLIA_SEARCH_URL = "https://hn.algolia.com/api/v1/search"
 ALGOLIA_ITEM_URL = "https://hn.algolia.com/api/v1/items"

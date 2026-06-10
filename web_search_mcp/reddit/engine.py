@@ -15,13 +15,15 @@ when every keyless tier comes up empty.
 """
 
 import concurrent.futures
+import logging
 import re
-import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from . import parsers, models, client
+
+logger = logging.getLogger(__name__)
 
 ENRICH_LIMITS = parsers.ENRICH_LIMITS
 ENRICH_BUDGET = 45  # seconds total across all enrichment threads
@@ -147,7 +149,7 @@ def _infer_query_intent(topic: str) -> str:
     return "general"
 
 
-def expand_queries(topic: str, depth: str) -> List[str]:
+def expand_queries(topic: str, depth: str) -> list[str]:
     """Generate 1-4 query variants from topic based on intent and depth.
 
     Ported from last30days-skill reddit.py expand_reddit_queries().
@@ -182,7 +184,7 @@ def expand_queries(topic: str, depth: str) -> List[str]:
 
     # Dedupe while preserving order
     seen: set = set()
-    unique: List[str] = []
+    unique: list[str] = []
     for q in queries:
         key = q.lower().strip()
         if key not in seen:
@@ -191,65 +193,70 @@ def expand_queries(topic: str, depth: str) -> List[str]:
     return unique
 
 
-def _log(msg: str) -> None:
-    sys.stderr.write(f"[RedditKeyless] {msg}\n")
-    sys.stderr.flush()
-
-
-def _tier0_json(topic: str, depth: str) -> List[Dict[str, Any]]:
+def _tier0_json(topic: str, depth: str) -> list[dict[str, Any]]:
     """One cheap global ``.json`` discovery attempt. Returns [] on the 403 wall."""
     try:
         return client.search_json(topic, depth=depth) or []
     except Exception as e:  # never let the demoted tier sink the run
-        _log(f"Tier 0 (.json) unavailable: {e}")
+        logger.debug("Tier 0 (.json) unavailable: %s", e)
         return []
 
 
-def _top_subreddits(posts: List[Dict[str, Any]], limit: int = MAX_DERIVED_SUBS) -> List[str]:
+def _top_subreddits(posts: list[dict[str, Any]], limit: int = MAX_DERIVED_SUBS) -> list[str]:
     """Most frequent subreddits across discovered posts (for score backfill)."""
     counts = Counter(p.get("subreddit", "") for p in posts if p.get("subreddit"))
     return [sub for sub, _ in counts.most_common(limit)]
 
 
-def _apply_scores(post: Dict[str, Any], scored: Dict[str, int]) -> None:
+def _apply_scores(post: dict[str, Any], scored: dict[str, int]) -> None:
     post["score"] = scored["score"]
     post["num_comments"] = scored["num_comments"]
     post.setdefault("engagement", {})["score"] = scored["score"]
     post["engagement"]["num_comments"] = scored["num_comments"]
 
 
-def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[Dict[str, Any]]:
+def _discover(topic: str, depth: str, subreddits: list[str] | None) -> list[dict[str, Any]]:
     # Tier 0: demoted one-shot .json (dead for normal users too, but free to try).
     posts = _tier0_json(topic, depth)
     if posts:
-        _log(f"Tier 0 (.json) returned {len(posts)} posts")
+        logger.debug("Tier 0 (.json) returned %d posts", len(posts))
         return posts
 
     # Tier 1: keyless discovery. RSS gives breadth (incl. global keyword search);
     # the listing partials give real upvote scores.
-    rss_posts = parsers.search_rss(topic, depth=depth, subreddits=subreddits)
-
     if subreddits:
-        # Targeted run: the caller chose these subreddits, their listing cards
-        # are on-topic — include them as scored discovery AND as a score source.
-        listing_posts = models.fetch_listings(subreddits, depth=depth, query=topic)
+        # Targeted run: the caller chose these subreddits. RSS search and listing
+        # card fetch are independent I/O — run them concurrently.
+        rss_posts = []
+        listing_posts = []
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            rss_future = executor.submit(
+                parsers.search_rss, topic, depth=depth, subreddits=subreddits
+            )
+            listing_future = executor.submit(
+                models.fetch_listings, subreddits, depth=depth, query=topic
+            )
+            rss_posts = rss_future.result() or []
+            listing_posts = listing_future.result() or []
         score_source = listing_posts
     else:
         # Bare global run: subreddits derived from noisy RSS results are NOT
         # reliably on-topic, so their listings are used ONLY to backfill scores
         # onto the keyword-matched RSS posts — never merged as discovery, which
         # would flood results with high-upvote but irrelevant posts.
+        rss_posts = parsers.search_rss(topic, depth=depth, subreddits=None)
         listing_posts = []
         derived = _top_subreddits(rss_posts)
         score_source = models.fetch_listings(derived, depth=depth, query=topic)
-    _log(
-        f"Tier 1 (RSS) {len(rss_posts)} posts; "
-        f"{'listing discovery ' + str(len(listing_posts)) if subreddits else 'score-only'}; "
-        f"{len(score_source)} scored cards"
+    logger.debug(
+        "Tier 1 (RSS) %d posts; %s; %d scored cards",
+        len(rss_posts),
+        f"listing discovery {len(listing_posts)}" if subreddits else "score-only",
+        len(score_source),
     )
 
     # Score lookup by post id, from the scored listing cards.
-    score_map: Dict[str, Dict[str, int]] = {}
+    score_map: dict[str, dict[str, int]] = {}
     for p in score_source:
         pid = p.get("metadata", {}).get("post_id", "")
         if pid:
@@ -257,7 +264,7 @@ def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[D
 
     # Merge: scored listing posts first (targeted only), then RSS breadth,
     # backfilled with real scores where the post appears in a listing.
-    merged: List[Dict[str, Any]] = []
+    merged: list[dict[str, Any]] = []
     seen: set = set()
     for p in listing_posts:
         if p["url"] not in seen:
@@ -274,7 +281,7 @@ def _discover(topic: str, depth: str, subreddits: Optional[List[str]]) -> List[D
     return merged
 
 
-def _enrich_one(post: Dict[str, Any]) -> Dict[str, Any]:
+def _enrich_one(post: dict[str, Any]) -> dict[str, Any]:
     """Attach shreddit comments + real comment count. Never raises."""
     try:
         data = parsers.fetch_comments(post.get("url", ""))
@@ -286,12 +293,12 @@ def _enrich_one(post: Dict[str, Any]) -> Dict[str, Any]:
         if num is not None:
             post["num_comments"] = num
             post.setdefault("engagement", {})["num_comments"] = num
-    except Exception:
-        pass  # keep the post with whatever discovery gave us
+    except Exception as e:
+        logger.debug("enrichment failed for %s: %s", post.get("url", ""), e)
     return post
 
 
-def _enrich(posts: List[Dict[str, Any]], depth: str) -> List[Dict[str, Any]]:
+def _enrich(posts: list[dict[str, Any]], depth: str) -> list[dict[str, Any]]:
     """Enrich the top N posts with comments under a total time budget."""
     limit = ENRICH_LIMITS.get(depth, ENRICH_LIMITS["default"])
     to_enrich = posts[:limit]
@@ -299,7 +306,7 @@ def _enrich(posts: List[Dict[str, Any]], depth: str) -> List[Dict[str, Any]]:
     if not to_enrich:
         return posts
 
-    result_map: Dict[int, Dict[str, Any]] = {}
+    result_map: dict[int, dict[str, Any]] = {}
     try:
         with ThreadPoolExecutor(max_workers=min(limit, MAX_ENRICH_WORKERS)) as executor:
             futures = {executor.submit(_enrich_one, post): i for i, post in enumerate(to_enrich)}
@@ -321,18 +328,13 @@ def _enrich(posts: List[Dict[str, Any]], depth: str) -> List[Dict[str, Any]]:
     return enriched + rest
 
 
-def _slot_priority(topic: str, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Order posts for enrichment slots: higher score first."""
-    return posts
-
-
 def _run_single_pipeline(
     query: str,
     from_date: str,
     to_date: str,
     depth: str,
-    subreddits: Optional[List[str]],
-) -> List[Dict[str, Any]]:
+    subreddits: list[str] | None,
+) -> list[dict[str, Any]]:
     """Run the full pipeline for a single query variant. Never raises."""
     try:
         posts = _discover(query, depth, subreddits)
@@ -340,20 +342,26 @@ def _run_single_pipeline(
             return []
         return [p for p in posts if p.get("date") is None or (from_date <= p["date"] <= to_date)]
     except Exception as e:
-        _log(f"pipeline failed for query {query!r}: {e}")
+        logger.debug("pipeline failed for query %r: %s", query, e)
         return []
 
 
-def _merge_dedupe(post_batches: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+def _merge_dedupe(post_batches: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Merge multiple post batches, deduping by URL (first occurrence wins)."""
     seen: set = set()
-    merged: List[Dict[str, Any]] = []
+    merged: list[dict[str, Any]] = []
+    dropped = 0
     for batch in post_batches:
         for post in batch:
             url = post.get("url", "")
-            if url and url not in seen:
-                seen.add(url)
-                merged.append(post)
+            if url:
+                if url not in seen:
+                    seen.add(url)
+                    merged.append(post)
+            else:
+                dropped += 1
+    if dropped:
+        logger.debug("merge_dedupe: dropped %d posts with missing or empty URL", dropped)
     return merged
 
 
@@ -362,17 +370,17 @@ def search_and_enrich(
     from_date: str,
     to_date: str,
     depth: str = "default",
-    subreddits: Optional[List[str]] = None,
-) -> List[Dict[str, Any]]:
+    subreddits: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """Full keyless Reddit pipeline with query expansion + parallel fan-out."""
     queries = expand_queries(topic, depth)
-    _log(f"expanded {len(queries)} queries: {queries}")
+    logger.debug("expanded %d queries: %s", len(queries), queries)
 
     if len(queries) == 1:
         posts = _run_single_pipeline(queries[0], from_date, to_date, depth, subreddits)
     else:
         workers = min(len(queries), MAX_FANOUT_WORKERS)
-        batches: List[List[Dict[str, Any]]] = []
+        batches: list[list[dict[str, Any]]] = []
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(_run_single_pipeline, q, from_date, to_date, depth, subreddits): q
@@ -381,14 +389,14 @@ def search_and_enrich(
             done, not_done = concurrent.futures.wait(futures, timeout=ENRICH_BUDGET)
             for future in not_done:
                 q = futures[future]
-                _log(f"fan-out timed out for {q!r}")
+                logger.debug("fan-out timed out for %r", q)
                 future.cancel()
             for future in done:
                 q = futures[future]
                 try:
                     batches.append(future.result(timeout=0))
                 except Exception as e:
-                    _log(f"fan-out failed for {q!r}: {e}")
+                    logger.debug("fan-out failed for %r: %s", q, e)
         posts = _merge_dedupe(batches)
 
     if not posts:
@@ -403,7 +411,7 @@ def search_and_enrich(
         reverse=True,
     )
 
-    posts = _enrich(_slot_priority(topic, posts), depth)
+    posts = _enrich(posts, depth)
 
     for i, post in enumerate(posts):
         post["id"] = f"R{i + 1}"

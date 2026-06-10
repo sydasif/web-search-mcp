@@ -16,7 +16,7 @@ from .http_client import http_client
 from .models import SearchRequest, SearchResponse, SearchResult, PageResponse, ErrorResponse
 from .utils import RateLimiter, format_error
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 # Rate limiters
 search_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_search)
@@ -56,6 +56,11 @@ def _should_retry_ddg(exception: BaseException) -> bool:
 )
 def _request_with_fallback(url: str, timeout: int = 30, backend: str = "auto") -> str:
     """Fetches a URL, falling back to curl_cffi if httpx fails or hits Cloudflare."""
+    VALID_BACKENDS = {"auto", "curl", "httpx"}
+    if backend not in VALID_BACKENDS:
+        raise ValueError(
+            f"Unknown fetch backend {backend!r}. Supported: {', '.join(sorted(VALID_BACKENDS))}"
+        )
     if backend == "curl":
         return _fetch_curl(url, timeout)
     if backend == "httpx":

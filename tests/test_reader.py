@@ -124,22 +124,6 @@ def test_fetch_page_with_auto_backend():
         assert "Extracted Content" in result.content
 
 
-def test_fetch_with_backend_unknown_raises():
-    """Test that unknown backend raises ValueError."""
-    # Since _fetch_with_backend was merged into _request_with_fallback,
-    # we test it via fetch_page or directly if we expose it.
-    # In ddg.py, _request_with_fallback handles backend.
-
-    with (
-        patch("web_search_mcp.ddg._fetch_httpx"),
-        patch("web_search_mcp.ddg._fetch_curl"),
-    ):
-        # The current _request_with_fallback doesn't raise ValueError for unknown backends,
-        # it just defaults to 'auto' or fails.
-        # I'll update the test to match the implementation.
-        pass
-
-
 def test_fetch_curl_backend_custom_timeout():
     """Test curl backend with custom timeout."""
     mock_session = MagicMock()

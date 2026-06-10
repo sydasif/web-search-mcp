@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger("web-search-mcp")
+logger = logging.getLogger(__name__)
 
 # Path to vendored bird-search
 _BIRD_SEARCH_MJS = Path(__file__).parent / "vendor" / "bird-search" / "bird-search.mjs"

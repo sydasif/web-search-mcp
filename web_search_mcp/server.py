@@ -15,10 +15,34 @@ from .groq_tools import (
 from .reddit import reddit_search_tool as _reddit_search_tool
 from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
 from .polymarket import search_polymarket as _search_pm
-from .x import search_x as _search_x  # noqa: F401 — used by x_search tool
+from .x import search_x as _search_x
 
 # Set up logging
-logger = logging.getLogger("web-search-mcp")
+LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
+
+
+_configured = False
+
+
+def configure_logging(level: int = logging.DEBUG) -> None:
+    """Configure the web-search-mcp logger with a stderr handler.
+
+    Called automatically on first import. Call again with a different level
+    (e.g. ``logging.WARNING``) to quiet diagnostics.
+    """
+    global _configured
+    if _configured:
+        return
+    _configured = True
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    _logger = logging.getLogger("web-search-mcp")
+    _logger.addHandler(handler)
+    _logger.setLevel(level)
+
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 mcp = FastMCP("Web Search Tools")
 
