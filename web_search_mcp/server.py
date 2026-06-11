@@ -18,6 +18,15 @@ from .polymarket import search_polymarket as _search_pm
 from .x import search_x as _search_x
 from .github import get_github_issue as _get_github_issue
 from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
+from .registries import (
+    lookup_package as _lookup_package,
+    search_packages as _search_packages,
+    format_package_info as _fmt_pkg_info,
+    format_package_list as _fmt_pkg_list,
+)
+from .errors import translate_error as _translate_error
+from .compare import compare_tech as _compare_tech
+
 
 # Set up logging
 LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
@@ -893,6 +902,200 @@ def _format_x_markdown(items: list[dict], query: str) -> str:
             lines.append(f"   {item['date']}")
         lines.append("")
     return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────
+# Developer tools — package registries, error translation, comparisons
+# Best for: developer workflows, debugging, technology evaluation
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="package_info",
+    annotations={
+        "title": "Look up a package from npm, PyPI, crates.io, or Go modules",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def package_info(
+    name: str,
+    registry: Literal["npm", "pypi", "crates", "go"] | None = None,
+) -> str | ErrorResponse:
+    """Look up a specific package from npm, PyPI, crates.io, or Go modules.
+
+    Role: Developer tooling. Use this to get version, description, downloads,
+    license, dependencies count, and repository info for any package.
+
+    Args:
+        name: Package name (e.g. ``"express"``, ``"numpy"``, ``"serde"``).
+            Auto-detects registry from the name format.
+        registry: Force a specific registry (``"npm"``, ``"pypi"``,
+            ``"crates"``, ``"go"``). Auto-detected if omitted.
+
+    Returns:
+        Markdown-formatted package metadata.
+
+    Examples:
+        - ``"requests"`` → PyPI lookup (auto-detected)
+        - ``"express"`` → npm lookup (auto-detected)
+        - ``"serde"`` → crates.io lookup (explicit registry)
+
+    Error Handling:
+        - Package not found: Returns clear message with registry info.
+        - Registry down: Returns error message.
+    """
+    try:
+        result = _lookup_package(name, registry=registry)
+        if isinstance(result, ErrorResponse):
+            return result
+        return _fmt_pkg_info(result)
+    except Exception as e:
+        logger.error("package_info failed: %s", e)
+        return format_error(f"Package lookup failed for '{name}'", str(e))
+
+
+@mcp.tool(
+    name="package_search",
+    annotations={
+        "title": "Search packages by keyword on npm, PyPI, crates.io, or Go",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def package_search(
+    query: str,
+    registry: Literal["npm", "pypi", "crates", "go"] = "npm",
+    max_results: int = 5,
+) -> str | ErrorResponse:
+    """Search for packages by keyword across a package registry.
+
+    Role: Developer tooling. Use this to discover packages related to a
+    topic. Follow up with ``package_info`` for detailed metadata.
+
+    Args:
+        query: Search keywords (e.g. ``"async http client"``).
+        registry: Registry to search (``"npm"``, ``"pypi"``,
+            ``"crates"``, ``"go"``). Defaults to ``"npm"``.
+        max_results: Max results (1-20).
+
+    Returns:
+        Markdown-formatted list of matching packages.
+
+    Examples:
+        - ``"async http client"`` on npm
+        - ``"dataframe"`` on PyPI
+        - ``"serialization"`` on crates.io
+
+    Error Handling:
+        - Empty query: Returns error message.
+        - No results: Returns "No packages found" message.
+    """
+    try:
+        result = _search_packages(query, registry=registry, max_results=max_results)
+        if isinstance(result, ErrorResponse):
+            return result
+        return _fmt_pkg_list(result, query, registry)
+    except Exception as e:
+        logger.error("package_search failed: %s", e)
+        return format_error(f"Package search failed for '{query}'", str(e))
+
+
+@mcp.tool(
+    name="translate_error",
+    annotations={
+        "title": "Analyze error messages and find solutions from Stack Overflow",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def translate_error(
+    error_message: str,
+    max_results: int = 5,
+    language: str | None = None,
+) -> str | ErrorResponse:
+    """Parse an error message and search Stack Overflow for solutions.
+
+    Role: Developer tooling. Use this when you get an error in your code
+    and want to understand what caused it and how to fix it. The tool
+    auto-detects the programming language and framework from the error.
+
+    Args:
+        error_message: The full error message or stack trace. Pass the
+            entire error - the parser extracts the relevant parts.
+        max_results: Number of Stack Overflow results to return (1-10).
+        language: Optionally specify the language (``"python"``,
+            ``"javascript"``, ``"typescript"``, ``"rust"``, ``"go"``,
+            ``"java"``). Auto-detected if omitted.
+
+    Returns:
+        Markdown with parsed error analysis and Stack Overflow solutions.
+
+    Examples:
+        - Python traceback with ``AttributeError``
+        - Node.js ``Cannot read property`` error
+        - Rust borrow checker error E0502
+
+    Error Handling:
+        - Empty input: Returns error message.
+        - No Stack Overflow results: Returns partial analysis with note.
+    """
+    try:
+        return _translate_error(error_message, max_results=max_results, language=language)
+    except Exception as e:
+        logger.error("translate_error failed: %s", e)
+        return format_error("Error analysis failed", str(e))
+
+
+@mcp.tool(
+    name="compare_tech",
+    annotations={
+        "title": "Compare two technologies side-by-side",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def compare_tech(
+    tech_a: str,
+    tech_b: str,
+    category: Literal["framework", "library", "database", "language", "tool"] = "library",
+) -> str | ErrorResponse:
+    """Compare two technologies side-by-side using GitHub and registry data.
+
+    Role: Developer tooling. Use this to evaluate technology choices with
+    real data: GitHub stars, download counts, version info, and license.
+
+    Args:
+        tech_a: First technology name (e.g. ``"React"``).
+        tech_b: Second technology name (e.g. ``"Vue"``).
+        category: Category hint (``"framework"``, ``"library"``,
+            ``"database"``, ``"language"``, ``"tool"``).
+
+    Returns:
+        Markdown table with side-by-side comparison and detail sections.
+
+    Examples:
+        - compare_tech("React", "Vue", category="framework")
+        - compare_tech("Django", "FastAPI", category="framework")
+        - compare_tech("PostgreSQL", "MongoDB", category="database")
+
+    Error Handling:
+        - Unknown technology: Returns partial data for found items.
+        - GitHub API rate limited: Returns what data is available.
+    """
+    try:
+        return _compare_tech(tech_a, tech_b, category=category)
+    except Exception as e:
+        logger.error("compare_tech failed: %s", e)
+        return format_error("Comparison failed", str(e))
 
 
 def main():

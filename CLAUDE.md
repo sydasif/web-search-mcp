@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The application follows a modular architecture with clear separation of concerns:
 
-- **server.py**: FastMCP server entry point, defines 13 MCP tools exposed to clients
+- **server.py**: FastMCP server entry point, defines 17 MCP tools exposed to clients
 - **ddg.py**: DuckDuckGo search + web content extraction (`ddg_search`, `fetch_page`) using `trafilatura`
 - **wikipedia.py**: Wikipedia search and article reading via MediaWiki API (`wikipedia_search_tool`)
 - **reddit/**: Keyless Reddit search via RSS + shreddit enrichment (`reddit_search_tool`)
@@ -26,10 +26,13 @@ The application follows a modular architecture with clear separation of concerns
 - **models.py**: Pydantic models for request/response validation (ErrorResponse, SearchRequest, PageResponse, SearchResult)
 - **config.py**: Application settings via pydantic-settings (includes `groq_api_key`)
 - **utils.py**: Shared utility functions for consistent error formatting, auth errors, and rate limiting
+- **registries.py**: Package registry queries for npm, PyPI, crates.io, and Go modules (`lookup_package`, `search_packages`)
+- **errors.py**: Error message parsing with language/framework detection + Stack Overflow solution search (`translate_error`)
+- **compare.py**: Side-by-side technology comparison via GitHub and registry data (`compare_tech`)
 
 ## MCP Tool Definitions
 
-The server exposes thirteen tools across eight engines:
+The server exposes 17 tools across nine engines:
 
 ### DuckDuckGo (free, fast, raw)
 
@@ -71,6 +74,15 @@ The server exposes thirteen tools across eight engines:
 - `groq_research`: Deep research — auto-selects search and tools to validate findings
 - `groq_analyze_page`: Visit and analyze a URL — fetches and interprets in one step
 
+### Developer Tools (free, no API key)
+
+- `package_info`: Look up a specific package from npm, PyPI, crates.io, or Go modules — returns version, description, downloads, license, dependencies
+- `package_search`: Search packages by keyword across npm, PyPI, crates.io, or Go — returns ranked list with metadata
+- `translate_error`: Parse error messages with auto-detected language/framework, search Stack Overflow for solutions, extract file/line info
+- `compare_tech`: Side-by-side technology comparison with GitHub stars, registry versions, download counts, license, and open issues
+
+All four are free and require no API keys. See `registries.py`, `errors.py`, and `compare.py`.
+
 ## Development Commands
 
 **IMPORTANT**: Always use `uv` for dependency management and `uv run` for executing commands. Do not use pip or python directly.
@@ -90,6 +102,9 @@ uv run pytest tests/test_search.py::TestDDGSearch::test_ddg_search_basic_text
 
 # Run source-specific tests
 uv run pytest tests/test_reddit.py tests/test_hackernews.py tests/test_github.py tests/test_polymarket.py
+
+# Run developer tools tests
+uv run pytest tests/test_developer_tools.py
 
 # Run with coverage
 uv run pytest --cov=web_search_mcp
@@ -128,6 +143,9 @@ from .polymarket import search_polymarket as _search_pm
 from .x import search_x as _search_x
 from .github import get_github_issue as _get_github_issue
 from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
+from .registries import lookup_package as _lookup_package, search_packages as _search_packages
+from .errors import translate_error as _translate_error
+from .compare import compare_tech as _compare_tech
 ```
 
 ### Formatting
@@ -152,6 +170,7 @@ from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
   - `web_search`, `search_docs` (discovery)
   - `fetch_page` (retrieval)
   - `groq_browse`, `groq_research`, `groq_analyze_page` (Groq tools)
+  - `package_info`, `package_search`, `translate_error`, `compare_tech` (developer tools)
 - **Private functions**: Leading underscore `_helper_function`
 
 ### Error Handling

@@ -169,6 +169,46 @@ Behind the scenes:
   groq_research(query="state of quantum computing 2025")
 ```
 
+### Look Up Package Info
+
+```
+Ask your LLM: "What's the latest version of FastAPI on PyPI?"
+
+Behind the scenes:
+  package_info(name="fastapi", registry="pypi")
+```
+
+### Search for Packages
+
+```
+Ask your LLM: "Find npm packages for async HTTP clients"
+
+Behind the scenes:
+  package_search(query="async http client", registry="npm")
+```
+
+### Debug an Error
+
+```
+Ask your LLM: "I'm getting 'TypeError: Cannot read property of undefined' in my React app"
+
+Behind the scenes:
+  translate_error(error_message="TypeError: Cannot read property 'map' of undefined")
+```
+
+This parses the error, detects JavaScript + React, searches Stack Overflow, and returns solutions.
+
+### Compare Technologies
+
+```
+Ask your LLM: "Compare React vs Vue for a new project"
+
+Behind the scenes:
+  compare_tech(tech_a="React", tech_b="Vue", category="framework")
+```
+
+Returns GitHub stars, npm download counts, version info, license, and open issues side by side.
+
 ---
 
 ## Choosing the Right Tool
@@ -189,6 +229,10 @@ Not sure which tool to use? Here's a quick guide:
 | Prediction market odds         | `polymarket_search` | Crowd-sourced probabilities          |
 | Validate findings              | `groq_research`     | AI cross-checks and expands          |
 | Deep page analysis             | `groq_analyze_page` | AI reads AND interprets              |
+| Package info                   | `package_info`      | Version, downloads, license, deps    |
+| Discover packages              | `package_search`    | Search npm, PyPI, crates.io, Go      |
+| Debug an error                 | `translate_error`   | Parse + search Stack Overflow        |
+| Compare technologies           | `compare_tech`      | GitHub stars, npm download stats     |
 
 ---
 
@@ -315,6 +359,15 @@ The `auto` backend handles this for you — it tries the fast option first and a
 | `groq_browse`       | Interactive multi-page web search  | When you need the AI to explore multiple pages |
 | `groq_research`     | Deep research — auto-selects tools | Validating and expanding on search findings    |
 | `groq_analyze_page` | Read AND interpret a URL           | Extracting specific insights from an article   |
+
+### Developer Tools (free, no API key)
+
+| Tool              | What It Does                                             | Key Parameters                                           |
+| ----------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `package_info`    | Look up a specific package from npm, PyPI, crates.io, Go | `name`, `registry` ("npm", "pypi", "crates", "go")       |
+| `package_search`  | Search packages by keyword across a registry             | `query`, `registry` (default "npm"), `max_results`       |
+| `translate_error` | Parse errors and find Stack Overflow solutions           | `error_message`, `max_results`, `language` (auto-detect) |
+| `compare_tech`    | Compare two technologies side-by-side                    | `tech_a`, `tech_b`, `category` ("framework", "library")  |
 
 **Which Groq model should I use?**
 
