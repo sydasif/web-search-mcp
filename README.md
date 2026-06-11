@@ -4,7 +4,7 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-11 tools that give your LLM real-time access to the web — from simple Google-style searches to deep AI-powered research. Search the web, read articles, check Reddit, browse Hacker News, track GitHub issues, follow X/Twitter discussions, explore prediction markets, and more.
+13 tools that give your LLM real-time access to the web — from simple Google-style searches to deep AI-powered research. Search the web, read articles, check Reddit, browse Hacker News, look up Wikipedia, track GitHub issues, read full issue threads, follow X/Twitter discussions, explore prediction markets, and more.
 
 No API keys required for most tools. Works out of the box.
 
@@ -20,7 +20,9 @@ Here's what you get:
 - **Read any article** — extract clean text from URLs, stripping ads and clutter
 - **Search Reddit** — find real discussions and community sentiment
 - **Search Hacker News** — developer opinions and tech discourse
+- **Search Wikipedia** — factual summaries, background research, citations
 - **Search GitHub** — find issues, PRs, and bug reports across repos
+- **Read GitHub issues** — fetch full issue/PR threads with all comments, sorted by reactions
 - **Search X/Twitter** — real-time posts and breaking news
 - **Search prediction markets** — odds and crowd-sourced probability estimates from Polymarket
 - **AI-powered research** — let Groq's models search, browse, and synthesize for you
@@ -116,14 +118,29 @@ Behind the scenes:
   hackernews_search(query="LLM fine-tuning 2024")
 ```
 
-### Search GitHub Issues
+### Search Wikipedia
 
 ```
-Ask your LLM: "Find issues about memory leaks in React Server Components"
+Ask your LLM: "What is the history of the Python programming language?"
 
 Behind the scenes:
-  github_search(query="memory leak React Server Components")
+  wikipedia_search(query="Python programming language")
 ```
+
+This fetches the top matching article's full plain text (with section markers) plus a list of related articles. No API key needed.
+
+### Search GitHub Issues
+
+### Read a Full GitHub Issue Thread
+
+```
+Ask your LLM: "Read this issue and summarize the discussion: https://github.com/astral-sh/uv/issues/2000"
+
+Behind the scenes:
+  get_github_issue(url="https://github.com/astral-sh/uv/issues/2000")
+```
+
+This fetches the entire thread — title, body, state, reactions, and all comments sorted by popularity — as structured Markdown. Works with both issues and pull requests. Requires `gh` CLI installed and authenticated, or `GITHUB_TOKEN` environment variable.
 
 ### Search X/Twitter for Breaking News
 
@@ -165,7 +182,9 @@ Not sure which tool to use? Here's a quick guide:
 | Search a specific site         | `search_docs`       | Adds `site:domain.com` automatically |
 | Reddit discussions             | `reddit_search`     | Real community opinions              |
 | Tech opinions                  | `hackernews_search` | Developer-focused discussions        |
+| Factual summaries              | `wikipedia_search`  | Encyclopedia articles with full text |
 | Bug reports / feature requests | `github_search`     | Issues and PRs across repos          |
+| Full issue/PR conversation     | `get_github_issue`  | Complete thread with all comments    |
 | Real-time social media         | `x_search`          | Live posts and breaking news         |
 | Prediction market odds         | `polymarket_search` | Crowd-sourced probabilities          |
 | Validate findings              | `groq_research`     | AI cross-checks and expands          |
@@ -211,6 +230,8 @@ This discovery → reading → validation pattern gives you the most reliable re
 | `SEARCH_MCP_RATE_LIMIT_FETCH`  | Max page fetch requests per minute                      | `20`    | No                  |
 | `AUTH_TOKEN`                   | X/Twitter session cookie                                | —       | Only for `x_search` |
 | `CT0`                          | X/Twitter CSRF token cookie                             | —       | Only for `x_search` |
+| `GITHUB_ISSUE_MAX_CHARS`       | Max characters for `get_github_issue` output            | `30000` | No                  |
+| `WIKIPEDIA_MAX_CHARS`          | Max characters for `wikipedia_search` output            | `30000` | No                  |
 
 ### Getting X/Twitter Cookies
 
@@ -262,11 +283,18 @@ The `auto` backend handles this for you — it tries the fast option first and a
 | ------------------- | ------------------ | ------------------------------------------------------------ |
 | `hackernews_search` | Search Hacker News | `query`, `max_results`, `depth` ("quick", "default", "deep") |
 
-### GitHub Search (free, no API key)
+### Wikipedia Search (free, no API key)
 
-| Tool            | What It Does          | Key Parameters                                      |
-| --------------- | --------------------- | --------------------------------------------------- |
-| `github_search` | Search Issues and PRs | `query`, `max_results`, `depth`, `token` (optional) |
+| Tool               | What It Does             | Key Parameters                             |
+| ------------------ | ------------------------ | ------------------------------------------ |
+| `wikipedia_search` | Search and read articles | `query`, `max_results` (default 5, max 20) |
+
+### GitHub Search (free, needs `gh` CLI or `GITHUB_TOKEN`)
+
+| Tool               | What It Does               | Key Parameters                                      |
+| ------------------ | -------------------------- | --------------------------------------------------- |
+| `github_search`    | Search Issues and PRs      | `query`, `max_results`, `depth`, `token` (optional) |
+| `get_github_issue` | Fetch full issue/PR thread | `url` (full GitHub issue or PR URL)                 |
 
 ### Polymarket Search (free, no API key)
 
@@ -336,6 +364,23 @@ DuckDuckGo will block you if you search too fast. The built-in rate limiter help
 - Add small delays between rapid searches
 - Use `max_results` to get fewer results per query
 
+### "get_github_issue" returns "gh CLI not installed"
+
+The `get_github_issue` tool requires the [GitHub CLI (`gh`)](https://cli.github.com/) to fetch issue and PR threads:
+
+```bash
+# Install on Ubuntu/Debian
+sudo apt install gh
+
+# Install on macOS
+brew install gh
+
+# Authenticate (one time)
+gh auth login
+```
+
+Alternatively, set `GITHUB_TOKEN` in your environment — `gh` will pick it up automatically without needing to run `gh auth login`. The `gh` binary itself is still required.
+
 ### Server won't start
 
 Make sure you're using `uv` (not pip):
@@ -354,11 +399,11 @@ uv run web-search-mcp
 
 **Do I need API keys?**
 
-For most tools, no. Web search, Reddit, Hacker News, GitHub, and Polymarket all work without any API key. You only need a Groq API key for the AI-powered tools (browse, research, analyze_page) and X/Twitter cookies for X search.
+For most tools, no. Web search, Reddit, Hacker News, Wikipedia, GitHub, and Polymarket all work without any API key. You only need a Groq API key for the AI-powered tools (browse, research, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
 
 **Is this free?**
 
-The DuckDuckGo, Reddit, Hacker News, GitHub, and Polymarket tools are completely free. Groq has a generous free tier. X/Twitter uses your browser session.
+The DuckDuckGo, Reddit, Hacker News, Wikipedia, GitHub, and Polymarket tools are completely free. Groq has a generous free tier. X/Twitter uses your browser session.
 
 **How is this different from just searching in the browser?**
 
@@ -432,4 +477,4 @@ uv run web-search-mcp
 
 ---
 
-> **Acknowledgment:** This project is built on publicly available APIs, open-source libraries, and community research. DuckDuckGo, Reddit RSS, Hacker News Algolia API, GitHub REST API, Polymarket Gamma API, and Groq's API are all used in accordance with their respective terms.
+> **Acknowledgment:** This project is built on publicly available APIs, open-source libraries, and community research. DuckDuckGo, Reddit RSS, Hacker News Algolia API, Wikipedia MediaWiki API, GitHub REST API, Polymarket Gamma API, and Groq's API are all used in accordance with their respective terms.

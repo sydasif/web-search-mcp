@@ -704,7 +704,7 @@ class TestMemoryAndResourceScenarios:
 
         markdown = format_search_results_markdown(results)
 
-        assert f"Found 100 results." in markdown
+        assert "Found 100 results." in markdown
         assert "Result 0" in markdown
         assert "Result 99" in markdown
 

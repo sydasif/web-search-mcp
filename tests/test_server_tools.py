@@ -1,6 +1,4 @@
-import pytest
 from web_search_mcp.models import SearchRequest, SearchResponse, SearchResult, ErrorResponse
-from web_search_mcp.ddg import ddg_search, format_search_results_markdown
 from web_search_mcp.utils import RateLimiter
 
 
@@ -52,7 +50,6 @@ class TestServerFunctionality:
     def test_reddit_search_functionality(self):
         """Test reddit_search server functionality."""
         # Test that reddit_search passes parameters correctly
-        from web_search_mcp.reddit import reddit_search_tool as _reddit_search_tool
 
         # We can't test the actual tool due to MCP decorator, but we can test the parameters
         # that would be passed to it
@@ -61,7 +58,6 @@ class TestServerFunctionality:
     def test_hackernews_search_functionality(self):
         """Test hackernews_search server functionality."""
         # Test that hackernews_search passes parameters correctly
-        from web_search_mcp.hackernews import search_hackernews as _search_hn
 
         # We can't test the actual tool due to MCP decorator, but we can test the parameters
         # that would be passed to it
@@ -70,7 +66,6 @@ class TestServerFunctionality:
     def test_polymarket_search_functionality(self):
         """Test polymarket_search server functionality."""
         # Test that polymarket_search passes parameters correctly
-        from web_search_mcp.polymarket import search_polymarket as _search_pm
 
         # We can't test the actual tool due to MCP decorator, but we can test the parameters
         # that would be passed to it
@@ -79,7 +74,6 @@ class TestServerFunctionality:
     def test_github_search_functionality(self):
         """Test github_search server functionality."""
         # Test that github_search passes parameters correctly
-        from web_search_mcp.github import search_github as _search_gh
 
         # We can't test the actual tool due to MCP decorator, but we can test the parameters
         # that would be passed to it
@@ -88,11 +82,6 @@ class TestServerFunctionality:
     def test_groq_tools_functionality(self):
         """Test Groq tools functionality."""
         # Test that Groq tools pass parameters correctly
-        from web_search_mcp.groq_tools import (
-            browse as _groq_browse,
-            research as _groq_research,
-            analyze_page as _groq_analyze_page,
-        )
 
         # We can't test the actual tools due to MCP decorator, but we can test the parameters
         # that would be passed to them
@@ -101,7 +90,6 @@ class TestServerFunctionality:
     def test_x_search_functionality(self):
         """Test x_search server functionality."""
         # Test that x_search passes parameters correctly
-        from web_search_mcp.x import search_x as _search_x
 
         # We can't test the actual tool due to MCP decorator, but we can test the parameters
         # that would be passed to it

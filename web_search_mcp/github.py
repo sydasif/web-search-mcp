@@ -5,12 +5,14 @@ per-item comment enrichment. Auth via GITHUB_TOKEN env var or
 `gh auth token` subprocess fallback.
 """
 
+import json
 import logging
 import math
 import os
+import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import httpx
 
@@ -308,3 +310,314 @@ def enrich_with_comments(
                 )
 
     return items
+
+
+# ─────────────────────────────────────────────────────────────
+# Issue/PR thread rendering via gh CLI
+# ─────────────────────────────────────────────────────────────
+
+
+class GitHubUrlError(ValueError):
+    pass
+
+
+_GITHUB_ISSUE_RE = re.compile(r"^/([^/]+)/([^/]+)/issues/(\d+)(?:/|$)")
+_GITHUB_PR_RE = re.compile(r"^/([^/]+)/([^/]+)/pull/(\d+)(?:/|$)")
+
+
+def parse_github_url(url: str) -> tuple[str, str, int, str]:
+    """Parse a GitHub issue or PR URL.
+
+    Returns (owner, repo, number, type) where type is 'issue' or 'pr'.
+    """
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if host not in {"github.com", "www.github.com"}:
+        raise GitHubUrlError(f"Unsupported GitHub host: {host or '(missing)'}")
+    path = parsed.path or ""
+
+    m = _GITHUB_ISSUE_RE.match(path)
+    if m:
+        return (m.group(1), m.group(2), int(m.group(3)), "issue")
+
+    m = _GITHUB_PR_RE.match(path)
+    if m:
+        return (m.group(1), m.group(2), int(m.group(3)), "pr")
+
+    raise GitHubUrlError(
+        "URL is not a recognized GitHub Issue or PR URL. "
+        "Expected format: https://github.com/owner/repo/issues/{number} "
+        "or https://github.com/owner/repo/pull/{number}"
+    )
+
+
+_REACTION_EMOJI: dict[str, str] = {
+    "THUMBS_UP": "\U0001f44d",
+    "THUMBS_DOWN": "\U0001f44e",
+    "LAUGH": "\U0001f604",
+    "HOORAY": "\U0001f389",
+    "CONFUSED": "\U0001f615",
+    "HEART": "\u2764\ufe0f",
+    "ROCKET": "\U0001f680",
+    "EYES": "\U0001f440",
+}
+
+
+def _sum_reactions(reaction_groups: list[dict] | None) -> dict[str, int]:
+    """Sum reaction counts from reactionGroups array.
+
+    Input: [{"content": "THUMBS_UP", "users": {"totalCount": 5}}, ...]
+    Output: {"THUMBS_UP": 5, "HEART": 2}
+    """
+    counts: dict[str, int] = {}
+    if not reaction_groups:
+        return counts
+    for rg in reaction_groups:
+        if not isinstance(rg, dict):
+            continue
+        content = rg.get("content")
+        users = rg.get("users")
+        if isinstance(content, str) and isinstance(users, dict):
+            try:
+                count = int(users.get("totalCount") or 0)
+            except (TypeError, ValueError):
+                count = 0
+            if count > 0:
+                counts[content] = count
+    return counts
+
+
+def _render_reactions_bar(counts: dict[str, int]) -> str:
+    """Render reaction counts as an inline list of emoji+N."""
+    if not counts:
+        return ""
+    parts: list[str] = []
+    for content in (
+        "THUMBS_UP",
+        "HEART",
+        "HOORAY",
+        "ROCKET",
+        "EYES",
+        "LAUGH",
+        "THUMBS_DOWN",
+        "CONFUSED",
+    ):
+        n = counts.get(content, 0)
+        if n > 0:
+            emoji = _REACTION_EMOJI.get(content, content.lower())
+            parts.append(f"{emoji} {n}")
+    return " | ".join(parts)
+
+
+def render_issue_markdown(data: dict, kind: str = "issue") -> str:
+    """Render a gh issue view --json response as structured Markdown.
+
+    Handles both issues and PRs (same JSON shape from gh CLI).
+
+    Args:
+        data: JSON response from ``gh`` CLI.
+        kind: ``"issue"`` or ``"pr"`` to control the heading.
+    """
+    lines: list[str] = []
+
+    # ── header ──
+    title = data.get("title") or "Untitled"
+    url = data.get("url") or ""
+    author = ""
+    author_data = data.get("author")
+    if isinstance(author_data, dict):
+        author = str(author_data.get("login") or "")
+    created = _parse_date(data.get("createdAt")) or ""
+    state = (data.get("state") or "").lower()
+    if state == "merged":
+        state_emoji = "\U0001f300"
+    elif state == "closed":
+        state_emoji = "\u2705"
+    else:
+        state_emoji = "\U0001f6a7"
+
+    heading = "# Pull Request" if kind == "pr" else "# Issue"
+    lines.append(heading)
+    lines.append(
+        f"Title: {title} Link: {url} Author: @{author} Date: {created} State: {state_emoji} {state}"
+    )
+    lines.append("")
+
+    # ── reactions on the issue ──
+    issue_rx = _sum_reactions(data.get("reactionGroups"))
+    rx_bar = _render_reactions_bar(issue_rx)
+    if rx_bar:
+        lines.append(rx_bar)
+        lines.append("")
+
+    # ── body ──
+    body = (data.get("body") or "").strip()
+    if body:
+        lines.append(body)
+        lines.append("")
+
+    # ── comments ──
+    raw_comments = data.get("comments")
+    if not isinstance(raw_comments, list) or not raw_comments:
+        lines.append("# Comments")
+        lines.append("_No comments._")
+        lines.append("")
+    else:
+        # Filter out minimized, sort by total reactions desc
+        active = [c for c in raw_comments if isinstance(c, dict) and not c.get("isMinimized")]
+
+        def _total_rx(c: dict) -> int:
+            return sum(_sum_reactions(c.get("reactionGroups")).values())
+
+        active.sort(key=_total_rx, reverse=True)
+
+        lines.append("# Comments")
+        lines.append("")
+        for idx, c in enumerate(active, start=1):
+            c_author = ""
+            ca = c.get("author")
+            if isinstance(ca, dict):
+                c_author = str(ca.get("login") or "")
+            c_assoc = (c.get("authorAssociation") or "").upper()
+            c_date = _parse_date(c.get("createdAt")) or ""
+            c_url = c.get("url") or ""
+            c_body = (c.get("body") or "").strip()
+            c_rx = _sum_reactions(c.get("reactionGroups"))
+
+            header = f"## Comment {idx}"
+            if c_assoc == "MEMBER":
+                header += " \U0001f3f7\ufe0f"
+            elif c_assoc == "COLLABORATOR":
+                header += " \U0001f91d"
+            elif c_assoc == "OWNER":
+                header += " \U0001f451"
+            lines.append(header)
+
+            meta = []
+            if c_author:
+                meta.append(f"Author: @{c_author}")
+            if c_date:
+                meta.append(f"Date: {c_date}")
+            rx_bar_c = _render_reactions_bar(c_rx)
+            if rx_bar_c:
+                meta.append(f"Reactions: {rx_bar_c}")
+            if c_url:
+                meta.append(f"[permalink]({c_url})")
+            lines.append(" | ".join(meta))
+            lines.append("")
+
+            if c_body:
+                lines.append(c_body)
+            else:
+                lines.append("_No text._")
+            lines.append("")
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def _gh_available() -> bool:
+    """Check if gh CLI is installed."""
+    try:
+        result = subprocess.run(
+            ["gh", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return False
+
+
+def _gh_authenticated() -> bool:
+    """Check if gh CLI is authenticated."""
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "status"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return False
+
+
+def get_github_issue(url: str) -> str:
+    """Fetch a GitHub Issue or PR with all comments as structured Markdown.
+
+    Uses the ``gh`` CLI to fetch the issue/PR and all its comments,
+    then renders them as structured Markdown sorted by reactions.
+
+    Args:
+        url: Full GitHub issue or PR URL.
+
+    Returns:
+        Markdown-formatted issue/PR thread with all comments.
+
+    Requires:
+        ``gh`` CLI installed and authenticated (via ``gh auth login``
+        or ``GITHUB_TOKEN`` env var).
+    """
+    try:
+        owner, repo, number, kind = parse_github_url(url)
+    except GitHubUrlError as e:
+        return f"_Error: {e}_\n"
+
+    if not _gh_available():
+        return (
+            "_Error: `gh` CLI is not installed._\n\n"
+            "Install it from https://cli.github.com/ or use `github_search` "
+            "with `GITHUB_TOKEN` environment variable instead.\n"
+        )
+
+    if not _gh_authenticated():
+        return (
+            "_Error: `gh` CLI is not authenticated._\n\n"
+            "Run `gh auth login` or set `GITHUB_TOKEN` environment variable.\n"
+        )
+
+    cmd = [
+        "gh",
+        "issue" if kind == "issue" else "pr",
+        "view",
+        str(number),
+        "--repo",
+        f"{owner}/{repo}",
+        "--comments",
+        "--json",
+        "title,body,url,state,createdAt,author,reactionGroups,comments",
+    ]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except FileNotFoundError:
+        return "_Error: `gh` CLI not found even though it was available earlier.\n"
+    except subprocess.TimeoutExpired:
+        return f"_Error: Request timed out for {url}_\n"
+
+    if result.returncode != 0:
+        stderr = (result.stderr or "").strip()
+        if stderr:
+            return f"_Error: `gh` failed: {stderr}_\n"
+        return f"_Error: `gh` returned exit code {result.returncode}_\n"
+
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        return f"_Error: Failed to parse `gh` output: {e}_\n"
+
+    if not isinstance(data, dict):
+        return "_Error: `gh` returned unexpected data format._\n"
+
+    md = render_issue_markdown(data, kind=kind)
+
+    max_chars_env = os.environ.get("GITHUB_ISSUE_MAX_CHARS", "30000")
+    try:
+        max_chars = int(max_chars_env)
+    except (TypeError, ValueError):
+        max_chars = 30000
+    if max_chars > 0 and len(md) > max_chars:
+        md = md[:max_chars].rstrip() + "\n\n_Truncated._\n"
+
+    return md

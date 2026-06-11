@@ -16,6 +16,8 @@ from .reddit import reddit_search_tool as _reddit_search_tool
 from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
 from .polymarket import search_polymarket as _search_pm
 from .x import search_x as _search_x
+from .github import get_github_issue as _get_github_issue
+from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
 # Set up logging
 LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
@@ -466,6 +468,56 @@ def _format_pm_markdown(items: list[dict], topic: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────
+# Wikipedia tools — free, open encyclopedia
+# Best for: factual summaries, background research, citations
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="wikipedia_search",
+    annotations={
+        "title": "Search Wikipedia and read articles",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def wikipedia_search(
+    query: str,
+    max_results: int = 5,
+) -> str | ErrorResponse:
+    """Search Wikipedia and return the top article with full text + related results.
+
+    Searches Wikipedia via the MediaWiki API, fetches the top article's full
+    plain text content (with ``== Section ==`` markers), and lists related
+    articles below. No API key required.
+
+    Args:
+        query: Search query (e.g. "Python programming language")
+        max_results: Max results to show (default 5, max 20)
+
+    Returns:
+        str: Markdown-formatted article content with related links.
+
+    Examples:
+        - "Python programming language"
+        - "Albert Einstein"
+        - "Quantum computing"
+
+    Error Handling:
+        - Empty query: Returns error message
+        - No results: Returns "No Wikipedia articles found"
+        - Network error: Returns error message
+    """
+    try:
+        return _wikipedia_search_tool(query, max_results=max_results)
+    except Exception as e:
+        logger.error("Wikipedia search failed: %s", e)
+        return format_error(f"Wikipedia search failed: {e}")
+
+
+# ─────────────────────────────────────────────────────────────
 # GitHub tools — issues/PRs search, auth via GITHUB_TOKEN or gh
 # Best for: code discussions, bug reports, feature requests
 # ─────────────────────────────────────────────────────────────
@@ -554,6 +606,52 @@ def _format_gh_markdown(items: list[dict], query: str) -> str:
                 lines.append(f"   > {c.get('excerpt', '')[:200]}...")
         lines.append("")
     return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────
+# GitHub Issue/PR thread rendering via gh CLI
+# Best for: getting the full conversation context of a specific
+# GitHub Issue or PR, with all comments sorted by reactions.
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="get_github_issue",
+    annotations={
+        "title": "Fetch a GitHub Issue or PR with all comments",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def get_github_issue(url: str) -> str | ErrorResponse:
+    """Fetch a GitHub Issue or Pull Request with all comments as structured Markdown.
+
+    Parses the URL, fetches the full issue/PR thread via ``gh`` CLI, and renders
+    all comments sorted by reactions with author/date/reactions metadata.
+
+    Args:
+        url: Full GitHub issue or PR URL
+             (e.g. https://github.com/owner/repo/issues/123)
+
+    Returns:
+        str: Markdown-formatted issue/PR thread with all comments.
+
+    Examples:
+        - https://github.com/astral-sh/uv/issues/1
+        - https://github.com/python/cpython/pull/100000
+
+    Error Handling:
+        - Invalid URL: Returns error message
+        - gh CLI not installed or authenticated: Returns error with instructions
+        - Timeout or API error: Returns error message
+    """
+    try:
+        return _get_github_issue(url)
+    except Exception as e:
+        logger.error("get_github_issue failed: %s", e)
+        return format_error(f"Failed to fetch issue: {e}")
 
 
 # ─────────────────────────────────────────────────────────────

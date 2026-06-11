@@ -1,5 +1,7 @@
 """Tests for GitHub search module."""
 
+import json
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -9,6 +11,11 @@ from web_search_mcp.github import (
     _compute_relevance,
     _parse_repo_from_url,
     _parse_date,
+    parse_github_url as _parse_url,
+    _sum_reactions,
+    _render_reactions_bar,
+    render_issue_markdown,
+    get_github_issue,
 )
 
 
@@ -165,6 +172,285 @@ class TestEnrich(unittest.TestCase):
 
     def test_enrich_empty_items(self):
         assert enrich_with_comments([]) == []
+
+
+class TestGetIssue(unittest.TestCase):
+    """Tests for parse_github_url and get_github_issue."""
+
+    def test_parse_issue_url(self):
+        owner, repo, number, kind = _parse_url("https://github.com/astral-sh/uv/issues/42")
+        assert owner == "astral-sh"
+        assert repo == "uv"
+        assert number == 42
+        assert kind == "issue"
+
+    def test_parse_pr_url(self):
+        owner, repo, number, kind = _parse_url("https://github.com/python/cpython/pull/100000")
+        assert owner == "python"
+        assert repo == "cpython"
+        assert number == 100000
+        assert kind == "pr"
+
+    def test_parse_url_with_trailing_slash(self):
+        owner, repo, number, kind = _parse_url("https://github.com/owner/repo/issues/5/")
+        assert (owner, repo, number, kind) == ("owner", "repo", 5, "issue")
+
+    def test_parse_url_invalid_host(self):
+        with self.assertRaises(ValueError):
+            _parse_url("https://gitlab.com/owner/repo/issues/1")
+
+    def test_parse_url_no_match(self):
+        with self.assertRaises(ValueError):
+            _parse_url("https://github.com/owner/repo")
+
+    def test_parse_url_bad_path(self):
+        with self.assertRaises(ValueError):
+            _parse_url("https://github.com/owner/repo/wiki/Home")
+
+    def test_sum_reactions_empty(self):
+        assert _sum_reactions(None) == {}
+        assert _sum_reactions([]) == {}
+
+    def test_sum_reactions_basic(self):
+        groups = [
+            {"content": "THUMBS_UP", "users": {"totalCount": 5}},
+            {"content": "HEART", "users": {"totalCount": 3}},
+        ]
+        result = _sum_reactions(groups)
+        assert result == {"THUMBS_UP": 5, "HEART": 3}
+
+    def test_sum_reactions_zero(self):
+        groups = [{"content": "THUMBS_UP", "users": {"totalCount": 0}}]
+        assert _sum_reactions(groups) == {}
+
+    def test_render_reactions_bar(self):
+        bar = _render_reactions_bar({"THUMBS_UP": 5, "HEART": 2})
+        assert "👍 5" in bar
+        assert "❤️ 2" in bar
+
+    def test_render_reactions_bar_empty(self):
+        assert _render_reactions_bar({}) == ""
+
+    def test_render_issue_markdown_basic(self):
+        data = {
+            "title": "Fix the bug",
+            "url": "https://github.com/astral-sh/uv/issues/1",
+            "state": "OPEN",
+            "createdAt": "2024-01-15T10:00:00Z",
+            "author": {"login": "testuser"},
+            "body": "This is a bug report.",
+            "reactionGroups": [],
+            "comments": [],
+        }
+        md = render_issue_markdown(data)
+        assert "Fix the bug" in md
+        assert "@testuser" in md
+        assert "🚧 open" in md
+        assert "No comments" in md
+
+    def test_render_issue_markdown_with_reactions(self):
+        data = {
+            "title": "Feature request",
+            "url": "https://github.com/owner/repo/issues/2",
+            "state": "CLOSED",
+            "createdAt": "2024-06-01T00:00:00Z",
+            "author": {"login": "dev1"},
+            "body": "Please add this feature.",
+            "reactionGroups": [
+                {"content": "THUMBS_UP", "users": {"totalCount": 42}},
+                {"content": "HEART", "users": {"totalCount": 7}},
+            ],
+            "comments": [],
+        }
+        md = render_issue_markdown(data)
+        assert "Feature request" in md
+        assert "✅ closed" in md
+        assert "👍 42" in md
+        assert "❤️ 7" in md
+
+    def test_render_issue_markdown_with_comments(self):
+        data = {
+            "title": "Discussion thread",
+            "url": "https://github.com/owner/repo/issues/3",
+            "state": "OPEN",
+            "createdAt": "2024-01-01T00:00:00Z",
+            "author": {"login": "opener"},
+            "body": "Let's discuss.",
+            "reactionGroups": [],
+            "comments": [
+                {
+                    "author": {"login": "member1"},
+                    "authorAssociation": "MEMBER",
+                    "body": "I think we should do X.",
+                    "createdAt": "2024-01-02T00:00:00Z",
+                    "url": "https://github.com/owner/repo/issues/3#issuecomment-1",
+                    "reactionGroups": [{"content": "THUMBS_UP", "users": {"totalCount": 10}}],
+                    "isMinimized": False,
+                },
+                {
+                    "author": {"login": "contributor1"},
+                    "authorAssociation": "CONTRIBUTOR",
+                    "body": "Good idea!",
+                    "createdAt": "2024-01-03T00:00:00Z",
+                    "url": "https://github.com/owner/repo/issues/3#issuecomment-2",
+                    "reactionGroups": [],
+                    "isMinimized": False,
+                },
+                {
+                    "author": {"login": "spammer"},
+                    "authorAssociation": "NONE",
+                    "body": "Spam message",
+                    "createdAt": "2024-01-04T00:00:00Z",
+                    "url": "https://github.com/owner/repo/issues/3#issuecomment-3",
+                    "reactionGroups": [],
+                    "isMinimized": True,
+                },
+            ],
+        }
+        md = render_issue_markdown(data)
+        assert "I think we should do X." in md
+        assert "Good idea!" in md
+        assert "Spam message" not in md
+        assert "🏷️" in md
+        assert "@member1" in md
+        assert "@contributor1" in md
+
+    def test_render_issue_markdown_merged_pr(self):
+        data = {
+            "title": "Merge the feature",
+            "url": "https://github.com/owner/repo/pull/42",
+            "state": "MERGED",
+            "createdAt": "2024-03-01T00:00:00Z",
+            "author": {"login": "dev42"},
+            "body": "This is the PR body.",
+            "reactionGroups": [],
+            "comments": [],
+            "merged": True,
+        }
+        md = render_issue_markdown(data, kind="pr")
+        assert "# Pull Request" in md
+        assert "Merge the feature" in md
+        assert "merged" in md
+        assert "@dev42" in md
+        assert "No comments" in md
+
+    @patch("web_search_mcp.github.subprocess.run")
+    def test_gh_available_true(self, mock_run):
+        mock_run.return_value.returncode = 0
+        from web_search_mcp.github import _gh_available
+
+        assert _gh_available() is True
+
+    @patch("web_search_mcp.github.subprocess.run")
+    def test_gh_available_false(self, mock_run):
+        mock_run.side_effect = FileNotFoundError
+        from web_search_mcp.github import _gh_available
+
+        assert _gh_available() is False
+
+    @patch("web_search_mcp.github.subprocess.run")
+    def test_gh_authenticated_true(self, mock_run):
+        mock_run.return_value.returncode = 0
+        from web_search_mcp.github import _gh_authenticated
+
+        assert _gh_authenticated() is True
+
+    @patch("web_search_mcp.github.subprocess.run")
+    def test_gh_authenticated_false(self, mock_run):
+        mock_run.return_value.returncode = 1
+        from web_search_mcp.github import _gh_authenticated
+
+        assert _gh_authenticated() is False
+
+    @patch("web_search_mcp.github._gh_available")
+    @patch("web_search_mcp.github._gh_authenticated")
+    @patch("web_search_mcp.github.subprocess.run")
+    def test_get_github_issue_success(self, mock_run, mock_auth, mock_avail):
+        mock_avail.return_value = True
+        mock_auth.return_value = True
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = json.dumps(
+            {
+                "title": "Test Issue",
+                "url": "https://github.com/owner/repo/issues/1",
+                "state": "OPEN",
+                "createdAt": "2024-06-01T00:00:00Z",
+                "author": {"login": "user1"},
+                "body": "Body text",
+                "reactionGroups": [],
+                "comments": [
+                    {
+                        "author": {"login": "user2"},
+                        "authorAssociation": "NONE",
+                        "body": "A comment",
+                        "createdAt": "2024-06-02T00:00:00Z",
+                        "url": "https://github.com/owner/repo/issues/1#issuecomment-1",
+                        "reactionGroups": [],
+                        "isMinimized": False,
+                    }
+                ],
+            }
+        )
+
+        result = get_github_issue("https://github.com/owner/repo/issues/1")
+        assert "Test Issue" in result
+        assert "Body text" in result
+        assert "A comment" in result
+        assert "@user1" in result
+        assert "@user2" in result
+
+    @patch("web_search_mcp.github._gh_available")
+    def test_get_github_issue_gh_not_installed(self, mock_avail):
+        mock_avail.return_value = False
+        result = get_github_issue("https://github.com/owner/repo/issues/1")
+        assert "`gh` CLI is not installed" in result
+
+    @patch("web_search_mcp.github._gh_available")
+    @patch("web_search_mcp.github._gh_authenticated")
+    def test_get_github_issue_gh_not_authed(self, mock_auth, mock_avail):
+        mock_avail.return_value = True
+        mock_auth.return_value = False
+        result = get_github_issue("https://github.com/owner/repo/issues/1")
+        assert "`gh` CLI is not authenticated" in result
+
+    def test_get_github_issue_bad_url(self):
+        result = get_github_issue("https://github.com/owner/repo")
+        assert "URL is not a recognized" in result
+
+    @patch("web_search_mcp.github._gh_available")
+    @patch("web_search_mcp.github._gh_authenticated")
+    @patch("web_search_mcp.github.subprocess.run")
+    def test_get_github_issue_timeout(self, mock_run, mock_auth, mock_avail):
+        mock_avail.return_value = True
+        mock_auth.return_value = True
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="gh", timeout=30)
+
+        result = get_github_issue("https://github.com/owner/repo/issues/1")
+        assert "timed out" in result
+
+    @patch("web_search_mcp.github._gh_available")
+    @patch("web_search_mcp.github._gh_authenticated")
+    @patch("web_search_mcp.github.subprocess.run")
+    @patch.dict("os.environ", {"GITHUB_ISSUE_MAX_CHARS": "5"})
+    def test_get_github_issue_truncation(self, mock_run, mock_auth, mock_avail):
+        mock_avail.return_value = True
+        mock_auth.return_value = True
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = json.dumps(
+            {
+                "title": "Long issue",
+                "url": "https://github.com/owner/repo/issues/1",
+                "state": "OPEN",
+                "createdAt": "2024-06-01T00:00:00Z",
+                "author": {"login": "user1"},
+                "body": "Some body text here",
+                "reactionGroups": [],
+                "comments": [],
+            }
+        )
+
+        result = get_github_issue("https://github.com/owner/repo/issues/1")
+        assert "_Truncated._" in result
 
 
 if __name__ == "__main__":

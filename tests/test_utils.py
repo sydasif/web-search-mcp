@@ -1,7 +1,6 @@
 import pytest
 import time
 import threading
-from unittest.mock import patch
 from web_search_mcp.utils import (
     token_overlap_relevance,
     format_error,
