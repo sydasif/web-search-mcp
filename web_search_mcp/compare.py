@@ -301,6 +301,18 @@ def compare_tech(
     left = gather_info(tech_a, category)
     right = gather_info(tech_b, category)
 
+    def _fmt(val) -> str:
+        if val is None:
+            return "—"
+        return str(val)
+
+    a_stars = _fmt(f"{left.github_stars:,}" if left.github_stars is not None else None)
+    b_stars = _fmt(f"{right.github_stars:,}" if right.github_stars is not None else None)
+    a_issues = _fmt(f"{left.github_open_issues:,}" if left.github_open_issues is not None else None)
+    b_issues = _fmt(
+        f"{right.github_open_issues:,}" if right.github_open_issues is not None else None
+    )
+
     lines = [
         f"# {tech_a} vs {tech_b}",
         "",
@@ -308,38 +320,16 @@ def compare_tech(
         "",
         "## Side-by-Side",
         "",
-        "| Dimension | {tech_a} | {tech_b} |",
+        f"| Dimension | {tech_a} | {tech_b} |",
         "| --- | --- | --- |",
-        "| **GitHub stars** | {a_stars} | {b_stars} |",
-        "| **Language** | {a_lang} | {b_lang} |",
-        "| **Version** | {a_ver} | {b_ver} |",
-        "| **Downloads** | {a_dl} | {b_dl} |",
-        "| **License** | {a_lic} | {b_lic} |",
-        "| **Open issues** | {a_issues} | {b_issues} |",
+        f"| **GitHub stars** | {a_stars} | {b_stars} |",
+        f"| **Language** | {_fmt(left.github_language)} | {_fmt(right.github_language)} |",
+        f"| **Version** | {_fmt(left.registry_version)} | {_fmt(right.registry_version)} |",
+        f"| **Downloads** | {_fmt(left.registry_downloads)} | {_fmt(right.registry_downloads)} |",
+        f"| **License** | {_fmt(left.registry_license)} | {_fmt(right.registry_license)} |",
+        f"| **Open issues** | {a_issues} | {b_issues} |",
         "",
     ]
-
-    def _fmt(val) -> str:
-        if val is None:
-            return "—"
-        return str(val)
-
-    # Fill table
-    a_stars = f"{left.github_stars:,}" if left.github_stars is not None else "—"
-    b_stars = f"{right.github_stars:,}" if right.github_stars is not None else "—"
-    a_issues = f"{left.github_open_issues:,}" if left.github_open_issues is not None else "—"
-    b_issues = f"{right.github_open_issues:,}" if right.github_open_issues is not None else "—"
-
-    lines[5] = f"| Dimension | {tech_a} | {tech_b} |"
-    lines[6] = "| --- | --- | --- |"
-    lines[7] = f"| **GitHub stars** | {a_stars} | {b_stars} |"
-    lines[8] = f"| **Language** | {_fmt(left.github_language)} | {_fmt(right.github_language)} |"
-    lines[9] = f"| **Version** | {_fmt(left.registry_version)} | {_fmt(right.registry_version)} |"
-    lines[10] = (
-        f"| **Downloads** | {_fmt(left.registry_downloads)} | {_fmt(right.registry_downloads)} |"
-    )
-    lines[11] = f"| **License** | {_fmt(left.registry_license)} | {_fmt(right.registry_license)} |"
-    lines[12] = f"| **Open issues** | {a_issues} | {b_issues} |"
 
     lines.append("")
     lines.append(f"## {tech_a}")

@@ -98,6 +98,7 @@ class ErrorParser:
             "ImportError": r"(ImportError|ModuleNotFoundError): (.+)",
             "ValueError": r"ValueError: (.+)",
             "KeyError": r"KeyError: (.+)",
+            "ImproperlyConfigured": r"ImproperlyConfigured: (.+)",
         },
         "javascript": {
             "CORS Error": r"CORS policy|Access-Control-Allow-Origin|No.*Access-Control",
@@ -365,11 +366,14 @@ def translate_error(
     parsed = parser.parse(error_message, language=language)
 
     # Build search query from parsed terms
-    query_parts = [parsed.error_type, parsed.message[:100]]
+    # Use key terms + error type + language; skip the raw message to avoid noise
+    query_parts = []
+    if parsed.error_type and parsed.error_type != "Unknown Error":
+        query_parts.append(parsed.error_type)
+    if parsed.key_terms:
+        query_parts.extend(parsed.key_terms[:5])
     if parsed.language:
         query_parts.append(parsed.language)
-    if parsed.key_terms:
-        query_parts.extend(parsed.key_terms[:3])
     search_query = " ".join(p for p in query_parts if p)
 
     # Search Stack Overflow
