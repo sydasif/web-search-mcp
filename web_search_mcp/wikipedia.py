@@ -10,10 +10,11 @@ from urllib.parse import quote, urlencode
 
 import httpx
 
+from .config import settings
+
 logger = logging.getLogger(__name__)
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
-USER_AGENT = "web-search-mcp/1.0"
 TIMEOUT = 15
 MAX_RESULTS_CAP = 20
 
@@ -41,7 +42,7 @@ def _search_wikipedia(query: str, max_results: int = 5) -> list[dict]:
     logger.info("Wikipedia searching for '%s' (max=%d)", query, capped)
 
     try:
-        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": USER_AGENT})
+        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": settings.user_agent})
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
@@ -91,7 +92,7 @@ def _fetch_page_extract(title: str) -> str | None:
     url = f"{WIKI_API}?{urlencode(params)}"
 
     try:
-        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": USER_AGENT})
+        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": settings.user_agent})
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:

@@ -30,12 +30,6 @@ class TestServerFunctionality:
         assert req.backend == "auto"
         assert req.response_format == "markdown"
 
-    def test_fetch_page_functionality(self):
-        """Test fetch_page server functionality through underlying ddg functions."""
-        # Test that fetch_page parameters are correctly passed to underlying functions
-        # This tests the parameter validation that happens before the actual fetch
-        pass
-
     def test_search_docs_functionality(self):
         """Test search_docs server functionality."""
         # Test that search_docs enhances queries with domain
@@ -46,54 +40,6 @@ class TestServerFunctionality:
         enhanced_query = f"site:{domain} {query}"
 
         assert enhanced_query == "site:docs.python.org asyncio"
-
-    def test_reddit_search_functionality(self):
-        """Test reddit_search server functionality."""
-        # Test that reddit_search passes parameters correctly
-
-        # We can't test the actual tool due to MCP decorator, but we can test the parameters
-        # that would be passed to it
-        pass
-
-    def test_hackernews_search_functionality(self):
-        """Test hackernews_search server functionality."""
-        # Test that hackernews_search passes parameters correctly
-
-        # We can't test the actual tool due to MCP decorator, but we can test the parameters
-        # that would be passed to it
-        pass
-
-    def test_polymarket_search_functionality(self):
-        """Test polymarket_search server functionality."""
-        # Test that polymarket_search passes parameters correctly
-
-        # We can't test the actual tool due to MCP decorator, but we can test the parameters
-        # that would be passed to it
-        pass
-
-    def test_github_search_functionality(self):
-        """Test github_search server functionality."""
-        # Test that github_search passes parameters correctly
-
-        # We can't test the actual tool due to MCP decorator, but we can test the parameters
-        # that would be passed to it
-        pass
-
-    def test_groq_tools_functionality(self):
-        """Test Groq tools functionality."""
-        # Test that Groq tools pass parameters correctly
-
-        # We can't test the actual tools due to MCP decorator, but we can test the parameters
-        # that would be passed to them
-        pass
-
-    def test_x_search_functionality(self):
-        """Test x_search server functionality."""
-        # Test that x_search passes parameters correctly
-
-        # We can't test the actual tool due to MCP decorator, but we can test the parameters
-        # that would be passed to it
-        pass
 
     def test_server_parameter_validation(self):
         """Test that server tools properly validate parameters."""
@@ -307,7 +253,7 @@ class TestServerFunctionality:
 
         auth_error = format_auth_error()
         assert auth_error.error == "Groq API key not configured"
-        assert "API key" in auth_error.details
+        assert "SEARCH_MCP_GROQ_API_KEY" in auth_error.details
 
         empty_query_error = format_empty_query_error()
         assert empty_query_error.error == "Query cannot be empty"

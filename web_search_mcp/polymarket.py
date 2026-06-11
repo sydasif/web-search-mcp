@@ -13,6 +13,8 @@ from urllib.parse import urlencode
 
 import httpx
 
+from .config import settings
+
 logger = logging.getLogger(__name__)
 
 GAMMA_SEARCH_URL = "https://gamma-api.polymarket.com/public-search"
@@ -266,7 +268,7 @@ def _search_single_query(query: str, page: int = 1) -> dict:
     }
     url = f"{GAMMA_SEARCH_URL}?{urlencode(params)}"
     try:
-        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": "web-search-mcp/1.0"})
+        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": settings.user_agent})
         resp.raise_for_status()
         return resp.json()
     except Exception as e:

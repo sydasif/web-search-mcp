@@ -12,8 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The application follows a modular architecture with clear separation of concerns:
 
-- **server.py**: FastMCP server entry point, defines 11 MCP tools exposed to clients
-- **ddg.py**: DuckDuckGo search + web content extraction (`ddg_search`, `fetch_page`) using `trafilatura` — consolidated from the former `search.py` and `reader.py`
+- **server.py**: FastMCP server entry point, defines 13 MCP tools exposed to clients
+- **ddg.py**: DuckDuckGo search + web content extraction (`ddg_search`, `fetch_page`) using `trafilatura`
+- **wikipedia.py**: Wikipedia search and article reading via MediaWiki API (`wikipedia_search_tool`)
 - **reddit/**: Keyless Reddit search via RSS + shreddit enrichment (`reddit_search_tool`)
 - **hackernews.py**: Hacker News search via Algolia API (`search_hackernews`)
 - **github.py**: GitHub Issues/PRs search (`search_github`)
@@ -28,7 +29,7 @@ The application follows a modular architecture with clear separation of concerns
 
 ## MCP Tool Definitions
 
-The server exposes eleven tools across seven engines:
+The server exposes thirteen tools across eight engines:
 
 ### DuckDuckGo (free, fast, raw)
 
@@ -56,6 +57,14 @@ The server exposes eleven tools across seven engines:
 
 - `x_search`: Search X/Twitter via vendored Bird CLI. Great for real-time discourse, breaking news, and community engagement signals. Requires `AUTH_TOKEN` and `CT0` environment variables from browser cookies.
 
+### Wikipedia (free, knowledge base)
+
+- `wikipedia_search`: Search Wikipedia and return full article text with related results. Great for factual, encyclopedic context.
+
+### GitHub Issue Thread (requires gh CLI or GITHUB_TOKEN)
+
+- `get_github_issue`: Read a full GitHub Issue or PR thread with all comments, sorted by reactions.
+
 ### Groq (requires API key)
 
 - `groq_browse`: Interactive browser search via GPT-OSS models
@@ -74,10 +83,10 @@ uv sync
 uv run pytest
 
 # Run a single test file
-uv run pytest tests/test_ddg_functional.py
+uv run pytest tests/test_search.py
 
 # Run a single test
-uv run pytest tests/test_ddg_functional.py::TestDDGSearch::test_ddg_search_basic_text
+uv run pytest tests/test_search.py::TestDDGSearch::test_ddg_search_basic_text
 
 # Run source-specific tests
 uv run pytest tests/test_reddit.py tests/test_hackernews.py tests/test_github.py tests/test_polymarket.py
@@ -114,9 +123,11 @@ from .groq_tools import browse as _groq_browse
 from .groq_tools import research as _groq_research
 from .groq_tools import analyze_page as _groq_analyze_page
 from .reddit import reddit_search_tool as _reddit_search_tool
-from .hackernews import search_hackernews as _search_hn
+from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
 from .polymarket import search_polymarket as _search_pm
 from .x import search_x as _search_x
+from .github import get_github_issue as _get_github_issue
+from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 ```
 
 ### Formatting

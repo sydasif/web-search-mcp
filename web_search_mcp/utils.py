@@ -39,7 +39,7 @@ def format_auth_error() -> ErrorResponse:
     """Returns a consistent authentication error."""
     return ErrorResponse(
         error="Groq API key not configured",
-        details="Set SEARCH_MCP_GROQ_API_KEY in your MCP config or GROQ_API_KEY environment variable.",
+        details="Set SEARCH_MCP_GROQ_API_KEY in your MCP config or environment.",
     )
 
 

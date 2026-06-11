@@ -16,6 +16,8 @@ from urllib.parse import urlencode, urlparse
 
 import httpx
 
+from .config import settings
+
 logger = logging.getLogger(__name__)
 
 SEARCH_URL = "https://api.github.com/search/issues"
@@ -24,7 +26,7 @@ REPO_API = "https://api.github.com/repos"
 DEPTH_LIMITS = {"quick": 15, "default": 30, "deep": 60}
 ENRICH_LIMITS = {"quick": 3, "default": 5, "deep": 8}
 
-USER_AGENT = "web-search-mcp/1.0"
+USER_AGENT = settings.user_agent
 MAX_WORKERS = 5
 TIMEOUT = 30
 
@@ -58,7 +60,7 @@ def _fetch_json(
 ) -> dict | list | None:
     """Fetch JSON from GitHub API. Returns None on failure."""
     headers = {
-        "User-Agent": USER_AGENT,
+        "User-Agent": settings.user_agent,
         "Accept": "application/vnd.github+json",
     }
     if token:

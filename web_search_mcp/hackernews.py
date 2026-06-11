@@ -14,6 +14,8 @@ from urllib.parse import urlencode
 
 import httpx
 
+from .config import settings
+
 logger = logging.getLogger(__name__)
 
 ALGOLIA_SEARCH_URL = "https://hn.algolia.com/api/v1/search"
@@ -128,7 +130,7 @@ def search_hackernews(
     url = f"{ALGOLIA_SEARCH_URL}?{urlencode(params)}"
 
     try:
-        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": "web-search-mcp/1.0"})
+        resp = httpx.get(url, timeout=TIMEOUT, headers={"User-Agent": settings.user_agent})
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
@@ -179,7 +181,7 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict:
     """Fetch top-level comments for a story from Algolia items endpoint."""
     url = f"{ALGOLIA_ITEM_URL}/{object_id}"
     try:
-        resp = httpx.get(url, timeout=15, headers={"User-Agent": "web-search-mcp/1.0"})
+        resp = httpx.get(url, timeout=15, headers={"User-Agent": settings.user_agent})
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:

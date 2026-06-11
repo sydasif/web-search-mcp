@@ -121,7 +121,6 @@ def test_format_auth_error():
 
     assert error.error == "Groq API key not configured"
     assert "SEARCH_MCP_GROQ_API_KEY" in error.details
-    assert "GROQ_API_KEY" in error.details
 
 
 def test_format_empty_query_error():
