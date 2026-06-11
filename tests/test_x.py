@@ -126,7 +126,7 @@ class TestAvailability(unittest.TestCase):
             assert is_authenticated() is False
 
     def test_is_authenticated_false_only_token(self):
-        with patch.dict(os.environ, {"AUTH_TOKEN": "abc123"}, clear=False):
+        with patch.dict(os.environ, {"AUTH_TOKEN": "abc123"}, clear=True):
             assert is_authenticated() is False
 
 

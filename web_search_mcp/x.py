@@ -119,7 +119,7 @@ def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
     return parsed
 
 
-def _parse_item(tweet: dict, index: int, query: str) -> dict | None:
+def _parse_item(tweet: Any, index: int, query: str) -> dict | None:
     """Parse a single tweet dict into a normalized item."""
     if not isinstance(tweet, dict):
         return None
