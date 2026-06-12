@@ -18,7 +18,6 @@ The application follows a modular architecture with clear separation of concerns
 - **reddit/**: Keyless Reddit search via RSS + shreddit enrichment (`reddit_search_tool`)
 - **hackernews.py**: Hacker News search via Algolia API (`search_hackernews`)
 - **github.py**: GitHub Issues/PRs search (`search_github`)
-- **polymarket.py**: Polymarket prediction market search via Gamma API (`search_polymarket`)
 - **x.py**: X/Twitter search via vendored Bird CLI (`search_x`) — requires `AUTH_TOKEN` + `CT0` cookies
 - **groq_tools.py**: Groq-powered tools — `search` (unified AI search: GPT-OSS browse or Compound auto-research), `analyze_page` (URL visit + interpretation)
 - **groq_client.py**: Shared Groq API client wrapper
@@ -51,10 +50,6 @@ The server exposes 15 tools across nine engines:
 ### GitHub (free, code discussions)
 
 - `github_search`: Search GitHub Issues and PRs. Great for bug reports, feature requests, and community sentiment on open-source projects. Optionally authenticates via `GITHUB_TOKEN` or `gh` CLI.
-
-### Polymarket (free, prediction signals)
-
-- `polymarket_search`: Search Polymarket prediction markets via Gamma API. Great for odds, market signals, and crowd-sourced probability estimates. No API key needed.
 
 ### X/Twitter (requires AUTH_TOKEN + CT0 cookies)
 
@@ -100,7 +95,7 @@ uv run pytest tests/test_search.py
 uv run pytest tests/test_search.py::TestDDGSearch::test_ddg_search_basic_text
 
 # Run source-specific tests
-uv run pytest tests/test_reddit.py tests/test_hackernews.py tests/test_github.py tests/test_polymarket.py
+uv run pytest tests/test_reddit.py tests/test_hackernews.py tests/test_github.py
 
 # Run developer tools tests
 uv run pytest tests/test_developer_tools.py
@@ -137,7 +132,6 @@ from .groq_tools import search as _groq_search
 from .groq_tools import analyze_page as _groq_analyze_page
 from .reddit import reddit_search_tool as _reddit_search_tool
 from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
-from .polymarket import search_polymarket as _search_pm
 from .x import search_x as _search_x
 from .github import get_github_issue as _get_github_issue
 from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool

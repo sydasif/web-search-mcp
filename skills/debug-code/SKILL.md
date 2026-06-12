@@ -48,7 +48,6 @@ Use the best available tool for the evidence needed. Do not block debugging just
 
 #### Not Used
 
-`polymarket_search` (prediction markets) — irrelevant for code debugging.
 
 ## Tool Sources
 

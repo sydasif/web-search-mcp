@@ -24,7 +24,6 @@ Here's what you get:
 - **Search GitHub** — find issues, PRs, and bug reports across repos
 - **Read GitHub issues** — fetch full issue/PR threads with all comments, sorted by reactions
 - **Search X/Twitter** — real-time posts and breaking news
-- **Search prediction markets** — odds and crowd-sourced probability estimates from Polymarket
 - **AI-powered research** — let Groq's models search, browse, and synthesize for you
 
 Most tools are **free and require no API keys**. A few need setup (detailed below).
@@ -57,7 +56,7 @@ That's it. You now have web search in your LLM.
 
 ### Step 3: Optional — Enable More Tools
 
-Want Reddit, Hacker News, GitHub, Polymarket, or X/Twitter search? They work out of the box — no extra config needed.
+Want Reddit, Hacker News, GitHub, or X/Twitter search? They work out of the box — no extra config needed.
 
 Want AI-powered research via Groq? Add an API key:
 
@@ -151,15 +150,6 @@ Behind the scenes:
   x_search(query="AI", depth="default")
 ```
 
-### Search Prediction Markets
-
-```
-Ask your LLM: "What are the current odds on the next US presidential election?"
-
-Behind the scenes:
-  polymarket_search(topic="US presidential election")
-```
-
 ### AI-Powered Deep Research
 
 ```
@@ -226,7 +216,6 @@ Not sure which tool to use? Here's a quick guide:
 | Bug reports / feature requests | `github_search`     | Issues and PRs across repos                     |
 | Full issue/PR conversation     | `get_github_issue`  | Complete thread with all comments               |
 | Real-time social media         | `x_search`          | Live posts and breaking news                    |
-| Prediction market odds         | `polymarket_search` | Crowd-sourced probabilities                     |
 | AI-powered research            | `groq_search`       | AI searches, browses, and synthesizes           |
 | Deep page analysis             | `groq_analyze_page` | AI reads AND interprets                         |
 | Package info                   | `package_info`      | Version, downloads, license, deps               |
@@ -339,12 +328,6 @@ The `auto` backend handles this for you — it tries the fast option first and a
 | `github_search`    | Search Issues and PRs      | `query`, `max_results`, `depth`, `token` (optional) |
 | `get_github_issue` | Fetch full issue/PR thread | `url` (full GitHub issue or PR URL)                 |
 
-### Polymarket Search (free, no API key)
-
-| Tool                | What It Does              | Key Parameters                  |
-| ------------------- | ------------------------- | ------------------------------- |
-| `polymarket_search` | Search prediction markets | `topic`, `max_results`, `depth` |
-
 ### X/Twitter Search (requires cookies)
 
 | Tool       | What It Does     | Key Parameters                             |
@@ -450,11 +433,11 @@ uv run web-search-mcp
 
 **Do I need API keys?**
 
-For most tools, no. Web search, Reddit, Hacker News, Wikipedia, GitHub, and Polymarket all work without any API key. You only need a Groq API key for the AI-powered tools (search, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
+For most tools, no. Web search, Reddit, Hacker News, Wikipedia, and GitHub all work without any API key. You only need a Groq API key for the AI-powered tools (search, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
 
 **Is this free?**
 
-The DuckDuckGo, Reddit, Hacker News, Wikipedia, GitHub, and Polymarket tools are completely free. Groq has a generous free tier. X/Twitter uses your browser session.
+The DuckDuckGo, Reddit, Hacker News, Wikipedia, and GitHub tools are completely free. Groq has a generous free tier. X/Twitter uses your browser session.
 
 **How is this different from just searching in the browser?**
 
@@ -528,4 +511,4 @@ uv run web-search-mcp
 
 ---
 
-> **Acknowledgment:** This project is built on publicly available APIs, open-source libraries, and community research. DuckDuckGo, Reddit RSS, Hacker News Algolia API, Wikipedia MediaWiki API, GitHub REST API, Polymarket Gamma API, and Groq's API are all used in accordance with their respective terms.
+> **Acknowledgment:** This project is built on publicly available APIs, open-source libraries, and community research. DuckDuckGo, Reddit RSS, Hacker News Algolia API, Wikipedia MediaWiki API, GitHub REST API, and Groq's API are all used in accordance with their respective terms.

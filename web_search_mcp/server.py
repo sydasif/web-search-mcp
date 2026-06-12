@@ -16,7 +16,6 @@ from .groq_tools import (
 from .hackernews import enrich_top_stories as _enrich_hn
 from .hackernews import search_hackernews as _search_hn
 from .models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
-from .polymarket import search_polymarket as _search_pm
 from .reddit import reddit_search_tool as _reddit_search_tool
 from .registries import (
     format_package_info as _fmt_pkg_info,
@@ -363,77 +362,6 @@ def _format_hn_markdown(items: list[dict], query: str) -> str:
     return format_results_markdown(items, query, "Hacker News", "stories", _item_lines)
 
 
-# ─────────────────────────────────────────────────────────────
-# Polymarket tools — free, prediction markets
-# Best for: odds, predictions, market signals
-# ─────────────────────────────────────────────────────────────
-
-
-@mcp.tool(
-    name="polymarket_search",
-    annotations={
-        "title": "Search Polymarket prediction markets",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def polymarket_search(
-    topic: str,
-    max_results: int = 15,
-    depth: Literal["quick", "default", "deep"] = "default",
-    response_format: Literal["json", "markdown"] = "markdown",
-) -> str | list[dict] | ErrorResponse:
-    """Search Polymarket prediction markets via Gamma API — free, no API key needed.
-
-    Role: Prediction signals. Use this for odds, market movements, and
-    crowd-sourced probability estimates. Alternative: web_search for
-    general news, groq_search for synthesized multi-source research.
-
-    Args:
-        topic: Search topic (e.g. 'NVIDIA', 'presidential election', 'Fed rate cut')
-        max_results: Max results (capped by depth: quick=5, default=15, deep=25)
-        depth: Search depth — controls query expansion and result limits
-        response_format: Output format ('json' or 'markdown')
-
-    Returns:
-        list: Polymarket events with outcome prices, volume, and liquidity
-        str: Markdown-formatted results (when response_format="markdown")
-
-    Examples:
-        - "Will the Fed cut rates in 2026"
-        - "NVIDIA stock price"
-        - "US presidential election"
-
-    Error Handling:
-        - Empty results: Try a broader topic or different phrasing.
-    """
-    try:
-        items = _search_pm(topic, depth=depth)[:max_results]
-        if response_format == "markdown":
-            return _format_pm_markdown(items, topic)
-        return items
-    except Exception as e:
-        logger.error("Polymarket search failed: %s", e)
-        return format_error(f"Polymarket search failed: {e}")
-
-
-def _format_pm_markdown(items: list[dict], topic: str) -> str:
-    """Format Polymarket results as markdown."""
-    def _item_lines(item: dict, i: int) -> list[str]:
-        lines = [f"{i}. **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**"]
-        outcomes = item.get("outcome_prices", [])
-        if outcomes:
-            odds_str = ", ".join(f"{name}: {p:.0%}" for name, p in outcomes)
-            lines.append(f"   Odds: {odds_str}")
-        vol = item.get("volume1mo") or item.get("volume24hr") or 0
-        if vol:
-            lines.append(f"   Volume: ${vol:,.0f}")
-        if item.get("price_movement"):
-            lines.append(f"   Movement: {item['price_movement']}")
-        return lines
-    return format_results_markdown(items, topic, "Polymarket", "markets", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────

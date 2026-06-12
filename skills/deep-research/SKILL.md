@@ -48,7 +48,6 @@ This skill uses the `ddg_search` MCP server (11 tools). Search, dedup, clusterin
 | `web_search`        | DuckDuckGo web/news search          | First pass: news, background, official sources        |
 | `web_search` (domain) | DuckDuckGo scoped to a domain     | Targeted docs: `docs.python.org`, `react.dev`, RFCs   |
 | `fetch_page`        | Clean HTML-to-markdown from a URL   | Read articles, changelogs, specs, papers              |
-| `polymarket_search` | Prediction market odds and movement | Topics involving forecasts, betting, market sentiment |
 
 ### Tier 2 — Community & Social Signal
 
@@ -130,7 +129,6 @@ Before community searches, resolve platform-scoped targeting. This is where you 
 | AI coding          | `ChatGPTCoding, LocalLLaMA, singularity`          |
 | AI chat models     | `LocalLLaMA, ChatGPT, ClaudeAI, singularity`      |
 | SaaS/productivity  | `SaaS, productivity, Entrepreneur`                |
-| Prediction markets | `Polymarket, Kalshi, predictionmarkets`           |
 
 **X handles:** For person/product topics, run `web_search "{topic} X handle"` for the primary handle and 1-2 commentators.
 
