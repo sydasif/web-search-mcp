@@ -21,7 +21,7 @@ This file gives Codebuff context about your project: goals, commands, convention
 - **Data flow:** Client → MCP tool (server.py) → engine module (ddg.py, reddit/, etc.) → external API → Pydantic model → response
 - **Key modules:**
   - `server.py` — 15 MCP tool definitions, imports with `_alias` pattern to avoid name collisions
-  - `ddg.py` — DuckDuckGo search + fetch_page (trafilatura for content extraction)
+  - `ddg.py` — DuckDuckGo search (with `domain` param for scoped docs searches, replaces old `search_docs`) + fetch_page (trafilatura for content extraction)
   - `groq_tools.py` / `groq_client.py` — AI-powered search (unified browse+compound) and analyze_page via Groq API
   - `registries.py` — npm/PyPI/crates.io/Go package lookup and search
   - `errors.py` — Error message parsing with language detection + Stack Overflow search
