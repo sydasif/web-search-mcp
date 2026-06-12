@@ -333,6 +333,9 @@ def hackernews_search(
     Error Handling:
         - Empty results: Try a more general query or broaden the search terms.
     """
+    if not query or not query.strip():
+        return format_error("Query cannot be empty")
+
     try:
         items = _search_hn(query, depth=depth)[:max_results]
         items = _enrich_hn(items, depth=depth)
@@ -346,6 +349,7 @@ def hackernews_search(
 
 def _format_hn_markdown(items: list[dict], query: str) -> str:
     """Format HN results as markdown."""
+
     def _item_lines(item: dict, i: int) -> list[str]:
         points = item.get("engagement", {}).get("points", 0)
         comments = item.get("engagement", {}).get("comments", 0)
@@ -359,9 +363,8 @@ def _format_hn_markdown(items: list[dict], query: str) -> str:
             for c in item["top_comments"][:2]:
                 lines.append(f"   > {c.get('text', '')[:200]}...")
         return lines
+
     return format_results_markdown(items, query, "Hacker News", "stories", _item_lines)
-
-
 
 
 # ─────────────────────────────────────────────────────────────
@@ -525,6 +528,9 @@ def github_search(
         - 403 rate limit: Wait or use a token with higher limits.
         - Empty results: Try a broader query or different keywords.
     """
+    if not query or not query.strip():
+        return format_error("Query cannot be empty")
+
     try:
         from .github import enrich_with_comments as _enrich_gh
         from .github import search_github as _search_gh
@@ -541,6 +547,7 @@ def github_search(
 
 def _format_gh_markdown(items: list[dict], query: str) -> str:
     """Format GitHub results as markdown."""
+
     def _item_lines(item: dict, i: int) -> list[str]:
         emoji = "🔀" if item.get("is_pr") else "🐛"
         repo = item.get("repository", "")
@@ -559,6 +566,7 @@ def _format_gh_markdown(items: list[dict], query: str) -> str:
             for c in item["top_comments"][:1]:
                 lines.append(f"   > {c.get('excerpt', '')[:200]}...")
         return lines
+
     return format_results_markdown(items, query, "GitHub", "issues/PRs", _item_lines)
 
 
@@ -605,11 +613,16 @@ def get_github_issue(url: str) -> str | ErrorResponse:
         return _get_github_issue(url)
     except Exception as e:
         logger.error("get_github_issue failed: %s", e)
-        return format_error(f"Failed to fetch issue: {e}")# ─────────────────────────────────────────────────────────────
+        return format_error(
+            f"Failed to fetch issue: {e}"
+        )  # ─────────────────────────────────────────────────────────────
+
+
 # Groq tools — AI-powered web search (browse + compound)
 # Best for: deep research, validation, multi-step synthesis
 # Costs tokens — use DDG tools for quick lookups
 # ─────────────────────────────────────────────────────────────
+
 
 @mcp.tool(
     name="groq_search",
@@ -623,7 +636,9 @@ def get_github_issue(url: str) -> str | ErrorResponse:
 )
 def groq_search(
     query: str,
-    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"] = "groq/compound-mini",
+    model: Literal[
+        "openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"
+    ] = "groq/compound-mini",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
     """AI-powered web search via Groq — browse interactively or auto-research.
@@ -803,6 +818,7 @@ def _format_x_markdown(items: list[dict], query: str) -> str:
         if item.get("date"):
             lines.append(f"   {item['date']}")
         return lines
+
     return format_results_markdown(items, query, "X/Twitter", "posts", _item_lines)
 
 

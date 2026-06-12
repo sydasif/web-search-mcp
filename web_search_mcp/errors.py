@@ -365,6 +365,25 @@ def translate_error(
     parser = ErrorParser()
     parsed = parser.parse(error_message, language=language)
 
+    # If we couldn't detect a language or error type, don't search SO —
+    # the results would just be popular posts with no relevance.
+    if parsed.error_type == "Unknown Error" and not parsed.language:
+        lines = [
+            "# Error Analysis",
+            "",
+            "**Error type:** Unknown Error",
+            "**Language:** Could not detect",
+            "",
+            "**Parsed message:**",
+            f"```\n{parsed.message}\n```",
+            "",
+            "*Could not identify the error type or programming language.*",
+            "",
+            "Try providing a more complete error message or stack trace.",
+            "",
+        ]
+        return "\n".join(lines)
+
     # Build search query from parsed terms
     # Use key terms + error type + language; skip the raw message to avoid noise
     query_parts = []

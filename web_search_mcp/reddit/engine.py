@@ -217,7 +217,11 @@ def _apply_scores(post: dict[str, Any], scored: dict[str, int]) -> None:
 
 def _discover(topic: str, depth: str, subreddits: list[str] | None) -> list[dict[str, Any]]:
     # Tier 0: demoted one-shot .json (dead for normal users too, but free to try).
-    posts = _tier0_json(topic, depth)
+    # Skip when subreddits are specified — .json is a global unfiltered search,
+    # so it would bypass the caller's subreddit filter.
+    posts: list[dict[str, Any]] = []
+    if not subreddits:
+        posts = _tier0_json(topic, depth)
     if posts:
         logger.debug("Tier 0 (.json) returned %d posts", len(posts))
         return posts
