@@ -4,7 +4,7 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-Web Search MCP gives your LLM real-time access to the web — from simple Google-style searches to deep AI-powered research. Search the web, read articles, check Reddit, browse Hacker News, look up Wikipedia, track GitHub issues, read full issue threads, follow X/Twitter discussions, explore prediction markets, and more.
+Web Search MCP gives your LLM real-time access to the web — from simple Google-style searches to deep AI-powered research. Search the web, read articles, check Reddit, browse Hacker News, look up Wikipedia, track GitHub issues, read full issue threads, follow X/Twitter discussions, search academic papers on arXiv, and more.
 
 No API keys required for most tools. Works out of the box.
 
@@ -17,10 +17,11 @@ When you ask your LLM "what's the latest on X?", it can only answer from its tra
 Here's what you get:
 
 - **Search the web** — text and news search via DuckDuckGo
-- **Read any article** — extract clean text from URLs, stripping ads and clutter
+- **Read any article or PDF** — extract clean text from URLs or PDFs, stripping ads and clutter
 - **Search Reddit** — find real discussions and community sentiment
 - **Search Hacker News** — developer opinions and tech discourse
 - **Search Wikipedia** — factual summaries, background research, citations
+- **Search arXiv** — academic papers with full-text extraction from PDFs
 - **Search GitHub** — find issues, PRs, and bug reports across repos
 - **Read GitHub issues** — fetch full issue/PR threads with all comments, sorted by reactions
 - **Search X/Twitter** — real-time posts and breaking news
@@ -129,6 +130,22 @@ Behind the scenes:
 This fetches the top matching article's full plain text (with section markers) plus a list of related articles. No API key needed.
 
 ### Search GitHub Issues
+
+### Search arXiv Papers
+
+```
+Ask your LLM: "Find recent papers on transformer attention mechanisms"
+
+Behind the scenes:
+  arxiv_search(query="transformer attention", max_results=3)
+```
+
+You can then read the full paper text by fetching the PDF:
+
+```
+Behind the scenes (chained):
+  fetch_page(url="https://arxiv.org/pdf/2209.15001v3")
+```
 
 ### Read a Full GitHub Issue Thread
 
@@ -277,7 +294,7 @@ The `x_search` tool needs two cookies from a logged-in X session. Here's how to 
 4. Find and copy the values for `auth_token` and `ct0`
 5. Add them to your MCP config as `AUTH_TOKEN` and `CT0`
 
-These cookies last about 24 hours. If X search stops working, refresh them.
+Cookie lifetimes vary. Some are **session cookies** that last ~24 hours. Others are **persistent cookies** that can last months or longer. Check the `Expires`/`Max-Age` column in DevTools to see how long yours will last. If X search stops working, refresh them.
 
 ---
 
@@ -302,7 +319,7 @@ The `auto` backend handles this for you — it tries the fast option first and a
 | Tool         | What It Does   | Key Parameters                                                                                                          |
 | ------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `web_search` | Search the web | `query`, `search_type` ("text" or "news"), `max_results`, `time_range` ("d", "w", "m", "y"), `region`, `page`, `domain` |
-| `fetch_page` | Read a URL     | `url`, `output_format` ("txt", "markdown", "html", "json"), `include_metadata`, `max_length`, `backend`                 |
+| `fetch_page` | Read a URL or PDF     | `url`, `output_format` ("txt", "markdown", "html", "json"), `include_metadata`, `max_length`, `backend` — PDF text extraction via pypdf |
 
 ### Reddit Search (free, no API key)
 
@@ -328,6 +345,14 @@ The `auto` backend handles this for you — it tries the fast option first and a
 | ------------------ | -------------------------- | --------------------------------------------------- |
 | `github_search`    | Search Issues and PRs      | `query`, `max_results`, `depth`, `token` (optional) |
 | `get_github_issue` | Fetch full issue/PR thread | `url` (full GitHub issue or PR URL)                 |
+
+### arXiv Search (free, no API key)
+
+| Tool            | What It Does                      | Key Parameters                                               |
+| --------------- | --------------------------------- | ------------------------------------------------------------ |
+| `arxiv_search`  | Search academic papers on arXiv   | `query`, `max_results` (max 50), `sort_by` ("relevance", "submitted_date", "updated_date") |
+
+arXiv returns paper titles, authors, dates, categories, and abstract excerpts. To read the full paper, chain with `fetch_page` on the PDF URL (PDF text extraction is built in).
 
 ### X/Twitter Search (requires cookies)
 
@@ -379,7 +404,7 @@ This happens when a website detects automated requests. The `fetch_page` tool ha
 
 ### X/Twitter search not working
 
-X cookies expire after ~24 hours. To fix:
+X cookies may expire over time. To fix:
 
 1. Log into x.com again
 2. Get fresh `auth_token` and `ct0` cookies (see [Getting X/Twitter Cookies](#getting-xtwitter-cookies) above)
@@ -434,11 +459,11 @@ uv run web-search-mcp
 
 **Do I need API keys?**
 
-For most tools, no. Web search, Reddit, Hacker News, Wikipedia, and GitHub all work without any API key. You only need a Groq API key for the AI-powered tools (search, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
+For most tools, no. Web search, Reddit, Hacker News, Wikipedia, arXiv, and GitHub all work without any API key. You only need a Groq API key for the AI-powered tools (search, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
 
 **Is this free?**
 
-The DuckDuckGo, Reddit, Hacker News, Wikipedia, and GitHub tools are completely free. Groq has a generous free tier. X/Twitter uses your browser session.
+The DuckDuckGo, Reddit, Hacker News, Wikipedia, arXiv, and GitHub tools are completely free. Groq has a generous free tier. X/Twitter uses your browser session.
 
 **How is this different from just searching in the browser?**
 
@@ -512,4 +537,4 @@ uv run web-search-mcp
 
 ---
 
-> **Acknowledgment:** This project is built on publicly available APIs, open-source libraries, and community research. DuckDuckGo, Reddit RSS, Hacker News Algolia API, Wikipedia MediaWiki API, GitHub REST API, and Groq's API are all used in accordance with their respective terms.
+> **Acknowledgment:** This project is built on publicly available APIs, open-source libraries, and community research. DuckDuckGo, Reddit RSS, Hacker News Algolia API, Wikipedia MediaWiki API, arXiv API, GitHub REST API, and Groq's API are all used in accordance with their respective terms.
