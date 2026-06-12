@@ -7,6 +7,7 @@ from web_search_mcp.utils import (
     format_auth_error,
     format_empty_query_error,
     format_empty_response_error,
+    format_results_markdown,
     RateLimiter,
 )
 
@@ -155,6 +156,126 @@ def test_format_empty_response_error_details():
     # Details is a generic template that doesn't include the source
     assert "The model produced no response" in error.details
     assert "Try rephrasing" in error.details
+
+
+
+class TestFormatResultsMarkdown:
+    """Tests for format_results_markdown helper."""
+
+    def test_empty_items(self):
+        """Test that empty items returns the no-results message."""
+        result = format_results_markdown([], "test query", "Test")
+        assert result == "No Test results found for 'test query'."
+
+    def test_single_item(self):
+        """Test formatting a single item via callback."""
+        items = [{"title": "Result 1", "url": "https://example.com/1"}]
+        result = format_results_markdown(
+            items,
+            "test",
+            "Test",
+            "results",
+            lambda item, i: [f"{i}. **[{item['title']}]({item['url']})**"],
+        )
+        assert "# Test Results for 'test'" in result
+        assert "Found 1 results." in result
+        assert "1. **[Result 1](https://example.com/1)**" in result
+
+    def test_multiple_items(self):
+        """Test formatting multiple items with correct numbering."""
+        items = [
+            {"name": "First"},
+            {"name": "Second"},
+            {"name": "Third"},
+        ]
+        result = format_results_markdown(
+            items,
+            "multi",
+            "Items",
+            "entries",
+            lambda item, i: [f"{i}. {item['name']}"],
+        )
+        assert "Found 3 entries." in result
+        assert "1. First" in result
+        assert "2. Second" in result
+        assert "3. Third" in result
+
+    def test_no_format_item_callback(self):
+        """Test without format_item — only header and count."""
+        items = [{"title": "A"}, {"title": "B"}]
+        result = format_results_markdown(items, "no callback", "Test")
+        assert "# Test Results for 'no callback'" in result
+        assert "Found 2 results." in result
+        # No item-specific lines should appear
+        assert "1." not in result
+
+    def test_custom_platform_and_label(self):
+        """Test custom platform name and item_label."""
+        items = [{"text": "post"}]
+        result = format_results_markdown(
+            items,
+            "my query",
+            "Hacker News",
+            "stories",
+            lambda item, i: [f"{i}. {item['text']}"],
+        )
+        assert "# Hacker News Results for 'my query'" in result
+        assert "Found 1 stories." in result
+        assert "1. post" in result
+
+    def test_special_characters_in_query(self):
+        """Test with special characters in the query string."""
+        items = [{"title": "Result"}]
+        result = format_results_markdown(
+            items,
+            "test & query < >",
+            "Test",
+            format_item=lambda item, i: [f"{i}. {item['title']}"],
+        )
+        assert "# Test Results for 'test & query < >'" in result
+
+    def test_unicode_in_query(self):
+        """Test with Unicode characters in the query."""
+        items = [{"title": "Café"}]
+        result = format_results_markdown(
+            items,
+            "café ☕",
+            "Test",
+            format_item=lambda item, i: [f"{i}. {item['title']}"],
+        )
+        assert "# Test Results for 'café ☕'" in result
+        assert "1. Café" in result
+
+    def test_callback_returns_multiple_lines(self):
+        """Test callback returning multiple lines per item."""
+        items = [{"title": "Item", "score": 42}]
+        result = format_results_markdown(
+            items,
+            "multi-line",
+            "Test",
+            format_item=lambda item, i: [
+                f"{i}. {item['title']}",
+                f"   Score: {item['score']}",
+            ],
+        )
+        lines = result.split("\n")
+        assert "1. Item" in lines
+        assert "   Score: 42" in lines
+
+    def test_item_lines_have_trailing_blank_line_separator(self):
+        """Test that items are separated by blank lines."""
+        items = [{"title": "A"}, {"title": "B"}]
+        result = format_results_markdown(
+            items,
+            "sep",
+            "Test",
+            format_item=lambda item, i: [f"{i}. {item['title']}"],
+        )
+        # Should have blank line between "1. A" and "2. B"
+        lines = result.split("\n")
+        assert lines[3] == "1. A"  # first item
+        assert lines[4] == ""       # blank separator
+        assert lines[5] == "2. B"  # second item
 
 
 class TestRateLimiter:
