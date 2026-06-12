@@ -266,15 +266,23 @@ class TestDDGSearchErrorScenarios:
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
-    def test_ddg_search_whitespace_query(self):
+    @patch("web_search_mcp.ddg.DDGS")
+    def test_ddg_search_whitespace_query(self, mock_ddgs_class):
         """Test DDG search with whitespace-only query."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = []
+
         req = SearchRequest(query="   ", max_results=5)
         result = ddg_search(req)
 
         assert isinstance(result, (ErrorResponse, SearchResponse))
 
-    def test_ddg_search_long_query(self):
+    @patch("web_search_mcp.ddg.DDGS")
+    def test_ddg_search_long_query(self, mock_ddgs_class):
         """Test DDG search with very long query."""
+        mock_ddgs = mock_ddgs_class.return_value.__enter__.return_value
+        mock_ddgs.text.return_value = [{"title": "R", "href": "https://x.com"}]
+
         long_query = "a " * 500  # 1000 characters
         req = SearchRequest(query=long_query, max_results=5)
         result = ddg_search(req)
@@ -375,8 +383,11 @@ class TestFetchPageErrorScenarios:
         assert isinstance(result, ErrorResponse)
         assert "no readable text" in result.error.lower()
 
-    def test_fetch_page_invalid_url(self):
+    @patch("web_search_mcp.ddg._request_with_fallback")
+    def test_fetch_page_invalid_url(self, mock_fetch):
         """Test fetch_page with invalid URL."""
+        mock_fetch.side_effect = httpx.RequestError("Invalid URL")
+
         result = fetch_page(url="not-a-valid-url")
 
         assert isinstance(result, (ErrorResponse, PageResponse))
