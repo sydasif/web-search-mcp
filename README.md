@@ -450,7 +450,7 @@ uv run web-search-mcp
 
 **Do I need API keys?**
 
-For most tools, no. Web search, Reddit, Hacker News, Wikipedia, GitHub, and Polymarket all work without any API key. You only need a Groq API key for the AI-powered tools (browse, research, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
+For most tools, no. Web search, Reddit, Hacker News, Wikipedia, GitHub, and Polymarket all work without any API key. You only need a Groq API key for the AI-powered tools (search, analyze_page) and X/Twitter cookies for X search. The `get_github_issue` tool needs the `gh` CLI installed (which uses your existing GitHub auth) or a `GITHUB_TOKEN` environment variable.
 
 **Is this free?**
 

@@ -1,5 +1,5 @@
 """Domain logic for Groq-powered web tools.
-Consolidates browse, research, and page analysis tools.
+Provides unified search and page analysis via Groq's API.
 """
 
 import logging
