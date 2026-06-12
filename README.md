@@ -213,6 +213,7 @@ Not sure which tool to use? Here's a quick guide:
 | Reddit discussions             | `reddit_search`     | Real community opinions                         |
 | Tech opinions                  | `hackernews_search` | Developer-focused discussions                   |
 | Factual summaries              | `wikipedia_search`  | Encyclopedia articles with full text            |
+| Academic papers                | `arxiv_search`      | Research papers with authors and abstracts       |
 | Bug reports / feature requests | `github_search`     | Issues and PRs across repos                     |
 | Full issue/PR conversation     | `get_github_issue`  | Complete thread with all comments               |
 | Real-time social media         | `x_search`          | Live posts and breaking news                    |
