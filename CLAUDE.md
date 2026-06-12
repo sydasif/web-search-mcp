@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The application follows a modular architecture with clear separation of concerns:
 
-- **server.py**: FastMCP server entry point, defines 17 MCP tools exposed to clients
+- **server.py**: FastMCP server entry point, defines 15 MCP tools exposed to clients
 - **ddg.py**: DuckDuckGo search + web content extraction (`ddg_search`, `fetch_page`) using `trafilatura`
 - **wikipedia.py**: Wikipedia search and article reading via MediaWiki API (`wikipedia_search_tool`)
 - **reddit/**: Keyless Reddit search via RSS + shreddit enrichment (`reddit_search_tool`)
@@ -20,7 +20,7 @@ The application follows a modular architecture with clear separation of concerns
 - **github.py**: GitHub Issues/PRs search (`search_github`)
 - **polymarket.py**: Polymarket prediction market search via Gamma API (`search_polymarket`)
 - **x.py**: X/Twitter search via vendored Bird CLI (`search_x`) — requires `AUTH_TOKEN` + `CT0` cookies
-- **groq_tools.py**: Groq-powered tools — `browse` (GPT-OSS interactive search), `research` (auto-selecting compound search), `analyze_page` (URL visit + interpretation)
+- **groq_tools.py**: Groq-powered tools — `search` (unified AI search: GPT-OSS browse or Compound auto-research), `analyze_page` (URL visit + interpretation)
 - **groq_client.py**: Shared Groq API client wrapper
 - **http_client.py**: Shared HTTP client for keyless API calls
 - **models.py**: Pydantic models for request/response validation (ErrorResponse, SearchRequest, PageResponse, SearchResult)
@@ -32,13 +32,13 @@ The application follows a modular architecture with clear separation of concerns
 
 ## MCP Tool Definitions
 
-The server exposes 17 tools across nine engines:
+The server exposes 15 tools across nine engines:
 
 ### DuckDuckGo (free, fast, raw)
 
 - `web_search`: Universal web and news search
 - `fetch_page`: Extract clean text from URLs
-- `search_docs`: Targeted search on specific domains (e.g., docs.python.org)
+- `web_search`: Universal web and news search (use `domain` param for scoped searches)
 
 ### Reddit (free, keyless, community signal)
 
@@ -70,8 +70,7 @@ The server exposes 17 tools across nine engines:
 
 ### Groq (requires API key)
 
-- `groq_browse`: Interactive browser search via GPT-OSS models
-- `groq_research`: Deep research — auto-selects search and tools to validate findings
+- `groq_search`: AI-powered web search — GPT-OSS models for interactive browsing, Compound models for auto-research
 - `groq_analyze_page`: Visit and analyze a URL — fetches and interprets in one step
 
 ### Developer Tools (free, no API key)
@@ -134,8 +133,7 @@ uv run web-search-mcp
 ```python
 from .ddg import ddg_search
 from .ddg import fetch_page as _fetch_page
-from .groq_tools import browse as _groq_browse
-from .groq_tools import research as _groq_research
+from .groq_tools import search as _groq_search
 from .groq_tools import analyze_page as _groq_analyze_page
 from .reddit import reddit_search_tool as _reddit_search_tool
 from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
@@ -167,9 +165,9 @@ from .compare import compare_tech as _compare_tech
 - **Classes**: `PascalCase` for classes (e.g., `SearchRequest`)
 - **Constants**: `SCREAMING_SNAKE_CASE`
 - **MCP Tools**: Use `action_subject` pattern:
-  - `web_search`, `search_docs` (discovery)
+  - `web_search` (discovery, includes domain-scoped search)
   - `fetch_page` (retrieval)
-  - `groq_browse`, `groq_research`, `groq_analyze_page` (Groq tools)
+  - `groq_search`, `groq_analyze_page` (Groq tools)
   - `package_info`, `package_search`, `translate_error`, `compare_tech` (developer tools)
 - **Private functions**: Leading underscore `_helper_function`
 
@@ -226,7 +224,7 @@ def tool_name(param: type, optional: type = default) -> str | dict:
 - Use `unittest.mock.patch` for external API calls
 - Mock at the class level: `@patch("web_search_mcp.ddg.DDGS")` or `@patch("web_search_mcp.groq_client.Groq")`
 - Test classes inherit from `unittest.TestCase` (optional, pytest can run functions too)
-- Group related tests in classes with descriptive names: `TestDDGSearch`, `TestGroqBrowse`, `TestResearch`
+- Group related tests in classes with descriptive names: `TestDDGSearch`, `TestGroqSearch`, `TestAnalyzePage`
 - Use `assert` for assertions (S101 allowed in tests per ruff config)
 - Coverage includes: success, error, empty input, and parameter forwarding
 
@@ -247,7 +245,7 @@ def test_groq_search_success(self, mock_settings, mock_groq_cls):
     mock_client.chat.completions.create.return_value = mock_response
     mock_groq_cls.return_value = mock_client
 
-    result = browse("test query")
+    result = search("test query")
     assert isinstance(result, str)
 ```
 

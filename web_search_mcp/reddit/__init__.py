@@ -58,7 +58,7 @@ def reddit_search_tool(
 
     Role: Discovery. Use this for Reddit-specific discussions, opinions, and
     community insights. Alternative: web_search for general web results,
-    groq_research for synthesized multi-source research.
+    groq_search for synthesized multi-source research.
 
     Workflow: Three-tier keyless pipeline:
     - Tier 0: Legacy .json search (often 403, tried once)

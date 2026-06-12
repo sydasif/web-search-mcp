@@ -18,7 +18,6 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 # Model Type Aliases
-SupportedModel = Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 CompoundModel = Literal["groq/compound", "groq/compound-mini"]
 DEFAULT_COMPOUND_MODEL: CompoundModel = "groq/compound-mini"
 
@@ -31,57 +30,56 @@ def _unwrap_error(e: BaseException) -> BaseException:
     return e
 
 
-def browse(
+# Combined model type: GPT-OSS for browsing, Compound for auto-tool-selection
+GroqModel = Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"]
+
+# Models that use browser_search tool (GPT-OSS models)
+_BROWSE_MODELS = {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}
+
+
+def search(
     query: str,
-    model: SupportedModel = "openai/gpt-oss-20b",
+    model: GroqModel = "groq/compound-mini",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
-    """Browse the web interactively via Groq — navigates pages like a human."""
+    """AI-powered web search via Groq — browse interactively or auto-research.
+
+    Role: AI-assisted search. Use when you need the model to actively browse
+    and synthesize information from multiple pages.
+
+    Two modes based on model selection:
+    - GPT-OSS models (openai/gpt-oss-20b/120b): Interactive browsing with
+      explicit page navigation. Use reasoning_effort to control depth.
+    - Compound models (groq/compound/compound-mini): Auto-selects search tools
+      and synthesis strategy. compound-mini is faster (1 tool call),
+      compound supports up to 10 tool calls.
+
+    Alternative: web_search for raw DDG results (free, no tokens).
+    """
     if not query.strip():
         return format_empty_query_error()
 
-    try:
-        response = call_groq_api(
-            messages=[{"role": "user", "content": query}],
-            model=model,
-            reasoning_effort=reasoning_effort,
-            tools=[{"type": "browser_search"}],
-        )
-        content = response.choices[0].message.content
-        if not content:
-            return format_empty_response_error("Groq browse")
-        return content
-    except Exception as e:
-        err = _unwrap_error(e)
-        if isinstance(err, GroqClientError) and err.status_code == 401:
-            return format_auth_error()
-
-        logger.error("Groq browse failed (%s): %s", model, err)
-        return format_error(
-            f"Groq browse failed ({model})",
-            f"{err}. Try switching to a different model or use web_search instead.",
-        )
-
-
-def research(
-    query: str,
-    model: CompoundModel = DEFAULT_COMPOUND_MODEL,
-) -> str | ErrorResponse:
-    """Research a topic using Groq's Compound system — auto-selects search and tools."""
-    if not query.strip():
-        return format_empty_query_error()
-
-    safe_query = truncate_query(query)
+    is_browse = model in _BROWSE_MODELS
 
     try:
-        response = call_groq_api(
-            messages=[{"role": "user", "content": safe_query}],
-            model=model,
-            max_tokens=4096,
-        )
+        if is_browse:
+            response = call_groq_api(
+                messages=[{"role": "user", "content": query}],
+                model=model,
+                reasoning_effort=reasoning_effort,
+                tools=[{"type": "browser_search"}],
+            )
+        else:
+            safe_query = truncate_query(query)
+            response = call_groq_api(
+                messages=[{"role": "user", "content": safe_query}],
+                model=model,
+                max_tokens=4096,
+            )
+
         content = response.choices[0].message.content
         if not content:
-            return format_empty_response_error("Groq research")
+            return format_empty_response_error("Groq search")
         return content
     except Exception as e:
         err = _unwrap_error(e)
@@ -89,18 +87,20 @@ def research(
             if err.status_code == 401:
                 return format_auth_error()
             if err.status_code == 413:
-                logger.error("Groq research request too large (%s): %s", model, err)
+                logger.error("Groq search request too large (%s): %s", model, err)
                 return format_error(
-                    f"Groq's internal search limit exceeded ({model})",
-                    "The request exceeded Groq's web_search payload limit. "
-                    "Try a shorter, more focused query, or use web_search for raw results.",
+                    f"Request too large for {model}",
+                    "The request exceeded Groq's limit. Try a shorter query or use web_search for raw results.",
                 )
 
-        logger.error("Groq research failed (%s): %s", model, err)
+        logger.error("Groq search failed (%s): %s", model, err)
         return format_error(
-            f"Groq research failed ({model})",
+            f"Groq search failed ({model})",
             f"{err}. Try using web_search for raw results or groq_analyze_page for a specific URL.",
         )
+
+
+
 
 
 def analyze_page(

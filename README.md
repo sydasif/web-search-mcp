@@ -166,7 +166,7 @@ Behind the scenes:
 Ask your LLM: "Research the state of quantum computing in 2025 and validate the findings"
 
 Behind the scenes:
-  groq_research(query="state of quantum computing 2025")
+  groq_search(query="state of quantum computing 2025")
 ```
 
 ### Look Up Package Info
@@ -219,7 +219,7 @@ Not sure which tool to use? Here's a quick guide:
 | ------------------------------ | ------------------- | ------------------------------------ |
 | Quick web search               | `web_search`        | Fast, free, no API key               |
 | Read a specific URL            | `fetch_page`        | Extracts clean text, strips ads      |
-| Search a specific site         | `search_docs`       | Adds `site:domain.com` automatically |
+| Search a specific site         | `web_search`        | Use `domain="docs.python.org"` to scope results |
 | Reddit discussions             | `reddit_search`     | Real community opinions              |
 | Tech opinions                  | `hackernews_search` | Developer-focused discussions        |
 | Factual summaries              | `wikipedia_search`  | Encyclopedia articles with full text |
@@ -227,7 +227,7 @@ Not sure which tool to use? Here's a quick guide:
 | Full issue/PR conversation     | `get_github_issue`  | Complete thread with all comments    |
 | Real-time social media         | `x_search`          | Live posts and breaking news         |
 | Prediction market odds         | `polymarket_search` | Crowd-sourced probabilities          |
-| Validate findings              | `groq_research`     | AI cross-checks and expands          |
+| AI-powered research            | `groq_search`       | AI searches, browses, and synthesizes |
 | Deep page analysis             | `groq_analyze_page` | AI reads AND interprets              |
 | Package info                   | `package_info`      | Version, downloads, license, deps    |
 | Discover packages              | `package_search`    | Search npm, PyPI, crates.io, Go      |
@@ -258,7 +258,7 @@ fetch_page(url="https://example.com/benchmark-results")
 Let AI cross-check and expand on what you found.
 
 ```
-groq_research("Validate these Python async benchmark findings and find any contradictions")
+groq_search("Validate these Python async benchmark findings and find any contradictions")
 ```
 
 This discovery → reading → validation pattern gives you the most reliable results.
@@ -311,9 +311,8 @@ The `auto` backend handles this for you — it tries the fast option first and a
 
 | Tool          | What It Does           | Key Parameters                                                                                                |
 | ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `web_search`  | Search the web         | `query`, `search_type` ("text" or "news"), `max_results`, `time_range` ("d", "w", "m", "y"), `region`, `page` |
+| `web_search`  | Search the web         | `query`, `search_type` ("text" or "news"), `max_results`, `time_range` ("d", "w", "m", "y"), `region`, `page`, `domain` |
 | `fetch_page`  | Read a URL             | `url`, `output_format` ("txt", "markdown", "html", "json"), `include_metadata`, `max_length`, `backend`       |
-| `search_docs` | Search a specific site | `query`, `domain` (e.g., "docs.python.org")                                                                   |
 
 ### Reddit Search (free, no API key)
 
@@ -356,9 +355,8 @@ The `auto` backend handles this for you — it tries the fast option first and a
 
 | Tool                | What It Does                       | Best For                                       |
 | ------------------- | ---------------------------------- | ---------------------------------------------- |
-| `groq_browse`       | Interactive multi-page web search  | When you need the AI to explore multiple pages |
-| `groq_research`     | Deep research — auto-selects tools | Validating and expanding on search findings    |
-| `groq_analyze_page` | Read AND interpret a URL           | Extracting specific insights from an article   |
+| `groq_search`       | AI-powered search (browse or compound) | Deep research, validation, multi-source synthesis |
+| `groq_analyze_page` | Read AND interpret a URL              | Extracting specific insights from an article      |
 
 ### Developer Tools (free, no API key)
 
@@ -371,10 +369,10 @@ The `auto` backend handles this for you — it tries the fast option first and a
 
 **Which Groq model should I use?**
 
-- **`groq/compound-mini`** (default) — Faster, cheaper, handles most tasks well. Start here.
-- **`groq/compound`** — More thorough, uses more tools internally. Use for complex research.
-- **`openai/gpt-oss-20b`** — For `groq_browse` only. Good balance of speed and quality.
-- **`openai/gpt-oss-120b`** — For `groq_browse` only. Best quality, but slower.
+- **`groq/compound-mini`** (default) — Faster, auto-research with 1 tool call. Start here.
+- **`groq/compound`** — More thorough auto-research, up to 10 tool calls.
+- **`openai/gpt-oss-20b`** — Interactive browsing with `reasoning_effort`. Good speed/quality balance.
+- **`openai/gpt-oss-120b`** — Interactive browsing, best quality but slower.
 
 ---
 

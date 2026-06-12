@@ -30,16 +30,15 @@ class TestServerFunctionality:
         assert req.backend == "auto"
         assert req.response_format == "markdown"
 
-    def test_search_docs_functionality(self):
-        """Test search_docs server functionality."""
-        # Test that search_docs enhances queries with domain
+    def test_web_search_domain_scoping(self):
+        """Test web_search with domain parameter enhances queries."""
         query = "asyncio"
         domain = "docs.python.org"
 
-        # Simulate the query enhancement that search_docs does
-        enhanced_query = f"site:{domain} {query}"
+        # Simulate the domain scoping that web_search now does
+        effective_query = f"site:{domain} {query}" if domain else query
 
-        assert enhanced_query == "site:docs.python.org asyncio"
+        assert effective_query == "site:docs.python.org asyncio"
 
     def test_server_parameter_validation(self):
         """Test that server tools properly validate parameters."""

@@ -27,7 +27,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | Tool | What It Does | When To Use |
 |------|-------------|-------------|
 | `web_search` | DuckDuckGo web/news search with JSON or markdown output | Broad search for error messages, known bugs, solutions, release notes |
-| `search_docs` | DuckDuckGo scoped to a single domain | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`) |
+| `web_search` (domain) | DuckDuckGo scoped to a domain via the `domain` param | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`) |
 | `fetch_page` | Clean HTML-to-markdown extraction from any URL | Reading docs, changelogs, error pages, issue threads cleanly; supports metadata extraction and table inclusion |
 
 #### Tier 2 — Community & Issue Mining
@@ -44,8 +44,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | Tool | What It Does | When To Use |
 |------|-------------|-------------|
 | `groq_analyze_page` | Fetches a URL and runs an AI query against its content | Extracting specific technical details from a long docs page, changelog, or spec without reading the whole thing |
-| `groq_research` | Auto-selects search, browsing, and tools to answer a deep question | Multi-source investigation: "What changed between v2 and v3 that could break X?" or "Why is this pattern failing across these three libraries?" |
-| `groq_browse` | Interactive multi-page browser via Groq | Navigating documentation sites that require link-following, JS-rendered pages, or multi-step troubleshooting guides |
+| `groq_search` | AI-powered web search — GPT-OSS for interactive browsing, Compound for auto-research | Deep investigation: "What changed between v2 and v3?" or navigating multi-step docs |
 
 #### Not Used
 
@@ -101,7 +100,7 @@ For library/framework docs, APIs, configuration, version-specific examples, and 
 | Scenario | Tool | Why |
 |----------|------|-----|
 | "Does this error message have a known cause?" | `web_search` with the exact error string | Broadest coverage of blog posts, Stack Overflow, docs, forums |
-| "What does the official docs say about this API?" | `search_docs` scoped to the project's docs domain | Skips noise from unofficial sources |
+| "What does the official docs say about this API?" | `web_search` with `domain="docs.python.org"` | Skips noise from unofficial sources |
 | "Read this changelog / issue / PR in full" | `fetch_page` with the URL | Clean extraction without JS or paywalls |
 
 #### 4d. Issue & Community Mining — Tier 2
@@ -118,8 +117,8 @@ For library/framework docs, APIs, configuration, version-specific examples, and 
 | Scenario | Tool | Why |
 |----------|------|-----|
 | "What exactly does this 2000-line doc page say about X?" | `groq_analyze_page` with the URL and a specific question | Skips reading the full page; AI extracts just the relevant parts |
-| "What changed across versions that could cause this?" | `groq_research` with a question comparing versions | Auto-searches and synthesizes across multiple sources |
-| "Walk through this multi-step troubleshooting guide" | `groq_browse` simulating interactive navigation | Handles pages that need clicking through or JS rendering |
+| "What changed across versions that could cause this?" | `groq_search` with a question comparing versions | Auto-searches and synthesizes across multiple sources |
+| "Walk through this multi-step troubleshooting guide" | `groq_search` with `openai/gpt-oss-20b` model | Interactive navigation handles pages that need clicking through or JS rendering |
 
 Prefer primary sources: official docs, changelogs, release notes, source code, and upstream issues. Use community posts only as leads unless they include reproducible evidence.
 

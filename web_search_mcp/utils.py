@@ -55,7 +55,7 @@ def format_empty_response_error(source: str = "Groq") -> ErrorResponse:
     """Returns a consistent empty-content error."""
     return ErrorResponse(
         error=f"{source} returned empty content",
-        details="The model produced no response. Try rephrasing your query with more specific detail, or switch to a different tool (e.g. web_search for DDG results, groq_research for Compound deep research).",
+        details="The model produced no response. Try rephrasing your query with more specific detail, or switch to a different tool (e.g. web_search for DDG results, groq_search for AI-powered research).",
     )
 
 

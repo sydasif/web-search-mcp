@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 from web_search_mcp.groq_tools import (
-    research,
+    search,
     analyze_page,
 )
 from web_search_mcp.groq_client import truncate_query
@@ -38,25 +38,25 @@ class TestTruncateQuery:
         assert len(result.encode("utf-8")) <= 3001
 
 
-class TestResearch:
-    """Unit tests for research function."""
+class TestSearch:
+    """Unit tests for search function (merged browse + research)."""
 
     @patch("web_search_mcp.groq_client.settings")
     def test_empty_query_returns_error(self, mock_settings):
-        result = research("")
+        result = search("")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
     @patch("web_search_mcp.groq_client.settings")
     def test_missing_api_key_returns_error(self, mock_settings):
         mock_settings.groq_api_key = ""
-        result = research("test")
+        result = search("test")
         assert isinstance(result, ErrorResponse)
         assert "not configured" in result.error.lower()
 
     @patch("web_search_mcp.groq_client.Groq")
     @patch("web_search_mcp.groq_client.settings")
-    def test_successful_search(self, mock_settings, mock_groq_cls):
+    def test_successful_compound_search(self, mock_settings, mock_groq_cls):
         mock_settings.groq_api_key = "gsk_test123"
 
         mock_message = MagicMock()
@@ -70,7 +70,7 @@ class TestResearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = research("Latest AI developments")
+        result = search("Latest AI developments")
 
         assert isinstance(result, str)
         assert "Research results" in result
@@ -95,7 +95,7 @@ class TestResearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        research("test")
+        search("test")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["model"] == "groq/compound-mini"
@@ -116,7 +116,7 @@ class TestResearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        research("test", model="groq/compound")
+        search("test", model="groq/compound")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["model"] == "groq/compound"
@@ -130,7 +130,7 @@ class TestResearch:
         mock_client.chat.completions.create.side_effect = Exception("API error")
         mock_groq_cls.return_value = mock_client
 
-        result = research("test")
+        result = search("test")
         assert isinstance(result, ErrorResponse)
 
     @patch("web_search_mcp.groq_client.Groq")
@@ -149,7 +149,7 @@ class TestResearch:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = research("test")
+        result = search("test")
         assert isinstance(result, ErrorResponse)
         assert "empty" in result.error.lower()
 
@@ -164,9 +164,9 @@ class TestResearch:
         )
         mock_groq_cls.return_value = mock_client
 
-        result = research("test")
+        result = search("test")
         assert isinstance(result, ErrorResponse)
-        assert "limit exceeded" in result.error.lower()
+        assert "too large" in result.error.lower()
 
     @patch("web_search_mcp.groq_client.Groq")
     @patch("web_search_mcp.groq_client.settings")
@@ -187,7 +187,7 @@ class TestResearch:
         long_query = (
             "What is the latest version of Python and what new features does it introduce? " * 100
         )
-        research(long_query)
+        search(long_query)
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         sent_query = call_kwargs["messages"][0]["content"]

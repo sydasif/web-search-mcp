@@ -46,7 +46,7 @@ This skill uses the `ddg_search` MCP server (11 tools). Search, dedup, clusterin
 | Tool                | What It Does                        | When To Use                                           |
 | ------------------- | ----------------------------------- | ----------------------------------------------------- |
 | `web_search`        | DuckDuckGo web/news search          | First pass: news, background, official sources        |
-| `search_docs`       | Search scoped to a single domain    | Targeted docs: `docs.python.org`, `react.dev`, RFCs   |
+| `web_search` (domain) | DuckDuckGo scoped to a domain     | Targeted docs: `docs.python.org`, `react.dev`, RFCs   |
 | `fetch_page`        | Clean HTML-to-markdown from a URL   | Read articles, changelogs, specs, papers              |
 | `polymarket_search` | Prediction market odds and movement | Topics involving forecasts, betting, market sentiment |
 
@@ -64,8 +64,7 @@ This skill uses the `ddg_search` MCP server (11 tools). Search, dedup, clusterin
 | Tool                | What It Does                             | When To Use                                     |
 | ------------------- | ---------------------------------------- | ----------------------------------------------- |
 | `groq_analyze_page` | Fetch URL + AI query on its content      | Extract specific facts from a long docs page    |
-| `groq_research`     | Auto-selects search + browse for deep Qs | Multi-source: "What changed between v2 and v3?" |
-| `groq_browse`       | Interactive multi-page browse            | Multi-step guides, docs you need to navigate    |
+| `groq_search`       | AI-powered search (browse or compound)   | Deep research, multi-source synthesis           |
 
 ---
 
@@ -150,7 +149,7 @@ Run 2-3 searches to map the landscape. Vary the angle:
 ```bash
 web_search "{topic} 2026"              # direct
 web_search "{topic}" (news mode)        # news
-search_docs "{topic}" domain=docs.★    # official docs
+web_search "{topic}" domain="docs.python.org"  # official docs
 ```
 
 From results, pick 1-2 long-form sources to deep-read later.
@@ -179,8 +178,8 @@ Pick 1-2 highest-signal sources and go deep:
 
 ```bash
 groq_analyze_page url="{long article}" q="Extract key facts about {specific aspect}"
-groq_research "What changed between v2 and v3 of {topic}?"
-groq_browse "Walk through the {topic} setup guide"
+groq_search "What changed between v2 and v3 of {topic}?"
+groq_search "Walk through the {topic} setup guide" model="openai/gpt-oss-20b"
 ```
 
 ### Phase 4 — Synthesis (You Do This Manually)
@@ -349,4 +348,4 @@ After delivering the report, treat yourself as an expert for the rest of the con
 - **Zero results:** Widen the query. Check for typos. If still empty: "no significant discussion found."
 - **Conflicting evidence:** Present both sides with source authority notes. Don't cherry-pick.
 - **Breaking news:** Use `web_search` (news mode) + `x_search`. Timestamp everything. Flag volatility.
-- **SEO pollution:** Add `-site:spam-site.com` exclusions. Prefer `search_docs` on known-good domains. Community platforms (Reddit, HN) resist SEO gaming.
+- **SEO pollution:** Add `-site:spam-site.com` exclusions. Prefer `web_search` with `domain="..."` on known-good domains. Community platforms (Reddit, HN) resist SEO gaming.

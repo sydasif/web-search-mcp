@@ -3,30 +3,35 @@ from typing import Literal
 
 from fastmcp import FastMCP
 
-from .models import SearchRequest, FetchOutputFormat, SearchResponse, PageResponse, ErrorResponse
+from .compare import compare_tech as _compare_tech
 from .ddg import ddg_search, format_search_results_markdown
-from .utils import format_error
 from .ddg import fetch_page as _fetch_page
-from .groq_tools import (
-    browse as _groq_browse,
-    research as _groq_research,
-    analyze_page as _groq_analyze_page,
-)
-from .reddit import reddit_search_tool as _reddit_search_tool
-from .hackernews import search_hackernews as _search_hn, enrich_top_stories as _enrich_hn
-from .polymarket import search_polymarket as _search_pm
-from .x import search_x as _search_x
+from .errors import translate_error as _translate_error
 from .github import get_github_issue as _get_github_issue
-from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
+from .groq_tools import (
+    analyze_page as _groq_analyze_page,
+    search as _groq_search,
+)
+from .hackernews import enrich_top_stories as _enrich_hn
+from .hackernews import search_hackernews as _search_hn
+from .models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
+from .polymarket import search_polymarket as _search_pm
+from .reddit import reddit_search_tool as _reddit_search_tool
 from .registries import (
-    lookup_package as _lookup_package,
-    search_packages as _search_packages,
     format_package_info as _fmt_pkg_info,
+)
+from .registries import (
     format_package_list as _fmt_pkg_list,
 )
-from .errors import translate_error as _translate_error
-from .compare import compare_tech as _compare_tech
-
+from .registries import (
+    lookup_package as _lookup_package,
+)
+from .registries import (
+    search_packages as _search_packages,
+)
+from .utils import format_error
+from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
+from .x import search_x as _search_x
 
 # Set up logging
 LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
@@ -83,12 +88,13 @@ def web_search(
     page: int = 1,
     backend: Literal["auto", "legacy", "api"] = "auto",
     response_format: Literal["json", "markdown"] = "markdown",
+    domain: str | None = None,
 ) -> str | SearchResponse | ErrorResponse:
     """Search the web via DuckDuckGo — free, fast, returns raw structured results.
 
     Role: Discovery. Use this as your first-pass search for broad coverage.
-    Workflow: Feed results into groq_research for deep validation, or
-    fetch_page to get full page content. Alternative: groq_research
+    Workflow: Feed results into groq_search for deep validation, or
+    fetch_page to get full page content. Alternative: groq_search
     provides a synthesized answer instead of raw links.
 
     Args:
@@ -101,6 +107,8 @@ def web_search(
         page: Page number for pagination (default 1)
         backend: Backend to use ('auto', 'legacy', 'api')
         response_format: Output format - 'markdown' for human-readable, 'json' for structured data
+        domain: Optional domain to scope results (e.g. 'docs.python.org').
+            Automatically adds a site: prefix. Use for targeted documentation searches.
 
     Returns:
         str: Markdown-formatted search results (when response_format="markdown")
@@ -110,15 +118,17 @@ def web_search(
     Examples:
         - "Latest NVIDIA H200 benchmarks"
         - "How to install uv on macOS"
-        - "Current state of Llama 3.1 vs GPT-4o"
+        - "asyncio event loop" with domain="docs.python.org"
+        - "useEffect cleanup" with domain="react.dev"
 
     Error Handling:
         - 429 Too Many Requests: Try reducing max_results or wait 60s.
         - Empty Results: Try a more general query or change search_type.
     """
     try:
+        effective_query = f"site:{domain} {query}" if domain else query
         req = SearchRequest(
-            query=query,
+            query=effective_query,
             search_type=search_type,
             max_results=max_results,
             time_range=time_range,
@@ -208,53 +218,6 @@ def fetch_page(
     )
 
 
-@mcp.tool(
-    name="search_docs",
-    annotations={
-        "title": "Search a domain for technical documentation",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def search_docs(query: str, domain: str = "docs.python.org") -> SearchResponse | ErrorResponse:
-    """Search a specific domain for technical documentation via DuckDuckGo.
-
-    Role: Targeted discovery. Use this when you know which site has the
-    answer (e.g. docs.python.org, react.dev). Faster and more precise than
-    general web_search. Alternative: groq_browse does interactive browsing
-    for deeper research on a specific site.
-
-    Args:
-        query: What you're looking for
-        domain: The domain to search (e.g. 'docs.python.org', 'stackoverflow.com')
-
-    Returns:
-        SearchResponse: Search results from the specified domain
-        ErrorResponse: Error response if applicable
-
-    Examples:
-        - query="asyncio event loop", domain="docs.python.org"
-        - query="useEffect cleanup", domain="react.dev"
-
-    Error Handling:
-        - Empty results: Try a more general query or verify the domain is correct.
-    """
-    enhanced_query = f"site:{domain} {query}"
-
-    try:
-        req = SearchRequest(
-            query=enhanced_query,
-            search_type="text",
-            max_results=5,
-        )
-        return ddg_search(req)
-    except Exception as e:
-        logger.error("Domain search failed for query %r on domain %r: %s", query, domain, e)
-        return format_error("Search failed", str(e))
-
-
 # ─────────────────────────────────────────────────────────────
 # Reddit tools — keyless, free Reddit search
 # Best for: community discussions, opinions, real user experiences
@@ -284,7 +247,7 @@ def reddit_search(
 
     Role: Discovery. Use this for Reddit-specific discussions, opinions, and
     community insights. Alternative: web_search for general web results,
-    groq_research for synthesized multi-source research.
+    groq_search for synthesized multi-source research.
 
     Workflow: Three-tier keyless pipeline:
     - Tier 0: Legacy .json search (often 403, tried once)
@@ -350,7 +313,7 @@ def hackernews_search(
 
     Role: Tech discourse. Use this for developer news, startup discussions,
     and technical opinions. Alternative: web_search for general results,
-    groq_research for synthesized multi-source research.
+    groq_search for synthesized multi-source research.
 
     Args:
         query: Search query string
@@ -426,7 +389,7 @@ def polymarket_search(
 
     Role: Prediction signals. Use this for odds, market movements, and
     crowd-sourced probability estimates. Alternative: web_search for
-    general news, groq_research for synthesized multi-source research.
+    general news, groq_search for synthesized multi-source research.
 
     Args:
         topic: Search topic (e.g. 'NVIDIA', 'presidential election', 'Fed rate cut')
@@ -553,7 +516,7 @@ def github_search(
 
     Role: Code & issues. Use this for bug discussions, feature requests,
     and community sentiment on GitHub projects. Alternative: web_search
-    for general results, search_docs for documentation.
+    for general results, or web_search with domain="docs.python.org" for documentation.
 
     Note: Requires GITHUB_TOKEN env var or `gh` CLI installed and authenticated.
     Without auth, returns empty results.
@@ -580,8 +543,8 @@ def github_search(
         - Empty results: Try a broader query or different keywords.
     """
     try:
-        from .github import search_github as _search_gh
         from .github import enrich_with_comments as _enrich_gh
+        from .github import search_github as _search_gh
 
         items = _search_gh(query, depth=depth, token=token)[:max_results]
         items = _enrich_gh(items, depth=depth, token=token)
@@ -660,109 +623,66 @@ def get_github_issue(url: str) -> str | ErrorResponse:
         return _get_github_issue(url)
     except Exception as e:
         logger.error("get_github_issue failed: %s", e)
-        return format_error(f"Failed to fetch issue: {e}")
-
-
-# ─────────────────────────────────────────────────────────────
-# Groq GPT-OSS tools — interactive browser search via GPT-OSS models
-# Best for: browsing-style search, single-page deep reads
-# ─────────────────────────────────────────────────────────────
-
-
-@mcp.tool(
-    name="groq_browse",
-    annotations={
-        "title": "Browse the web interactively via Groq",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def groq_browse(
-    query: str,
-    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
-    reasoning_effort: Literal["low", "medium", "high"] = "low",
-) -> str | ErrorResponse:
-    """Interactive browser search via Groq — navigates pages like a human.
-
-    Role: Deep browsing. Use this when you need multi-page context or
-    the site requires interactive navigation. Alternative: search_docs for
-    simple single-domain searches, or groq_research for auto-selecting
-    the best combination of search and page reading.
-
-    Args:
-        query: Search question or topic
-        model: Groq model to use ('openai/gpt-oss-20b' or 'openai/gpt-oss-120b')
-        reasoning_effort: Reasoning intensity ('low', 'medium', 'high').
-            'low' balances quality vs token cost; 'high' explores more pages.
-
-    Returns:
-        str: Combined results from multiple web sources
-        ErrorResponse: Error response if applicable
-
-    Examples:
-        - "Compare the performance of React vs Vue in 2026, focusing on hydration patterns"
-        - "Find the latest pricing for NVIDIA H200 across three different vendors"
-
-    Error Handling:
-        - API Key Missing: Ensure GROQ_API_KEY is set in your environment.
-        - Rate Limit: Groq API limit reached. Wait a few minutes before retrying.
-    """
-    return _groq_browse(query=query, model=model, reasoning_effort=reasoning_effort)
-
-
-# ─────────────────────────────────────────────────────────────
-# Groq Compound tools — auto-selecting AI research system
+        return format_error(f"Failed to fetch issue: {e}")# ─────────────────────────────────────────────────────────────
+# Groq tools — AI-powered web search (browse + compound)
 # Best for: deep research, validation, multi-step synthesis
 # Costs tokens — use DDG tools for quick lookups
 # ─────────────────────────────────────────────────────────────
 
-
 @mcp.tool(
-    name="groq_research",
+    name="groq_search",
     annotations={
-        "title": "Deep research via Groq Compound",
+        "title": "AI-powered web search via Groq",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
         "openWorldHint": True,
     },
 )
-def groq_research(
+def groq_search(
     query: str,
-    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
+    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"] = "groq/compound-mini",
+    reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
-    """Deep research via Groq Compound — auto-selects search, browsing, and tools.
+    """AI-powered web search via Groq — browse interactively or auto-research.
 
-    Role: Validation & synthesis. Use this AFTER web_search to validate,
-    deep-dive, or expand on initial results. Compound decides whether to
-    search, visit pages, or use other tools to answer your question.
-    Alternative: web_search for fast raw results, groq_browse for a
-    simpler interactive browse.
+    Role: AI-assisted search. Use when you need the model to actively browse
+    and synthesize information from multiple pages.
 
-    Note: Long queries may be truncated to fit Groq's internal search limit.
-    Keep queries concise for best results.
+    Two modes based on model selection:
+    - GPT-OSS models (openai/gpt-oss-20b/120b): Interactive browsing with
+      explicit page navigation. Use reasoning_effort to control depth.
+    - Compound models (groq/compound/compound-mini): Auto-selects search tools
+      and synthesis strategy. compound-mini is faster (1 tool call),
+      compound supports up to 10 tool calls.
+
+    Alternative: web_search for raw DDG results (free, no tokens).
 
     Args:
-        query: Research question or topic for deep investigation
-        model: Compound system to use. 'groq/compound-mini' (default) has ~3x
-               lower latency but limits to 1 tool call; 'groq/compound' supports
-               up to 10 tool calls.
+        query: Search question or topic
+        model: Which Groq model to use:
+            - 'groq/compound-mini' (default): Fast auto-research, 1 tool call
+            - 'groq/compound': Deep auto-research, up to 10 tool calls
+            - 'openai/gpt-oss-20b': Interactive browsing (fast)
+            - 'openai/gpt-oss-120b': Interactive browsing (thorough)
+        reasoning_effort: Reasoning intensity for GPT-OSS models ('low', 'medium', 'high').
+            'low' balances quality vs token cost; 'high' explores more pages.
 
     Returns:
-        str: Synthesized research results from multiple sources
+        str: Synthesized research results from multiple web sources
         ErrorResponse: Error response if applicable
 
     Examples:
         - "Analyze the current state of quantum computing breakthroughs in 2026"
-        - "Investigation into the impact of Llama 3 on open-source software development"
+        - "Find the latest pricing for NVIDIA H200 across three different vendors"
+        - "Compare the performance of React vs Vue in 2026"
 
     Error Handling:
+        - API Key Missing: Ensure GROQ_API_KEY is set in your environment.
+        - Rate Limit: Groq API limit reached. Wait a few minutes before retrying.
         - Request too long: Keep your query under 150 characters.
-        - Synthesis failure: The model could not find enough data to synthesize a result.
     """
-    return _groq_research(query=query, model=model)
+    return _groq_search(query=query, model=model, reasoning_effort=reasoning_effort)
 
 
 @mcp.tool(
