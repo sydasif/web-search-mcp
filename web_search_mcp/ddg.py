@@ -96,6 +96,39 @@ def _fetch_curl(url: str, timeout: int) -> str:
         return response.text
 
 
+def _fetch_pdf_text(url: str, timeout: int = 30, max_length: int = 15000) -> str | None:
+    """Download a PDF and extract its text content using pypdf."""
+    import io
+
+    import pypdf
+
+    try:
+        response = http_client.get(url, timeout=timeout, follow_redirects=True)
+        response.raise_for_status()
+
+        pdf_file = io.BytesIO(response.content)
+        reader = pypdf.PdfReader(pdf_file)
+
+        text_parts: list[str] = []
+        total = 0
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text_parts.append(page_text)
+                total += len(page_text)
+                if total >= max_length:
+                    break
+
+        if not text_parts:
+            return None
+
+        result = "\n\n".join(text_parts)
+        return result[:max_length]
+    except Exception as e:
+        logger.error("PDF extraction failed for %s: %s", url, e)
+        return None
+
+
 def format_search_results_markdown(results: SearchResponse | ErrorResponse) -> str:
     """Formats search results as a human-readable markdown string."""
     if isinstance(results, ErrorResponse):
@@ -175,8 +208,16 @@ def fetch_page(
     timeout: int = 30,
     backend: Literal["httpx", "curl", "auto"] = "auto",
 ) -> PageResponse | ErrorResponse:
-    """Extracts clean text content from a web page URL."""
+    """Extracts clean text content from a web page or PDF URL."""
     fetch_rate_limiter.acquire()
+
+    # PDF URLs: extract text directly from the binary PDF
+    if url.lower().endswith(".pdf") or "/pdf/" in url.lower() or "pdf=" in url.lower():
+        pdf_text = _fetch_pdf_text(url, timeout=timeout, max_length=max_length)
+        if pdf_text:
+            return PageResponse(url=url, length=len(pdf_text), content=pdf_text)
+        # Fall through to normal HTML extraction if PDF fails
+
     try:
         html_content = _request_with_fallback(url, timeout=timeout, backend=backend)
 

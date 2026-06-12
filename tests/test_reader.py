@@ -215,6 +215,70 @@ def test_fetch_page_extraction_fails():
         assert "No readable text found" in result.error
 
 
+def test_fetch_page_pdf_url_detected():
+    """Test that PDF URLs are detected and go through PDF extraction path."""
+    with (
+        patch("web_search_mcp.ddg._fetch_pdf_text") as mock_pdf,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
+    ):
+        mock_pdf.return_value = "Extracted PDF text from the paper."
+
+        # URL ending in .pdf
+        result = fetch_page("https://example.com/paper.pdf")
+        assert isinstance(result, PageResponse)
+        assert "Extracted PDF text" in result.content
+        mock_pdf.assert_called_once()
+
+
+def test_fetch_page_arxiv_pdf_url_detected():
+    """Test that arXiv-style PDF URLs (/pdf/...) are detected."""
+    with (
+        patch("web_search_mcp.ddg._fetch_pdf_text") as mock_pdf,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
+    ):
+        mock_pdf.return_value = "Extracted arXiv PDF text."
+
+        # arXiv URL with /pdf/ in path
+        result = fetch_page("https://arxiv.org/pdf/2403.02148v4")
+        assert isinstance(result, PageResponse)
+        assert "Extracted arXiv PDF text" in result.content
+
+
+def test_fetch_page_pdf_fallback_to_html():
+    """Test that when PDF extraction fails, it falls through to HTML extraction."""
+    with (
+        patch("web_search_mcp.ddg._fetch_pdf_text") as mock_pdf,
+        patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
+        patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
+    ):
+        mock_pdf.return_value = None  # PDF extraction fails
+        mock_fetch.return_value = "<html><body>HTML fallback</body></html>"
+        mock_trafilatura.extract.return_value = "HTML Fallback Content"
+
+        result = fetch_page("https://arxiv.org/pdf/2403.02148v4")
+        assert isinstance(result, PageResponse)
+        assert "HTML Fallback Content" in result.content
+        mock_fetch.assert_called_once()
+
+
+def test_fetch_page_normal_url_skips_pdf():
+    """Test that normal URLs skip PDF extraction entirely."""
+    with (
+        patch("web_search_mcp.ddg._fetch_pdf_text") as mock_pdf,
+        patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
+        patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
+    ):
+        mock_fetch.return_value = "<html><body>Normal page</body></html>"
+        mock_trafilatura.extract.return_value = "Normal Content"
+
+        result = fetch_page("https://example.com/article")
+        assert isinstance(result, PageResponse)
+        assert "Normal Content" in result.content
+        mock_pdf.assert_not_called()
+
+
 def test_fetch_page_generic_exception():
     """Test handling of a generic exception during fetching."""
     with (
