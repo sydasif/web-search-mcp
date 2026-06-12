@@ -24,30 +24,29 @@ Use the best available tool for the evidence needed. Do not block debugging just
 
 #### Tier 1 — Direct Search & Retrieval (start here)
 
-| Tool | What It Does | When To Use |
-|------|-------------|-------------|
-| `web_search` | DuckDuckGo web/news search with JSON or markdown output | Broad search for error messages, known bugs, solutions, release notes |
-| `web_search` (domain) | DuckDuckGo scoped to a domain via the `domain` param | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`) |
-| `fetch_page` | Clean HTML-to-markdown extraction from any URL | Reading docs, changelogs, error pages, issue threads cleanly; supports metadata extraction and table inclusion |
+| Tool                  | What It Does                                            | When To Use                                                                                                    |
+| --------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `web_search`          | DuckDuckGo web/news search with JSON or markdown output | Broad search for error messages, known bugs, solutions, release notes                                          |
+| `web_search` (domain) | DuckDuckGo scoped to a domain via the `domain` param    | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                         |
+| `fetch_page`          | Clean HTML-to-markdown extraction from any URL          | Reading docs, changelogs, error pages, issue threads cleanly; supports metadata extraction and table inclusion |
 
 #### Tier 2 — Community & Issue Mining
 
-| Tool | What It Does | When To Use |
-|------|-------------|-------------|
-| `github_search` | GitHub Issues/PR search via GitHub Search API | Find upstream bug reports, fix PRs, changelog discussions, feature flags, deprecation notices across any repo |
-| `hackernews_search` | Hacker News search via Algolia with comment enrichment | Tech community discussions about bugs, regressions, architectural root causes, known workarounds |
-| `reddit_search` | Reddit search via RSS + shreddit enrichment | Real-world troubleshooting threads, niche library issues, configuration gotchas |
-| `x_search` | X/Twitter search via Bird CLI | Real-time announcements, outage reports, release alerts, short workaround threads |
+| Tool                | What It Does                                           | When To Use                                                                                                   |
+| ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `github_search`     | GitHub Issues/PR search via GitHub Search API          | Find upstream bug reports, fix PRs, changelog discussions, feature flags, deprecation notices across any repo |
+| `hackernews_search` | Hacker News search via Algolia with comment enrichment | Tech community discussions about bugs, regressions, architectural root causes, known workarounds              |
+| `reddit_search`     | Reddit search via RSS + shreddit enrichment            | Real-world troubleshooting threads, niche library issues, configuration gotchas                               |
+| `x_search`          | X/Twitter search via Bird CLI                          | Real-time announcements, outage reports, release alerts, short workaround threads                             |
 
 #### Tier 3 — AI-Powered Synthesis (for complex/composite questions)
 
-| Tool | What It Does | When To Use |
-|------|-------------|-------------|
-| `groq_analyze_page` | Fetches a URL and runs an AI query against its content | Extracting specific technical details from a long docs page, changelog, or spec without reading the whole thing |
-| `groq_search` | AI-powered web search — GPT-OSS for interactive browsing, Compound for auto-research | Deep investigation: "What changed between v2 and v3?" or navigating multi-step docs |
+| Tool           | What It Does                                                                         | When To Use                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `groq_analyze` | Fetches a URL and runs an AI query against its content                               | Extracting specific technical details from a long docs page, changelog, or spec without reading the whole thing |
+| `groq_search`  | AI-powered web search — GPT-OSS for interactive browsing, Compound for auto-research | Deep investigation: "What changed between v2 and v3?" or navigating multi-step docs                             |
 
 #### Not Used
-
 
 ## Tool Sources
 
@@ -89,35 +88,37 @@ Prefer experiments that narrow the search space quickly: focused tests, minimal 
 Use external sources when the issue depends on dependency, framework, CLI, API, OS, or standards behavior that may have changed, or when local code delegates behavior to something outside the repo.
 
 #### 4a. Dependency & API Docs — Context7
+
 For library/framework docs, APIs, configuration, version-specific examples, and known edge cases.
 
 #### 4b. GitHub-Native Evidence — `gh`
+
 `gh issue list`, `gh issue view`, `gh pr view`, `gh pr checks`, `gh release view`, `gh repo view`, and `gh api` for upstream GitHub issues, PRs, releases, metadata, checks, and raw source.
 
 #### 4c. General Search — Tier 1
 
-| Scenario | Tool | Why |
-|----------|------|-----|
-| "Does this error message have a known cause?" | `web_search` with the exact error string | Broadest coverage of blog posts, Stack Overflow, docs, forums |
-| "What does the official docs say about this API?" | `web_search` with `domain="docs.python.org"` | Skips noise from unofficial sources |
-| "Read this changelog / issue / PR in full" | `fetch_page` with the URL | Clean extraction without JS or paywalls |
+| Scenario                                          | Tool                                         | Why                                                           |
+| ------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| "Does this error message have a known cause?"     | `web_search` with the exact error string     | Broadest coverage of blog posts, Stack Overflow, docs, forums |
+| "What does the official docs say about this API?" | `web_search` with `domain="docs.python.org"` | Skips noise from unofficial sources                           |
+| "Read this changelog / issue / PR in full"        | `fetch_page` with the URL                    | Clean extraction without JS or paywalls                       |
 
 #### 4d. Issue & Community Mining — Tier 2
 
-| Scenario | Tool | Why |
-|----------|------|-----|
-| "Is there a GitHub issue for this?" | `github_search` with keywords + repo filter | Direct access to upstream bug tracker, fix PRs, and discussion |
-| "Has this been discussed on Hacker News?" | `hackernews_search` | Often surfaces deep architectural analysis and workarounds from core devs |
-| "What are real users saying about this?" | `reddit_search` for niche/subreddit-specific chatter | Practical troubleshooting, config fixes, version-specific gotchas |
-| "Any breaking news about this outage/incident?" | `x_search` for real-time posts | Time-sensitive: service outages, zero-days, urgent releases |
+| Scenario                                        | Tool                                                 | Why                                                                       |
+| ----------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| "Is there a GitHub issue for this?"             | `github_search` with keywords + repo filter          | Direct access to upstream bug tracker, fix PRs, and discussion            |
+| "Has this been discussed on Hacker News?"       | `hackernews_search`                                  | Often surfaces deep architectural analysis and workarounds from core devs |
+| "What are real users saying about this?"        | `reddit_search` for niche/subreddit-specific chatter | Practical troubleshooting, config fixes, version-specific gotchas         |
+| "Any breaking news about this outage/incident?" | `x_search` for real-time posts                       | Time-sensitive: service outages, zero-days, urgent releases               |
 
 #### 4e. Deep Research — Tier 3
 
-| Scenario | Tool | Why |
-|----------|------|-----|
-| "What exactly does this 2000-line doc page say about X?" | `groq_analyze_page` with the URL and a specific question | Skips reading the full page; AI extracts just the relevant parts |
-| "What changed across versions that could cause this?" | `groq_search` with a question comparing versions | Auto-searches and synthesizes across multiple sources |
-| "Walk through this multi-step troubleshooting guide" | `groq_search` with `openai/gpt-oss-20b` model | Interactive navigation handles pages that need clicking through or JS rendering |
+| Scenario                                                 | Tool                                                | Why                                                                             |
+| -------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| "What exactly does this 2000-line doc page say about X?" | `groq_analyze` with the URL and a specific question | Skips reading the full page; AI extracts just the relevant parts                |
+| "What changed across versions that could cause this?"    | `groq_search` with a question comparing versions    | Auto-searches and synthesizes across multiple sources                           |
+| "Walk through this multi-step troubleshooting guide"     | `groq_search` with `openai/gpt-oss-20b` model       | Interactive navigation handles pages that need clicking through or JS rendering |
 
 Prefer primary sources: official docs, changelogs, release notes, source code, and upstream issues. Use community posts only as leads unless they include reproducible evidence.
 
@@ -170,5 +171,5 @@ When finished, keep the summary evidence-based:
 - Root cause in plain language.
 - Files changed and why.
 - Verification commands and outcomes.
-- External sources used, with the specific tool that found each (e.g., "found via `github_search`", "confirmed on docs via `groq_analyze_page`").
+- External sources used, with the specific tool that found each (e.g., "found via `github_search`", "confirmed on docs via `groq_analyze`").
 - Remaining risk or unverified areas, if any.

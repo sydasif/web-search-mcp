@@ -3,6 +3,7 @@
 This file gives Codebuff context about your project: goals, commands, conventions, and gotchas.
 
 ## Quickstart
+
 - **Setup:** `uv sync` (uses `uv`, never pip)
 - **Dev:** `uv run web-search-mcp` (stdio MCP server)
 - **Test:** `uv run pytest` (all), `uv run pytest tests/test_models.py` (single file)
@@ -10,6 +11,7 @@ This file gives Codebuff context about your project: goals, commands, convention
 - **Typecheck:** `uv run mypy web_search_mcp/`
 
 ## Architecture
+
 - **Language/Runtime:** Python 3.11+ with `uv` for dependency management
 - **Framework:** FastMCP 2.14+ (Model Context Protocol server)
 - **Entry point:** `web_search_mcp/server.py` → `main()` (stdio transport)
@@ -22,7 +24,7 @@ This file gives Codebuff context about your project: goals, commands, convention
 - **Key modules:**
   - `server.py` — 15 MCP tool definitions, imports with `_alias` pattern to avoid name collisions
   - `ddg.py` — DuckDuckGo search (with `domain` param for scoped docs searches, replaces old `search_docs`) + fetch_page (trafilatura for content extraction)
-  - `groq_tools.py` / `groq_client.py` — AI-powered search (unified browse+compound) and analyze_page via Groq API
+  - `groq_tools.py` / `groq_client.py` — AI-powered search (unified browse+compound) and `groq_analyze` (URL visit + interpretation) via Groq API
   - `registries.py` — npm/PyPI/crates.io/Go package lookup and search
   - `errors.py` — Error message parsing with language detection + Stack Overflow search
   - `compare.py` — Side-by-side tech comparison (GitHub stars, downloads, etc.)
@@ -33,6 +35,7 @@ This file gives Codebuff context about your project: goals, commands, convention
   - `x.py` — X/Twitter search via vendored Bird CLI (needs `AUTH_TOKEN` + `CT0` cookies)
 
 ## Conventions
+
 - **Formatting:** ruff, line-length 100, trailing commas in multi-line calls
 - **Type hints:** Python 3.11+ union syntax (`str | None`, not `Optional[str]`), `typing.Literal` for enum-like params
 - **Naming:** `snake_case` functions, `PascalCase` classes, `SCREAMING_SNAKE_CASE` constants, leading `_` for private functions
@@ -43,6 +46,7 @@ This file gives Codebuff context about your project: goals, commands, convention
 - **Git:** Conventional commits (`feat:`, `fix:`, `docs:`), atomic commits, `git add <specific-file>` (not `git add .`)
 
 ## Gotchas
+
 - **Never use pip or python directly** — always `uv run ...` for commands
 - **X/Twitter cookies expire ~24h** — users need to refresh `AUTH_TOKEN` and `CT0`
 - **Groq tools need API key** — set `SEARCH_MCP_GROQ_API_KEY` env var; free tier at console.groq.com

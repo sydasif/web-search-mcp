@@ -31,7 +31,9 @@ def _unwrap_error(e: BaseException) -> BaseException:
 
 
 # Combined model type: GPT-OSS for browsing, Compound for auto-tool-selection
-GroqModel = Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"]
+GroqModel = Literal[
+    "openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"
+]
 
 # Models that use browser_search tool (GPT-OSS models)
 _BROWSE_MODELS = {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}
@@ -96,14 +98,11 @@ def search(
         logger.error("Groq search failed (%s): %s", model, err)
         return format_error(
             f"Groq search failed ({model})",
-            f"{err}. Try using web_search for raw results or groq_analyze_page for a specific URL.",
+            f"{err}. Try using web_search for raw results or groq_analyze for a specific URL.",
         )
 
 
-
-
-
-def analyze_page(
+def groq_analyze(
     url: str,
     query: str = "Summarize the key points of this page.",
     model: CompoundModel = DEFAULT_COMPOUND_MODEL,
@@ -125,7 +124,7 @@ def analyze_page(
         )
         content = response.choices[0].message.content
         if not content:
-            return format_empty_response_error("Groq analyze page")
+            return format_empty_response_error("Groq analyze")
         return content
     except Exception as e:
         err = _unwrap_error(e)
@@ -133,15 +132,15 @@ def analyze_page(
             if err.status_code == 401:
                 return format_auth_error()
             if err.status_code == 413:
-                logger.error("Groq analyze page request too large (%s): %s", model, err)
+                logger.error("Groq analyze request too large (%s): %s", model, err)
                 return format_error(
                     f"Page too large for Groq's internal limit ({model})",
                     "The request exceeded Groq's internal payload limit. "
                     "Try using fetch_page to get raw content first, or use a more focused query.",
                 )
 
-        logger.error("Groq analyze page failed (%s): %s", model, err)
+        logger.error("Groq analyze failed (%s): %s", model, err)
         return format_error(
-            f"Groq analyze page failed ({model})",
+            f"Groq analyze failed ({model})",
             f"{err}. Try using fetch_page to get raw content instead.",
         )

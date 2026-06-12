@@ -43,11 +43,11 @@ This skill uses the `ddg_search` MCP server (11 tools). Search, dedup, clusterin
 
 ### Tier 1 — Broad Discovery
 
-| Tool                | What It Does                        | When To Use                                           |
-| ------------------- | ----------------------------------- | ----------------------------------------------------- |
-| `web_search`        | DuckDuckGo web/news search          | First pass: news, background, official sources        |
-| `web_search` (domain) | DuckDuckGo scoped to a domain     | Targeted docs: `docs.python.org`, `react.dev`, RFCs   |
-| `fetch_page`        | Clean HTML-to-markdown from a URL   | Read articles, changelogs, specs, papers              |
+| Tool                  | What It Does                      | When To Use                                         |
+| --------------------- | --------------------------------- | --------------------------------------------------- |
+| `web_search`          | DuckDuckGo web/news search        | First pass: news, background, official sources      |
+| `web_search` (domain) | DuckDuckGo scoped to a domain     | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
+| `fetch_page`          | Clean HTML-to-markdown from a URL | Read articles, changelogs, specs, papers            |
 
 ### Tier 2 — Community & Social Signal
 
@@ -60,10 +60,10 @@ This skill uses the `ddg_search` MCP server (11 tools). Search, dedup, clusterin
 
 ### Tier 3 — AI-Powered Depth
 
-| Tool                | What It Does                             | When To Use                                     |
-| ------------------- | ---------------------------------------- | ----------------------------------------------- |
-| `groq_analyze_page` | Fetch URL + AI query on its content      | Extract specific facts from a long docs page    |
-| `groq_search`       | AI-powered search (browse or compound)   | Deep research, multi-source synthesis           |
+| Tool           | What It Does                           | When To Use                                  |
+| -------------- | -------------------------------------- | -------------------------------------------- |
+| `groq_analyze` | Fetch URL + AI query on its content    | Extract specific facts from a long docs page |
+| `groq_search`  | AI-powered search (browse or compound) | Deep research, multi-source synthesis        |
 
 ---
 
@@ -121,14 +121,14 @@ Before community searches, resolve platform-scoped targeting. This is where you 
 
 **Subreddits:** Run `web_search "{topic} subreddit"` to find 3-5 relevant subreddits. For product/tool topics, also add 2-3 category-peer subs from the table below (where cross-product discussion actually happens):
 
-| Category           | Peer Subs                                         |
-| ------------------ | ------------------------------------------------- |
-| AI image gen       | `StableDiffusion, midjourney, dalle2, aiArt`      |
-| AI video gen       | `aivideo, StableDiffusion, runwayml, singularity` |
-| AI music gen       | `SunoAI, udiomusic, aimusic`                      |
-| AI coding          | `ChatGPTCoding, LocalLLaMA, singularity`          |
-| AI chat models     | `LocalLLaMA, ChatGPT, ClaudeAI, singularity`      |
-| SaaS/productivity  | `SaaS, productivity, Entrepreneur`                |
+| Category          | Peer Subs                                         |
+| ----------------- | ------------------------------------------------- |
+| AI image gen      | `StableDiffusion, midjourney, dalle2, aiArt`      |
+| AI video gen      | `aivideo, StableDiffusion, runwayml, singularity` |
+| AI music gen      | `SunoAI, udiomusic, aimusic`                      |
+| AI coding         | `ChatGPTCoding, LocalLLaMA, singularity`          |
+| AI chat models    | `LocalLLaMA, ChatGPT, ClaudeAI, singularity`      |
+| SaaS/productivity | `SaaS, productivity, Entrepreneur`                |
 
 **X handles:** For person/product topics, run `web_search "{topic} X handle"` for the primary handle and 1-2 commentators.
 
@@ -175,7 +175,7 @@ Mine 3-4 platforms. Use resolved handles/subreddits/repos to scope. The tool res
 Pick 1-2 highest-signal sources and go deep:
 
 ```bash
-groq_analyze_page url="{long article}" q="Extract key facts about {specific aspect}"
+groq_analyze url="{long article}" q="Extract key facts about {specific aspect}"
 groq_search "What changed between v2 and v3 of {topic}?"
 groq_search "Walk through the {topic} setup guide" model="openai/gpt-oss-20b"
 ```

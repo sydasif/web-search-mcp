@@ -10,7 +10,7 @@ from .ddg import fetch_page as _fetch_page
 from .errors import translate_error as _translate_error
 from .github import get_github_issue as _get_github_issue
 from .groq_tools import (
-    analyze_page as _groq_analyze_page,
+    groq_analyze as _groq_analyze,
     search as _groq_search,
 )
 from .hackernews import enrich_top_stories as _enrich_hn
@@ -176,8 +176,8 @@ def fetch_page(
 
     Role: Retrieval. Use this when you need the actual page content (not a
     summary). Supports bot-detection bypass and multiple output formats.
-    Workflow: Pipe the content into groq_analyze_page for AI interpretation.
-    Alternative: groq_analyze_page fetches AND interprets in one step, but
+    Workflow: Pipe the content into groq_analyze for AI interpretation.
+    Alternative: groq_analyze fetches AND interprets in one step, but
     costs tokens and gives you no raw content.
 
     Args:
@@ -683,7 +683,7 @@ def groq_search(
 
 
 @mcp.tool(
-    name="groq_analyze_page",
+    name="groq_analyze",
     annotations={
         "title": "Analyze a web page via Groq Compound",
         "readOnlyHint": True,
@@ -692,7 +692,7 @@ def groq_search(
         "openWorldHint": True,
     },
 )
-def groq_analyze_page(
+def groq_analyze(
     url: str,
     query: str = "Summarize the key points of this page.",
     model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
@@ -725,7 +725,7 @@ def groq_analyze_page(
         - Page too large: The content exceeds Groq's context window. Use fetch_page first.
         - Access Denied: The page is behind a paywall or blocking the analyzer.
     """
-    return _groq_analyze_page(url=url, query=query, model=model)
+    return _groq_analyze(url=url, query=query, model=model)
 
 
 # ─────────────────────────────────────────────────────────────

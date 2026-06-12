@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 from web_search_mcp.groq_tools import (
+    groq_analyze,
     search,
-    analyze_page,
 )
 from web_search_mcp.groq_client import truncate_query
 from web_search_mcp.models import ErrorResponse
@@ -195,18 +195,18 @@ class TestSearch:
 
 
 class TestAnalyzePage:
-    """Unit tests for analyze_page function."""
+    """Unit tests for groq_analyze function."""
 
     @patch("web_search_mcp.groq_client.settings")
     def test_empty_url_returns_error(self, mock_settings):
-        result = analyze_page("")
+        result = groq_analyze("")
         assert isinstance(result, ErrorResponse)
         assert "url cannot be empty" in result.error.lower()
 
     @patch("web_search_mcp.groq_client.settings")
     def test_missing_api_key_returns_error(self, mock_settings):
         mock_settings.groq_api_key = ""
-        result = analyze_page("https://example.com")
+        result = groq_analyze("https://example.com")
         assert isinstance(result, ErrorResponse)
         assert "not configured" in result.error.lower()
 
@@ -226,7 +226,7 @@ class TestAnalyzePage:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        result = analyze_page("https://example.com")
+        result = groq_analyze("https://example.com")
 
         assert isinstance(result, str)
         assert "AI trends" in result
@@ -247,7 +247,7 @@ class TestAnalyzePage:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        analyze_page("https://example.com", query="Extract the table of contents")
+        groq_analyze("https://example.com", query="Extract the table of contents")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         msg = call_kwargs["messages"][0]["content"]
@@ -263,7 +263,7 @@ class TestAnalyzePage:
         mock_client.chat.completions.create.side_effect = Exception("Rate limit")
         mock_groq_cls.return_value = mock_client
 
-        result = analyze_page("https://example.com")
+        result = groq_analyze("https://example.com")
         assert isinstance(result, ErrorResponse)
 
     @patch("web_search_mcp.groq_client.Groq")
@@ -277,7 +277,7 @@ class TestAnalyzePage:
         )
         mock_groq_cls.return_value = mock_client
 
-        result = analyze_page("https://example.com")
+        result = groq_analyze("https://example.com")
         assert isinstance(result, ErrorResponse)
         assert "too large" in result.error.lower()
 
@@ -297,7 +297,7 @@ class TestAnalyzePage:
         mock_client.chat.completions.create.return_value = mock_response
         mock_groq_cls.return_value = mock_client
 
-        analyze_page("https://example.com")
+        groq_analyze("https://example.com")
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["model"] == "groq/compound-mini"
