@@ -99,6 +99,7 @@ def test_fetch_page_with_backend_parameter():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_fetch.return_value = "<html><body>Content</body></html>"
         mock_trafilatura.extract.return_value = "Extracted Content"
@@ -114,6 +115,7 @@ def test_fetch_page_with_auto_backend():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_fetch.return_value = "<html><body>Content</body></html>"
         mock_trafilatura.extract.return_value = "Extracted Content"
@@ -167,6 +169,7 @@ def test_fetch_page_success():
     with (
         patch("web_search_mcp.ddg.http_client") as mock_client,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_response = MagicMock()
         mock_response.text = "<html><body><h1>Test</h1><p>Content</p></body></html>"
@@ -188,7 +191,10 @@ def test_fetch_page_success():
 
 def test_fetch_page_download_fails():
     """Test when the page download returns empty content."""
-    with patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch:
+    with (
+        patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
+    ):
         mock_fetch.return_value = ""
         result = fetch_page("https://example.com/empty")
         assert isinstance(result, ErrorResponse)
@@ -200,6 +206,7 @@ def test_fetch_page_extraction_fails():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura.extract") as mock_extract,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_fetch.return_value = "<html><body>Empty</body></html>"
         mock_extract.return_value = None
@@ -210,7 +217,10 @@ def test_fetch_page_extraction_fails():
 
 def test_fetch_page_generic_exception():
     """Test handling of a generic exception during fetching."""
-    with patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch:
+    with (
+        patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
+    ):
         mock_fetch.side_effect = Exception("Network timeout")
         result = fetch_page("https://example.com/timeout")
         assert isinstance(result, ErrorResponse)
@@ -222,6 +232,7 @@ def test_fetch_page_with_metadata():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_fetch.return_value = "<html><head><title>Test Title</title></head><body><h1>Test</h1><p>Content</p></body></html>"
         mock_metadata = MagicMock()
@@ -250,6 +261,7 @@ def test_fetch_page_with_different_formats():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_fetch.return_value = "<html><body><h1>Test</h1><p>Content</p></body></html>"
         mock_trafilatura.extract.return_value = "Test Content"
@@ -275,6 +287,7 @@ def test_fetch_page_with_content_options():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),
     ):
         mock_fetch.return_value = (
             "<html><body><table><tr><td>Table</td></tr></table><p>Content</p></body></html>"
@@ -294,6 +307,7 @@ def test_fetch_page_with_max_length():
     with (
         patch("web_search_mcp.ddg._request_with_fallback") as mock_fetch,
         patch("web_search_mcp.ddg.trafilatura") as mock_trafilatura,
+        patch("web_search_mcp.ddg.fetch_rate_limiter.acquire"),  # avoid rate limiter delay
     ):
         mock_fetch.return_value = "<html><body><p>" + "Content " * 1000 + "</p></body></html>"
         mock_trafilatura.extract.return_value = "Content " * 1000
