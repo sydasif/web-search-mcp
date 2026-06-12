@@ -253,6 +253,20 @@ def test_groq_search_success(self, mock_settings, mock_groq_cls):
 - Only add files that are part of the specific changes: `git add <specific-file>` instead of `git add .`
 - Sign off on commits that adhere to the Developer Certificate of Origin (DCO)
 
+### Wiki Sync
+
+After any change that adds, removes, or modifies a tool, engine, configuration variable, or project file:
+
+1. Clone the wiki: `git clone https://github.com/sydasif/web-search-mcp.wiki.git /tmp/wiki-sync`
+2. Update the relevant page(s) in `/tmp/wiki-sync/`:
+   - **Tools.md** — tool names, descriptions, count, selection guide
+   - **Architecture.md** — project file list, data flow, design principles
+   - **Configuration.md** — environment variables and authentication setup
+   - **Home.md** — capabilities list, sources table, tool count
+   - **Development.md** — test file names, commands
+3. Commit and push: `cd /tmp/wiki-sync && git add -A && git commit -m "sync: ..." && git remote set-url origin https://x-access-token:$(gh auth token)@github.com/sydasif/web-search-mcp.wiki.git && git push`
+4. Clean up: `rm -rf /tmp/wiki-sync`
+
 ### Dependency and Execution Best Practices
 
 - Always use `uv` for dependency management (not pip)
