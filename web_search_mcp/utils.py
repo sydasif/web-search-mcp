@@ -2,6 +2,8 @@ import logging
 import re
 import time
 import threading
+from collections.abc import Callable
+from typing import Any
 from .models import ErrorResponse
 
 logger = logging.getLogger(__name__)
@@ -57,6 +59,39 @@ def format_empty_response_error(source: str = "Groq") -> ErrorResponse:
         error=f"{source} returned empty content",
         details="The model produced no response. Try rephrasing your query with more specific detail, or switch to a different tool (e.g. web_search for DDG results, groq_search for AI-powered research).",
     )
+
+
+def format_results_markdown(
+    items: list[dict[str, Any]],
+    query: str,
+    platform: str,
+    item_label: str = "results",
+    format_item: Callable[[dict[str, Any], int], list[str]] | None = None,
+) -> str:
+    """Build a markdown results list shared across platform tools.
+
+    Produces:
+        # {Platform} Results for '{query}'
+        Found {N} {item_label}.
+
+        1. **[Title](url)**
+           ...metadata lines from format_item...
+
+        2. **[Title](url)**
+           ...
+    """
+    if not items:
+        return f"No {platform} results found for '{query}'."
+    lines: list[str] = [
+        f"# {platform} Results for '{query}'",
+        f"Found {len(items)} {item_label}.",
+        "",
+    ]
+    if format_item:
+        for i, item in enumerate(items, 1):
+            lines.extend(format_item(item, i))
+            lines.append("")
+    return "\n".join(lines)
 
 
 class RateLimiter:

@@ -29,7 +29,7 @@ from .registries import (
 from .registries import (
     search_packages as _search_packages,
 )
-from .utils import format_error
+from .utils import format_error, format_results_markdown
 from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 from .x import search_x as _search_x
 
@@ -346,21 +346,20 @@ def hackernews_search(
 
 def _format_hn_markdown(items: list[dict], query: str) -> str:
     """Format HN results as markdown."""
-    if not items:
-        return f"No Hacker News results found for '{query}'."
-    lines = [f"# Hacker News Results for '{query}'", f"Found {len(items)} stories.", ""]
-    for i, item in enumerate(items, 1):
+    def _item_lines(item: dict, i: int) -> list[str]:
         points = item.get("engagement", {}).get("points", 0)
         comments = item.get("engagement", {}).get("comments", 0)
         hn_url = item.get("hn_url", item.get("url", "#"))
-        lines.append(f"{i}. **[{item.get('title', 'Untitled')}]({hn_url})**")
-        lines.append(f"   {points} points, {comments} comments | {item.get('date', '')}")
+        lines = [
+            f"{i}. **[{item.get('title', 'Untitled')}]({hn_url})**",
+            f"   {points} points, {comments} comments | {item.get('date', '')}",
+        ]
         if item.get("top_comments"):
             lines.append("   Top comments:")
             for c in item["top_comments"][:2]:
                 lines.append(f"   > {c.get('text', '')[:200]}...")
-        lines.append("")
-    return "\n".join(lines)
+        return lines
+    return format_results_markdown(items, query, "Hacker News", "stories", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -421,11 +420,8 @@ def polymarket_search(
 
 def _format_pm_markdown(items: list[dict], topic: str) -> str:
     """Format Polymarket results as markdown."""
-    if not items:
-        return f"No Polymarket results found for '{topic}'."
-    lines = [f"# Polymarket Results for '{topic}'", f"Found {len(items)} markets.", ""]
-    for i, item in enumerate(items, 1):
-        lines.append(f"{i}. **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**")
+    def _item_lines(item: dict, i: int) -> list[str]:
+        lines = [f"{i}. **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**"]
         outcomes = item.get("outcome_prices", [])
         if outcomes:
             odds_str = ", ".join(f"{name}: {p:.0%}" for name, p in outcomes)
@@ -435,8 +431,8 @@ def _format_pm_markdown(items: list[dict], topic: str) -> str:
             lines.append(f"   Volume: ${vol:,.0f}")
         if item.get("price_movement"):
             lines.append(f"   Movement: {item['price_movement']}")
-        lines.append("")
-    return "\n".join(lines)
+        return lines
+    return format_results_markdown(items, topic, "Polymarket", "markets", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -558,17 +554,16 @@ def github_search(
 
 def _format_gh_markdown(items: list[dict], query: str) -> str:
     """Format GitHub results as markdown."""
-    if not items:
-        return f"No GitHub results found for '{query}'."
-    lines = [f"# GitHub Results for '{query}'", f"Found {len(items)} issues/PRs.", ""]
-    for i, item in enumerate(items, 1):
+    def _item_lines(item: dict, i: int) -> list[str]:
         emoji = "🔀" if item.get("is_pr") else "🐛"
         repo = item.get("repository", "")
-        lines.append(f"{i}. {emoji} **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**")
-        lines.append(f"   {repo} | {item.get('author', '')} | {item.get('date', '')}")
         reactions = item.get("engagement", {}).get("reactions", 0)
         comments = item.get("engagement", {}).get("comments", 0)
-        lines.append(f"   ❤️ {reactions} reactions, 💬 {comments} comments")
+        lines = [
+            f"{i}. {emoji} **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**",
+            f"   {repo} | {item.get('author', '')} | {item.get('date', '')}",
+            f"   ❤️ {reactions} reactions, 💬 {comments} comments",
+        ]
         labels = item.get("labels", [])
         if labels:
             lines.append(f"   Labels: {', '.join(labels[:5])}")
@@ -576,8 +571,8 @@ def _format_gh_markdown(items: list[dict], query: str) -> str:
             lines.append("   Top comment:")
             for c in item["top_comments"][:1]:
                 lines.append(f"   > {c.get('excerpt', '')[:200]}...")
-        lines.append("")
-    return "\n".join(lines)
+        return lines
+    return format_results_markdown(items, query, "GitHub", "issues/PRs", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -796,18 +791,18 @@ def x_search(
 
 def _format_x_markdown(items: list[dict], query: str) -> str:
     """Format X results as markdown."""
-    if not items:
-        return f"No X results found for '{query}'."
-    # Check for auth errors
+    # Check for auth errors (unique to X tool)
     if len(items) == 1 and "error" in items[0]:
         return f"⚠️ {items[0]['error']}"
-    lines = [f"# X/Twitter Results for '{query}'", f"Found {len(items)} posts.", ""]
-    for i, item in enumerate(items, 1):
+
+    def _item_lines(item: dict, i: int) -> list[str]:
         handle = item.get("author_handle", "unknown")
         url = item.get("url", "#")
         text = (item.get("text", "") or "")[:200]
-        lines.append(f"{i}. **@{handle}** · [{url}]({url})")
-        lines.append(f"   {text}{'...' if len(item.get('text', '') or '') > 200 else ''}")
+        lines = [
+            f"{i}. **@{handle}** · [{url}]({url})",
+            f"   {text}{'...' if len(item.get('text', '') or '') > 200 else ''}",
+        ]
         eng = item.get("engagement", {}) or {}
         eng_parts = []
         if eng.get("likes"):
@@ -820,8 +815,8 @@ def _format_x_markdown(items: list[dict], query: str) -> str:
             lines.append(f"   {' '.join(eng_parts)}")
         if item.get("date"):
             lines.append(f"   {item['date']}")
-        lines.append("")
-    return "\n".join(lines)
+        return lines
+    return format_results_markdown(items, query, "X/Twitter", "posts", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
