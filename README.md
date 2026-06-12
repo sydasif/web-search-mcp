@@ -4,7 +4,7 @@
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-13 tools that give your LLM real-time access to the web — from simple Google-style searches to deep AI-powered research. Search the web, read articles, check Reddit, browse Hacker News, look up Wikipedia, track GitHub issues, read full issue threads, follow X/Twitter discussions, explore prediction markets, and more.
+Web Search MCP gives your LLM real-time access to the web — from simple Google-style searches to deep AI-powered research. Search the web, read articles, check Reddit, browse Hacker News, look up Wikipedia, track GitHub issues, read full issue threads, follow X/Twitter discussions, explore prediction markets, and more.
 
 No API keys required for most tools. Works out of the box.
 
@@ -215,24 +215,24 @@ Returns GitHub stars, npm download counts, version info, license, and open issue
 
 Not sure which tool to use? Here's a quick guide:
 
-| What You Want                  | Use This Tool       | Why                                  |
-| ------------------------------ | ------------------- | ------------------------------------ |
-| Quick web search               | `web_search`        | Fast, free, no API key               |
-| Read a specific URL            | `fetch_page`        | Extracts clean text, strips ads      |
+| What You Want                  | Use This Tool       | Why                                             |
+| ------------------------------ | ------------------- | ----------------------------------------------- |
+| Quick web search               | `web_search`        | Fast, free, no API key                          |
+| Read a specific URL            | `fetch_page`        | Extracts clean text, strips ads                 |
 | Search a specific site         | `web_search`        | Use `domain="docs.python.org"` to scope results |
-| Reddit discussions             | `reddit_search`     | Real community opinions              |
-| Tech opinions                  | `hackernews_search` | Developer-focused discussions        |
-| Factual summaries              | `wikipedia_search`  | Encyclopedia articles with full text |
-| Bug reports / feature requests | `github_search`     | Issues and PRs across repos          |
-| Full issue/PR conversation     | `get_github_issue`  | Complete thread with all comments    |
-| Real-time social media         | `x_search`          | Live posts and breaking news         |
-| Prediction market odds         | `polymarket_search` | Crowd-sourced probabilities          |
-| AI-powered research            | `groq_search`       | AI searches, browses, and synthesizes |
-| Deep page analysis             | `groq_analyze_page` | AI reads AND interprets              |
-| Package info                   | `package_info`      | Version, downloads, license, deps    |
-| Discover packages              | `package_search`    | Search npm, PyPI, crates.io, Go      |
-| Debug an error                 | `translate_error`   | Parse + search Stack Overflow        |
-| Compare technologies           | `compare_tech`      | GitHub stars, npm download stats     |
+| Reddit discussions             | `reddit_search`     | Real community opinions                         |
+| Tech opinions                  | `hackernews_search` | Developer-focused discussions                   |
+| Factual summaries              | `wikipedia_search`  | Encyclopedia articles with full text            |
+| Bug reports / feature requests | `github_search`     | Issues and PRs across repos                     |
+| Full issue/PR conversation     | `get_github_issue`  | Complete thread with all comments               |
+| Real-time social media         | `x_search`          | Live posts and breaking news                    |
+| Prediction market odds         | `polymarket_search` | Crowd-sourced probabilities                     |
+| AI-powered research            | `groq_search`       | AI searches, browses, and synthesizes           |
+| Deep page analysis             | `groq_analyze_page` | AI reads AND interprets                         |
+| Package info                   | `package_info`      | Version, downloads, license, deps               |
+| Discover packages              | `package_search`    | Search npm, PyPI, crates.io, Go                 |
+| Debug an error                 | `translate_error`   | Parse + search Stack Overflow                   |
+| Compare technologies           | `compare_tech`      | GitHub stars, npm download stats                |
 
 ---
 
@@ -269,7 +269,7 @@ This discovery → reading → validation pattern gives you the most reliable re
 
 | Variable                       | What It Does                                            | Default | Required?           |
 | ------------------------------ | ------------------------------------------------------- | ------- | ------------------- |
-| `SEARCH_MCP_GROQ_API_KEY`      | API key for Groq tools (browse, research, analyze_page) | —       | Only for Groq tools |
+| `SEARCH_MCP_GROQ_API_KEY`      | API key for Groq tools (search, analyze_page) | —       | Only for Groq tools |
 | `SEARCH_MCP_RATE_LIMIT_SEARCH` | Max DDG search requests per minute                      | `30`    | No                  |
 | `SEARCH_MCP_RATE_LIMIT_FETCH`  | Max page fetch requests per minute                      | `20`    | No                  |
 | `AUTH_TOKEN`                   | X/Twitter session cookie                                | —       | Only for `x_search` |
@@ -309,10 +309,10 @@ The `auto` backend handles this for you — it tries the fast option first and a
 
 ### DuckDuckGo Tools (free, no API key)
 
-| Tool          | What It Does           | Key Parameters                                                                                                |
-| ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `web_search`  | Search the web         | `query`, `search_type` ("text" or "news"), `max_results`, `time_range` ("d", "w", "m", "y"), `region`, `page`, `domain` |
-| `fetch_page`  | Read a URL             | `url`, `output_format` ("txt", "markdown", "html", "json"), `include_metadata`, `max_length`, `backend`       |
+| Tool         | What It Does   | Key Parameters                                                                                                          |
+| ------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `web_search` | Search the web | `query`, `search_type` ("text" or "news"), `max_results`, `time_range` ("d", "w", "m", "y"), `region`, `page`, `domain` |
+| `fetch_page` | Read a URL     | `url`, `output_format` ("txt", "markdown", "html", "json"), `include_metadata`, `max_length`, `backend`                 |
 
 ### Reddit Search (free, no API key)
 
@@ -353,10 +353,10 @@ The `auto` backend handles this for you — it tries the fast option first and a
 
 ### Groq Tools (requires API key)
 
-| Tool                | What It Does                       | Best For                                       |
-| ------------------- | ---------------------------------- | ---------------------------------------------- |
+| Tool                | What It Does                           | Best For                                          |
+| ------------------- | -------------------------------------- | ------------------------------------------------- |
 | `groq_search`       | AI-powered search (browse or compound) | Deep research, validation, multi-source synthesis |
-| `groq_analyze_page` | Read AND interpret a URL              | Extracting specific insights from an article      |
+| `groq_analyze_page` | Read AND interpret a URL               | Extracting specific insights from an article      |
 
 ### Developer Tools (free, no API key)
 
