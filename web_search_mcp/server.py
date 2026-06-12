@@ -3,6 +3,7 @@ from typing import Literal
 
 from fastmcp import FastMCP
 
+from .arxiv import arxiv_search_tool as _arxiv_search_tool
 from .compare import compare_tech as _compare_tech
 from .ddg import ddg_search, format_search_results_markdown
 from .ddg import fetch_page as _fetch_page
@@ -433,6 +434,64 @@ def _format_pm_markdown(items: list[dict], topic: str) -> str:
             lines.append(f"   Movement: {item['price_movement']}")
         return lines
     return format_results_markdown(items, topic, "Polymarket", "markets", _item_lines)
+
+
+# ─────────────────────────────────────────────────────────────
+# arXiv tools — free, academic paper search
+# Best for: research papers, citations, literature reviews
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="arxiv_search",
+    annotations={
+        "title": "Search arXiv for academic papers",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def arxiv_search(
+    query: str,
+    max_results: int = 10,
+    sort_by: Literal["relevance", "submitted_date", "updated_date"] = "relevance",
+) -> str | ErrorResponse:
+    """Search arXiv for academic papers — free, no API key needed.
+
+    Role: Academic research. Use this to find papers by keyword, author,
+    or category. Supports Lucene field prefixes for targeted searches.
+    Alternative: web_search for general results, groq_search for synthesized
+    multi-source research with validation.
+
+    Field prefixes:
+    - ``all:`` — Search all fields (default)
+    - ``ti:`` — Title only
+    - ``au:`` — Author name
+    - ``abs:`` — Abstract only
+    - ``cat:`` — Category (e.g. cat:cs.AI, cat:hep-th, cat:math)
+
+    Args:
+        query: Search query with optional field prefixes
+               (e.g. "transformer attention", "au:Goodfellow", "cat:cs.AI")
+        max_results: Max results to return (default 10, max 50)
+        sort_by: Sort criterion ('relevance', 'submitted_date', 'updated_date')
+
+    Returns:
+        str: Markdown-formatted list of papers with title, authors, date,
+             categories, and abstract excerpt.
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "quantum computing error correction"
+        - "au:Yoshua+Bengio AND cat:cs.LG"
+        - "cat:cs.AI reinforcement learning"
+
+    Error Handling:
+        - Empty query: Returns error message.
+        - arXiv API down: arXiv periodically has maintenance. Try again later.
+    """
+    return _arxiv_search_tool(query=query, max_results=max_results, sort_by=sort_by)
 
 
 # ─────────────────────────────────────────────────────────────
