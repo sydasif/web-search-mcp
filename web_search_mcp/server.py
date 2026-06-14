@@ -3,35 +3,49 @@ from typing import Literal
 
 from fastmcp import FastMCP
 
-from .arxiv import arxiv_search_tool as _arxiv_search_tool
-from .compare import compare_tech as _compare_tech
-from .ddg import ddg_search, format_search_results_markdown
-from .ddg import fetch_page as _fetch_page
-from .errors import translate_error as _translate_error
-from .github import get_github_issue as _get_github_issue
-from .groq_tools import (
-    groq_analyze as _groq_analyze,
-    search as _groq_search,
+from ._models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
+from ._utils import format_error
+from .search.ddg import ddg_search, format_search_results_markdown
+from .search.ddg import fetch_page as _fetch_page
+from .search.exa import exa_search as _exa_search
+from .search.exa import exa_search_advanced as _exa_search_advanced
+from .search.exa import format_exa_markdown as _format_exa_markdown
+from .social.github import (
+    enrich_with_comments as _enrich_gh,
 )
-from .hackernews import enrich_top_stories as _enrich_hn
-from .hackernews import search_hackernews as _search_hn
-from .models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
-from .reddit import reddit_search_tool as _reddit_search_tool
-from .registries import (
+from .social.github import (
+    format_github_markdown as _format_gh_markdown,
+)
+from .social.github import (
+    get_github_issue as _get_github_issue,
+)
+from .social.github import (
+    search_github as _search_gh,
+)
+from .social.hackernews import enrich_top_stories as _enrich_hn
+from .social.hackernews import format_hackernews_markdown as _format_hn_markdown
+from .social.hackernews import search_hackernews as _search_hn
+from .social.reddit import reddit_search_tool as _reddit_search_tool
+from .social.x import format_x_markdown as _format_x_markdown
+from .social.x import search_x as _search_x
+from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
+from .tools.compare import compare_tech as _compare_tech
+from .tools.errors import translate_error as _translate_error
+from .tools.groq_tools import groq_analyze as _groq_analyze
+from .tools.groq_tools import search as _groq_search
+from .tools.registries import (
     format_package_info as _fmt_pkg_info,
 )
-from .registries import (
+from .tools.registries import (
     format_package_list as _fmt_pkg_list,
 )
-from .registries import (
+from .tools.registries import (
     lookup_package as _lookup_package,
 )
-from .registries import (
+from .tools.registries import (
     search_packages as _search_packages,
 )
-from .utils import format_error, format_results_markdown
-from .wikipedia import wikipedia_search_tool as _wikipedia_search_tool
-from .x import search_x as _search_x
+from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
 # Set up logging
 LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
@@ -69,7 +83,7 @@ mcp = FastMCP("Web Search Tools")
 
 
 @mcp.tool(
-    name="web_search",
+    name="search_web",
     annotations={
         "title": "Search the web via DuckDuckGo",
         "readOnlyHint": True,
@@ -78,7 +92,7 @@ mcp = FastMCP("Web Search Tools")
         "openWorldHint": True,
     },
 )
-def web_search(
+def search_web(
     query: str,
     search_type: Literal["text", "news"] = "text",
     max_results: int = 5,
@@ -94,7 +108,7 @@ def web_search(
 
     Role: Discovery. Use this as your first-pass search for broad coverage.
     Workflow: Feed results into groq_search for deep validation, or
-    fetch_page to get full page content. Alternative: groq_search
+    fetch_web_page to get full page content. Alternative: groq_search
     provides a synthesized answer instead of raw links.
 
     Args:
@@ -124,6 +138,7 @@ def web_search(
     Error Handling:
         - 429 Too Many Requests: Try reducing max_results or wait 60s.
         - Empty Results: Try a more general query or change search_type.
+
     """
     try:
         effective_query = f"site:{domain} {query}" if domain else query
@@ -143,7 +158,7 @@ def web_search(
             return format_search_results_markdown(result)
         return result
     except Exception as e:
-        logger.error("Search failed: %s", e)
+        logger.exception("Search failed")
         return format_error(
             "DuckDuckGo search failed",
             f"{e}. Try reducing max_results, switching search_type, or using a more specific query.",
@@ -151,7 +166,7 @@ def web_search(
 
 
 @mcp.tool(
-    name="fetch_page",
+    name="fetch_web_page",
     annotations={
         "title": "Extract text content from a URL",
         "readOnlyHint": True,
@@ -160,7 +175,7 @@ def web_search(
         "openWorldHint": True,
     },
 )
-def fetch_page(
+def fetch_web_page(
     url: str,
     output_format: FetchOutputFormat = "txt",
     include_metadata: bool = False,
@@ -170,7 +185,6 @@ def fetch_page(
     deduplicate: bool = True,
     max_length: int = 15000,
     timeout: int = 30,
-    backend: Literal["httpx", "curl", "auto"] = "auto",
 ) -> PageResponse | ErrorResponse:
     """Extract raw text content from a URL — fast, free, full control.
 
@@ -190,7 +204,6 @@ def fetch_page(
         deduplicate: Whether to remove duplicated content
         max_length: Maximum length of content to return (default 15000)
         timeout: Request timeout in seconds (default 30)
-        backend: HTTP backend to use ('httpx' for lightweight, 'curl' to bypass bot detection, 'auto' to try httpx first then fallback to curl)
 
     Returns:
         PageResponse: Extracted content and metadata
@@ -201,8 +214,9 @@ def fetch_page(
         - "https://www.nature.com/articles/s41586-024-00000-0"
 
     Error Handling:
-        - HTTP 403 Forbidden: The site is blocking the request. Try changing the backend to 'curl'.
+        - HTTP 403 Forbidden: The site is blocking the request. The server automatically falls back to Exa.
         - Timeout: The page is taking too long to respond. Increase the timeout parameter.
+
     """
     return _fetch_page(
         url=url,
@@ -214,7 +228,6 @@ def fetch_page(
         deduplicate=deduplicate,
         max_length=max_length,
         timeout=timeout,
-        backend=backend,
     )
 
 
@@ -225,7 +238,7 @@ def fetch_page(
 
 
 @mcp.tool(
-    name="reddit_search",
+    name="search_reddit",
     annotations={
         "title": "Search Reddit via keyless RSS + shreddit enrichment",
         "readOnlyHint": True,
@@ -234,7 +247,7 @@ def fetch_page(
         "openWorldHint": True,
     },
 )
-def reddit_search(
+def search_reddit(
     query: str,
     search_type: Literal["text", "news"] = "text",
     max_results: int = 25,
@@ -246,7 +259,7 @@ def reddit_search(
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed.
 
     Role: Discovery. Use this for Reddit-specific discussions, opinions, and
-    community insights. Alternative: web_search for general web results,
+    community insights. Alternative: search_web for general web results,
     groq_search for synthesized multi-source research.
 
     Workflow: Three-tier keyless pipeline:
@@ -275,6 +288,7 @@ def reddit_search(
 
     Error Handling:
         - Reddit 403/429: The free keyless path is rate-limited. Try a different query, target specific subreddits, or wait.
+
     """
     return _reddit_search_tool(
         query=query,
@@ -294,7 +308,7 @@ def reddit_search(
 
 
 @mcp.tool(
-    name="hackernews_search",
+    name="search_hackernews",
     annotations={
         "title": "Search Hacker News via Algolia API",
         "readOnlyHint": True,
@@ -303,7 +317,7 @@ def reddit_search(
         "openWorldHint": True,
     },
 )
-def hackernews_search(
+def search_hackernews(
     query: str,
     max_results: int = 30,
     depth: Literal["quick", "default", "deep"] = "default",
@@ -312,7 +326,7 @@ def hackernews_search(
     """Search Hacker News via Algolia API — free, no API key needed.
 
     Role: Tech discourse. Use this for developer news, startup discussions,
-    and technical opinions. Alternative: web_search for general results,
+    and technical opinions. Alternative: search_web for general results,
     groq_search for synthesized multi-source research.
 
     Args:
@@ -332,6 +346,7 @@ def hackernews_search(
 
     Error Handling:
         - Empty results: Try a more general query or broaden the search terms.
+
     """
     if not query or not query.strip():
         return format_error("Query cannot be empty")
@@ -343,28 +358,8 @@ def hackernews_search(
             return _format_hn_markdown(items, query)
         return items
     except Exception as e:
-        logger.error("Hacker News search failed: %s", e)
+        logger.exception("Hacker News search failed")
         return format_error(f"Hacker News search failed: {e}")
-
-
-def _format_hn_markdown(items: list[dict], query: str) -> str:
-    """Format HN results as markdown."""
-
-    def _item_lines(item: dict, i: int) -> list[str]:
-        points = item.get("engagement", {}).get("points", 0)
-        comments = item.get("engagement", {}).get("comments", 0)
-        hn_url = item.get("hn_url", item.get("url", "#"))
-        lines = [
-            f"{i}. **[{item.get('title', 'Untitled')}]({hn_url})**",
-            f"   {points} points, {comments} comments | {item.get('date', '')}",
-        ]
-        if item.get("top_comments"):
-            lines.append("   Top comments:")
-            for c in item["top_comments"][:2]:
-                lines.append(f"   > {c.get('text', '')[:200]}...")
-        return lines
-
-    return format_results_markdown(items, query, "Hacker News", "stories", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -374,7 +369,7 @@ def _format_hn_markdown(items: list[dict], query: str) -> str:
 
 
 @mcp.tool(
-    name="arxiv_search",
+    name="search_arxiv",
     annotations={
         "title": "Search arXiv for academic papers",
         "readOnlyHint": True,
@@ -383,7 +378,7 @@ def _format_hn_markdown(items: list[dict], query: str) -> str:
         "openWorldHint": True,
     },
 )
-def arxiv_search(
+def search_arxiv(
     query: str,
     max_results: int = 10,
     sort_by: Literal["relevance", "submitted_date", "updated_date"] = "relevance",
@@ -392,7 +387,7 @@ def arxiv_search(
 
     Role: Academic research. Use this to find papers by keyword, author,
     or category. Supports Lucene field prefixes for targeted searches.
-    Alternative: web_search for general results, groq_search for synthesized
+    Alternative: search_web for general results, groq_search for synthesized
     multi-source research with validation.
 
     Field prefixes:
@@ -421,6 +416,7 @@ def arxiv_search(
     Error Handling:
         - Empty query: Returns error message.
         - arXiv API down: arXiv periodically has maintenance. Try again later.
+
     """
     return _arxiv_search_tool(query=query, max_results=max_results, sort_by=sort_by)
 
@@ -432,7 +428,7 @@ def arxiv_search(
 
 
 @mcp.tool(
-    name="wikipedia_search",
+    name="search_wikipedia",
     annotations={
         "title": "Search Wikipedia and read articles",
         "readOnlyHint": True,
@@ -441,7 +437,7 @@ def arxiv_search(
         "openWorldHint": True,
     },
 )
-def wikipedia_search(
+def search_wikipedia(
     query: str,
     max_results: int = 5,
 ) -> str | ErrorResponse:
@@ -467,11 +463,12 @@ def wikipedia_search(
         - Empty query: Returns error message
         - No results: Returns "No Wikipedia articles found"
         - Network error: Returns error message
+
     """
     try:
         return _wikipedia_search_tool(query, max_results=max_results)
     except Exception as e:
-        logger.error("Wikipedia search failed: %s", e)
+        logger.exception("Wikipedia search failed")
         return format_error(f"Wikipedia search failed: {e}")
 
 
@@ -482,7 +479,7 @@ def wikipedia_search(
 
 
 @mcp.tool(
-    name="github_search",
+    name="search_github",
     annotations={
         "title": "Search GitHub Issues and PRs",
         "readOnlyHint": True,
@@ -491,7 +488,7 @@ def wikipedia_search(
         "openWorldHint": True,
     },
 )
-def github_search(
+def search_github(
     query: str,
     max_results: int = 30,
     depth: Literal["quick", "default", "deep"] = "default",
@@ -501,8 +498,8 @@ def github_search(
     """Search GitHub Issues and PRs via the GitHub Search API.
 
     Role: Code & issues. Use this for bug discussions, feature requests,
-    and community sentiment on GitHub projects. Alternative: web_search
-    for general results, or web_search with domain="docs.python.org" for documentation.
+    and community sentiment on GitHub projects. Alternative: search_web
+    for general results, or search_web with domain="docs.python.org" for documentation.
 
     Note: Requires GITHUB_TOKEN env var or `gh` CLI installed and authenticated.
     Without auth, returns empty results.
@@ -527,47 +524,20 @@ def github_search(
         - No token: Set GITHUB_TOKEN env var or install gh CLI.
         - 403 rate limit: Wait or use a token with higher limits.
         - Empty results: Try a broader query or different keywords.
+
     """
     if not query or not query.strip():
         return format_error("Query cannot be empty")
 
     try:
-        from .github import enrich_with_comments as _enrich_gh
-        from .github import search_github as _search_gh
-
         items = _search_gh(query, depth=depth, token=token)[:max_results]
         items = _enrich_gh(items, depth=depth, token=token)
         if response_format == "markdown":
             return _format_gh_markdown(items, query)
         return items
     except Exception as e:
-        logger.error("GitHub search failed: %s", e)
+        logger.exception("GitHub search failed")
         return format_error(f"GitHub search failed: {e}")
-
-
-def _format_gh_markdown(items: list[dict], query: str) -> str:
-    """Format GitHub results as markdown."""
-
-    def _item_lines(item: dict, i: int) -> list[str]:
-        emoji = "🔀" if item.get("is_pr") else "🐛"
-        repo = item.get("repository", "")
-        reactions = item.get("engagement", {}).get("reactions", 0)
-        comments = item.get("engagement", {}).get("comments", 0)
-        lines = [
-            f"{i}. {emoji} **[{item.get('title', 'Untitled')}]({item.get('url', '#')})**",
-            f"   {repo} | {item.get('author', '')} | {item.get('date', '')}",
-            f"   ❤️ {reactions} reactions, 💬 {comments} comments",
-        ]
-        labels = item.get("labels", [])
-        if labels:
-            lines.append(f"   Labels: {', '.join(labels[:5])}")
-        if item.get("top_comments"):
-            lines.append("   Top comment:")
-            for c in item["top_comments"][:1]:
-                lines.append(f"   > {c.get('excerpt', '')[:200]}...")
-        return lines
-
-    return format_results_markdown(items, query, "GitHub", "issues/PRs", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -608,14 +578,16 @@ def get_github_issue(url: str) -> str | ErrorResponse:
         - Invalid URL: Returns error message
         - gh CLI not installed or authenticated: Returns error with instructions
         - Timeout or API error: Returns error message
+
     """
     try:
         return _get_github_issue(url)
     except Exception as e:
-        logger.error("get_github_issue failed: %s", e)
-        return format_error(
-            f"Failed to fetch issue: {e}"
-        )  # ─────────────────────────────────────────────────────────────
+        logger.exception("get_github_issue failed")
+        return format_error(f"Failed to fetch issue: {e}")
+
+
+# ─────────────────────────────────────────────────────────────
 
 
 # Groq tools — AI-powered web search (browse + compound)
@@ -637,7 +609,10 @@ def get_github_issue(url: str) -> str | ErrorResponse:
 def groq_search(
     query: str,
     model: Literal[
-        "openai/gpt-oss-20b", "openai/gpt-oss-120b", "groq/compound", "groq/compound-mini"
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "groq/compound",
+        "groq/compound-mini",
     ] = "groq/compound-mini",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
@@ -653,7 +628,7 @@ def groq_search(
       and synthesis strategy. compound-mini is faster (1 tool call),
       compound supports up to 10 tool calls.
 
-    Alternative: web_search for raw DDG results (free, no tokens).
+    Alternative: search_web for raw DDG results (free, no tokens).
 
     Args:
         query: Search question or topic
@@ -678,6 +653,7 @@ def groq_search(
         - API Key Missing: Ensure GROQ_API_KEY is set in your environment.
         - Rate Limit: Groq API limit reached. Wait a few minutes before retrying.
         - Request too long: Keep your query under 150 characters.
+
     """
     return _groq_search(query=query, model=model, reasoning_effort=reasoning_effort)
 
@@ -699,13 +675,13 @@ def groq_analyze(
 ) -> str | ErrorResponse:
     """Visit and analyze a URL via Groq Compound — fetches and interprets content.
 
-    Role: Interpretation. Use this AFTER fetch_page when you need AI analysis
+    Role: Interpretation. Use this AFTER fetch_web_page when you need AI analysis
     of the content (e.g. "Find the argument for X", "Extract the data table").
-    Alternative: fetch_page gives you raw content for free — use that when
+    Alternative: fetch_web_page gives you raw content for free — use that when
     you just need to read the text yourself.
 
     Note: Large pages may hit Groq's internal request-body limit. If so,
-    use fetch_page first, then ask a specific question about the content.
+    use fetch_web_page first, then ask a specific question about the content.
 
     Args:
         url: The URL to visit and analyze
@@ -724,6 +700,7 @@ def groq_analyze(
     Error Handling:
         - Page too large: The content exceeds Groq's context window. Use fetch_page first.
         - Access Denied: The page is behind a paywall or blocking the analyzer.
+
     """
     return _groq_analyze(url=url, query=query, model=model)
 
@@ -735,7 +712,7 @@ def groq_analyze(
 
 
 @mcp.tool(
-    name="x_search",
+    name="search_x",
     annotations={
         "title": "Search X/Twitter via Bird CLI",
         "readOnlyHint": True,
@@ -744,7 +721,7 @@ def groq_analyze(
         "openWorldHint": True,
     },
 )
-def x_search(
+def search_x(
     query: str,
     from_date: str | None = None,
     max_results: int = 30,
@@ -779,47 +756,16 @@ def x_search(
     Error Handling:
         - Missing credentials: Set AUTH_TOKEN and CT0 env vars.
         - Node.js missing: Install Node.js 22+ for the vendored Bird CLI.
-    """
 
+    """
     try:
         items = _search_x(query=query, from_date=from_date, depth=depth)[:max_results]
         if response_format == "markdown":
             return _format_x_markdown(items, query)
         return items
     except Exception as e:
-        logger.error("X search failed: %s", e)
+        logger.exception("X search failed")
         return format_error(f"X search failed: {e}")
-
-
-def _format_x_markdown(items: list[dict], query: str) -> str:
-    """Format X results as markdown."""
-    # Check for auth errors (unique to X tool)
-    if len(items) == 1 and "error" in items[0]:
-        return f"⚠️ {items[0]['error']}"
-
-    def _item_lines(item: dict, i: int) -> list[str]:
-        handle = item.get("author_handle", "unknown")
-        url = item.get("url", "#")
-        text = (item.get("text", "") or "")[:200]
-        lines = [
-            f"{i}. **@{handle}** · [{url}]({url})",
-            f"   {text}{'...' if len(item.get('text', '') or '') > 200 else ''}",
-        ]
-        eng = item.get("engagement", {}) or {}
-        eng_parts = []
-        if eng.get("likes"):
-            eng_parts.append(f"❤️ {eng['likes']}")
-        if eng.get("retweets"):
-            eng_parts.append(f"🔁 {eng['retweets']}")
-        if eng.get("replies"):
-            eng_parts.append(f"💬 {eng['replies']}")
-        if eng_parts:
-            lines.append(f"   {' '.join(eng_parts)}")
-        if item.get("date"):
-            lines.append(f"   {item['date']}")
-        return lines
-
-    return format_results_markdown(items, query, "X/Twitter", "posts", _item_lines)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -829,7 +775,7 @@ def _format_x_markdown(items: list[dict], query: str) -> str:
 
 
 @mcp.tool(
-    name="package_info",
+    name="get_package_info",
     annotations={
         "title": "Look up a package from npm, PyPI, crates.io, or Go modules",
         "readOnlyHint": True,
@@ -838,7 +784,7 @@ def _format_x_markdown(items: list[dict], query: str) -> str:
         "openWorldHint": True,
     },
 )
-def package_info(
+def get_package_info(
     name: str,
     registry: Literal["npm", "pypi", "crates", "go"] | None = None,
 ) -> str | ErrorResponse:
@@ -864,6 +810,7 @@ def package_info(
     Error Handling:
         - Package not found: Returns clear message with registry info.
         - Registry down: Returns error message.
+
     """
     try:
         result = _lookup_package(name, registry=registry)
@@ -871,12 +818,12 @@ def package_info(
             return result
         return _fmt_pkg_info(result)
     except Exception as e:
-        logger.error("package_info failed: %s", e)
+        logger.exception("package_info failed")
         return format_error(f"Package lookup failed for '{name}'", str(e))
 
 
 @mcp.tool(
-    name="package_search",
+    name="search_packages",
     annotations={
         "title": "Search packages by keyword on npm, PyPI, crates.io, or Go",
         "readOnlyHint": True,
@@ -885,7 +832,7 @@ def package_info(
         "openWorldHint": True,
     },
 )
-def package_search(
+def search_packages(
     query: str,
     registry: Literal["npm", "pypi", "crates", "go"] = "npm",
     max_results: int = 5,
@@ -893,7 +840,7 @@ def package_search(
     """Search for packages by keyword across a package registry.
 
     Role: Developer tooling. Use this to discover packages related to a
-    topic. Follow up with ``package_info`` for detailed metadata.
+    topic. Follow up with ``get_package_info`` for detailed metadata.
 
     Args:
         query: Search keywords (e.g. ``"async http client"``).
@@ -912,6 +859,7 @@ def package_search(
     Error Handling:
         - Empty query: Returns error message.
         - No results: Returns "No packages found" message.
+
     """
     try:
         result = _search_packages(query, registry=registry, max_results=max_results)
@@ -919,12 +867,12 @@ def package_search(
             return result
         return _fmt_pkg_list(result, query, registry)
     except Exception as e:
-        logger.error("package_search failed: %s", e)
+        logger.exception("package_search failed")
         return format_error(f"Package search failed for '{query}'", str(e))
 
 
 @mcp.tool(
-    name="translate_error",
+    name="analyze_error",
     annotations={
         "title": "Analyze error messages and find solutions from Stack Overflow",
         "readOnlyHint": True,
@@ -933,7 +881,7 @@ def package_search(
         "openWorldHint": True,
     },
 )
-def translate_error(
+def analyze_error(
     error_message: str,
     max_results: int = 5,
     language: str | None = None,
@@ -963,16 +911,17 @@ def translate_error(
     Error Handling:
         - Empty input: Returns error message.
         - No Stack Overflow results: Returns partial analysis with note.
+
     """
     try:
         return _translate_error(error_message, max_results=max_results, language=language)
     except Exception as e:
-        logger.error("translate_error failed: %s", e)
+        logger.exception("translate_error failed")
         return format_error("Error analysis failed", str(e))
 
 
 @mcp.tool(
-    name="compare_tech",
+    name="compare_technologies",
     annotations={
         "title": "Compare two technologies side-by-side",
         "readOnlyHint": True,
@@ -981,7 +930,7 @@ def translate_error(
         "openWorldHint": True,
     },
 )
-def compare_tech(
+def compare_technologies(
     tech_a: str,
     tech_b: str,
     category: Literal["framework", "library", "database", "language", "tool"] = "library",
@@ -1008,15 +957,117 @@ def compare_tech(
     Error Handling:
         - Unknown technology: Returns partial data for found items.
         - GitHub API rate limited: Returns what data is available.
+
     """
     try:
         return _compare_tech(tech_a, tech_b, category=category)
     except Exception as e:
-        logger.error("compare_tech failed: %s", e)
+        logger.exception("compare_tech failed")
         return format_error("Comparison failed", str(e))
 
 
-def main():
+# ─────────────────────────────────────────────────────────────
+# Exa AI tools — semantic search, free, no API key
+# Best for: semantic discovery, filtered search, JS-heavy pages
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="search_exa",
+    annotations={
+        "title": "Semantic web search via Exa AI",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def search_exa(
+    query: str,
+    max_results: int = 5,
+    category: str | None = None,
+    include_domains: list[str] | None = None,
+    exclude_domains: list[str] | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    search_type: str | None = None,
+    contents_text: bool = False,
+    contents_highlights: bool = False,
+    response_format: Literal["json", "markdown"] = "markdown",
+) -> str | list[dict] | ErrorResponse:
+    """Semantic web search via Exa AI. Optional EXA_API_KEY increases rate limits.
+
+    Role: Semantic discovery. Use when keyword search gives poor results
+    or you need AI-understood relevance. Exa uses semantic matching instead
+    of keyword matching.
+
+    Args:
+        query: Natural language query (Exa works best with full sentences)
+        max_results: Max results (default 5)
+        category: Content type filter ('company', 'research paper', 'news', 'tweet')
+        include_domains: Only search these domains (e.g. ['github.com'])
+        exclude_domains: Exclude these domains
+        start_date: Only results after this date (YYYY-MM-DD)
+        end_date: Only results before this date (YYYY-MM-DD)
+        search_type: Search mode ('auto', 'instant', 'fast', 'deep-lite', 'deep', 'deep-reasoning')
+        contents_text: Include full page text in results
+        contents_highlights: Include highlighted snippets in results
+        response_format: 'json' for structured data, 'markdown' for readable
+
+    Returns:
+        list: Results with title, url, snippet
+        str: Markdown-formatted results
+
+    Examples:
+        - "What are the best Python async frameworks in 2026"
+        - query="Claude code review", include_domains=["reddit.com"]
+        - query="AI regulation news", category="news", start_date="2026-01-01"
+        - query="compare Rust vs Go", search_type="deep"
+
+    Error Handling:
+        - Empty results: Try a more general query or remove domain filters.
+        - Rate limit: Exa free tier is 20K req/month. Wait if exhausted.
+    """
+    try:
+        has_filters = any([category, include_domains, exclude_domains, start_date, end_date])
+        use_advanced = has_filters or search_type or contents_text or contents_highlights
+        if use_advanced:
+            contents = {}
+            if contents_text:
+                contents["text"] = True
+            if contents_highlights:
+                contents["highlights"] = True
+            data = _exa_search_advanced(
+                query,
+                num_results=max_results,
+                category=category,
+                include_domains=include_domains,
+                exclude_domains=exclude_domains,
+                start_date=start_date,
+                end_date=end_date,
+                search_type=search_type,
+                contents=contents if contents else None,
+            )
+            if not data:
+                return format_error("Exa search returned no results")
+            results = data.get("results", []) if isinstance(data, dict) else []
+            if response_format == "json":
+                return results if results else []
+            return _format_exa_markdown(results, query)
+
+        items = _exa_search(query, num_results=max_results)
+        if not items:
+            return format_error("Exa search returned no results")
+        if response_format == "json":
+            return items
+
+        return _format_exa_markdown(items, query)
+    except Exception as e:
+        logger.exception("Exa search failed")
+        return format_error(f"Exa search failed: {e}")
+
+
+def main() -> None:
     mcp.run(transport="stdio")
 
 

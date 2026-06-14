@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "web_search_mcp"
 version = "0.2.0"
@@ -6,7 +10,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "arxiv>=4.0.0",
-    "curl_cffi>=0.7.0",
     "ddgs>=9.10.0",
     "fastmcp>=2.14.4",
     "groq>=0.28.0",
@@ -45,6 +48,7 @@ dev = [
 line-length = 100
 
 [tool.ruff.lint]
+select = ["I"]
 # S101: assert is standard in pytest tests
 ignore = []
 
