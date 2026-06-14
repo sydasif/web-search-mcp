@@ -1,0 +1,10 @@
+{
+  "name": "web-search",
+  "version": "0.2.0",
+  "description": "Web search, content extraction, and research tools for Claude Code. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and more — all from your Claude session.",
+  "author": {
+    "name": "Syed Asif",
+    "email": "sydasif78@gmail.com"
+  },
+  "skills": ["./skills/research", "./skills/debug"]
+}

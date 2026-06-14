@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/sydasif/web-search-mcp.git",
+        "web-search-mcp"
+      ],
+      "env": {
+        "GROQ_API_KEY": "${GROQ_API_KEY}",
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "AUTH_TOKEN": "${AUTH_TOKEN}",
+        "CT0": "${CT0}",
+        "EXA_API_KEY": "${EXA_API_KEY}"
+      }
+    }
+  }
+}
