@@ -1,146 +1,64 @@
-# Web Search Plugin
+# Web Search MCP
 
-A Claude Code plugin that provides web search, content extraction, and research tools. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and package registries - all from your Claude session. Powered by DuckDuckGo with automatic Exa AI fallback for JS-heavy and Cloudflare-protected pages.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![FastMCP](https://img.shields.io/badge/FastMCP-2.0-orange)](https://github.com/jlowin/fastmcp)
 
-## Tools
+A FastMCP server giving LLMs real-time access to the web — search, read articles, browse Reddit/HN, track GitHub issues, search arXiv, look up packages, and more. No API keys required for most tools.
 
-### Web & Content Discovery
+---
 
-| Tool             | Description                                                               |
-| :--------------- | :------------------------------------------------------------------------ |
-| `search_web`     | Search the web via DuckDuckGo (text or news, domain-scoped)               |
-| `search_exa`     | Semantic search via Exa AI (filters, search type, content options)        |
-| `fetch_web_page` | Extract clean text content from any URL (Exa fallback for JS-heavy pages) |
-
-### Community Platforms
-
-| Tool                | Description                                              |
-| :------------------ | :------------------------------------------------------- |
-| `search_reddit`     | Search Reddit via keyless RSS + shreddit enrichment      |
-| `search_hackernews` | Search Hacker News via Algolia API                       |
-| `search_github`     | Search GitHub Issues and PRs                             |
-| `search_x`          | Search X/Twitter (requires AUTH_TOKEN + CT0 cookies)     |
-| `get_github_issue`  | Fetch a full GitHub Issue or PR thread with all comments |
-
-### AI-Powered Research (requires GROQ_API_KEY)
-
-| Tool           | Description                                         |
-| :------------- | :-------------------------------------------------- |
-| `groq_search`  | AI-powered web search via Groq (browse or compound) |
-| `groq_analyze` | Visit and analyze a URL via Groq Compound           |
-
-### Knowledge Bases
-
-| Tool               | Description                                   |
-| :----------------- | :-------------------------------------------- |
-| `search_wikipedia` | Search Wikipedia and return full article text |
-| `search_arxiv`     | Search arXiv for academic papers              |
-
-### Developer Tooling
-
-| Tool                   | Description                                                         |
-| :--------------------- | :------------------------------------------------------------------ |
-| `get_package_info`     | Look up a package from npm, PyPI, crates.io, or Go                  |
-| `search_packages`      | Search packages by keyword across a registry                        |
-| `analyze_error`        | Parse error messages and search Stack Overflow for solutions        |
-| `compare_technologies` | Compare two technologies side-by-side with GitHub and registry data |
-
-## Skills
-
-This plugin bundles two skills:
-
-- **research** (`/research`) — Deep research across multiple sources with breadth-first, depth-first methodology
-- **debug** (`/debug`) — Debug errors, test failures, and runtime exceptions
-
-## Configuration
-
-| Variable       | Required | Description                                  |
-| :------------- | :------- | :------------------------------------------- |
-| `GROQ_API_KEY` | No       | For `groq_search` and `groq_analyze` tools   |
-| `EXA_API_KEY`  | No       | For Exa AI search (free tier: 20K req/month) |
-| `GITHUB_TOKEN` | No       | For higher GitHub API rate limits            |
-| `AUTH_TOKEN`   | No       | For X/Twitter search                         |
-| `CT0`          | No       | For X/Twitter search                         |
-
-### Example `~/.profile` entries
-
-Add these to your `~/.profile` (or equivalent shell profile) to make the vars available to Claude Code:
+## Quick Start
 
 ```bash
-# Groq — for groq_search and groq_analyze
-export GROQ_API_KEY="gsk_your_key_here"
-
-# Exa — for search_exa (optional, increases rate limits)
-export EXA_API_KEY="your_exa_key_here"
-
-# GitHub — for higher API rate limits on issue/PR search
-export GITHUB_TOKEN="ghp_your_token_here"
-
-# X/Twitter — for search_x (AUTH_TOKEN and CT0 from browser cookies)
-export AUTH_TOKEN="your_auth_token_here"
-export CT0="your_ct0_here"
+uv tool install git+https://github.com/sydasif/web-search-mcp.git
 ```
 
-The `AUTH_TOKEN` and `CT0` cookies can be extracted from your browser after logging in to `x.com`. These are session cookies that expire periodically and need to be refreshed.
+Add to your MCP client config:
 
-> **Note**: The `.mcp.json` configures the MCP server to read these same variables via `${VAR_NAME}` interpolation — no additional mapping needed once they're in your environment.
-
-## Package Structure
-
-```
-web_search_mcp/
-├── server.py              # MCP tool registration (thin layer)
-├── _config/               # Settings (pydantic-settings) + business constants
-│   ├── settings.py
-│   └── limits.py
-├── _models/               # Shared Pydantic models and type aliases
-│   ├── responses.py
-│   ├── requests.py
-│   └── types.py
-├── _utils/                # Formatting, scoring, rate limiting
-│   ├── formatting.py
-│   ├── scoring.py
-│   └── rate_limiter.py
-├── _http/                 # Shared httpx client
-│   └── client.py
-├── search/                # Web search engines
-│   ├── ddg.py             # DuckDuckGo + Exa fallback
-│   └── exa.py             # Exa AI semantic search
-├── social/                # Social platforms
-│   ├── github.py          # GitHub Issues/PRs
-│   ├── hackernews.py      # Hacker News via Algolia
-│   ├── x.py               # X/Twitter via Bird CLI
-│   └── reddit/            # Reddit RSS + shreddit
-│       ├── client.py
-│       ├── engine.py
-│       ├── models.py
-│       └── parsers.py
-└── tools/                 # Developer tools
-    ├── arxiv.py           # arXiv academic papers
-    ├── compare.py         # Technology comparison
-    ├── errors.py          # Error parsing + Stack Overflow
-    ├── groq_client.py     # Groq API client
-    ├── groq_tools.py      # Groq search/analyze
-    ├── registries.py      # npm/PyPI/crates.io/Go
-    └── wikipedia.py       # Wikipedia articles
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "web-search-mcp"
+    }
+  }
+}
 ```
 
-## Adding New Tools
+Optional — enable AI-powered research via Groq:
 
-1. Add your source module in the appropriate sub-package (`search/`, `social/`, or `tools/`)
-2. Import and register the tool in `web_search_mcp/server.py`
-3. Update this README
-
-## Development
-
-```bash
-cd web-search
-uv sync
-uv run ruff check web_search_mcp/
-uv run ruff format web_search_mcp/
-uv run mypy web_search_mcp/
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "web-search-mcp",
+      "env": {
+        "SEARCH_MCP_GROQ_API_KEY": "gsk_your_key_here"
+      }
+    }
+  }
+}
 ```
+
+[Get a free Groq API key](https://console.groq.com/keys)
+
+---
+
+## Documentation
+
+Full documentation is on the [GitHub Wiki](https://github.com/sydasif/web-search-mcp/wiki):
+
+| Page                                                                          | Contents                                              |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [Tools](https://github.com/sydasif/web-search-mcp/wiki/Tools)                 | All 15 tools, what they do, and when to use them      |
+| [Tools Status](https://github.com/sydasif/web-search-mcp/wiki/Tools-Status)   | Live functional test results and known quirks         |
+| [Configuration](https://github.com/sydasif/web-search-mcp/wiki/Configuration) | Environment variables, X/Twitter cookies, GitHub auth |
+| [Architecture](https://github.com/sydasif/web-search-mcp/wiki/Architecture)   | Project structure, design principles, data flow       |
+| [Development](https://github.com/sydasif/web-search-mcp/wiki/Development)     | Setup, testing, linting, coding standards             |
+
+---
 
 ## License
 
-MIT
+[MIT](https://opensource.org/licenses/MIT)
