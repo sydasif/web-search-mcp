@@ -101,6 +101,69 @@ def call_groq_api(
         raise GroqClientError(msg, status_code=status_code)
 
 
+def call_groq_api_with_fallback(
+    models: list[str],
+    messages: list[ChatCompletionMessageParam],
+    temperature: float = 1.0,
+    max_tokens: int = 2048,
+    top_p: float = 1.0,
+    stream: bool = False,
+    stop: list[str] | None = None,
+    reasoning_effort: Literal["none", "default", "low", "medium", "high"] | None = None,
+    tools: list[ChatCompletionToolParam] | None = None,
+) -> Any:
+    """Try models in order, falling back to the next on retryable errors.
+
+    Iterates through ``models``, calling :func:`call_groq_api` for each.
+    If a model fails with a retryable error (413, 429, 5xx, timeout, network),
+    logs the failure and tries the next model. Fatal errors (401, 403) fail
+    immediately. If all models are exhausted, raises the last error.
+    """
+    if not models:
+        msg = "No models provided for fallback chain"
+        raise GroqClientError(msg, status_code=400)
+
+    last_error: Exception | None = None
+    for model in models:
+        try:
+            return call_groq_api(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                stream=stream,
+                stop=stop,
+                reasoning_effort=reasoning_effort,
+                tools=tools,
+            )
+        except GroqClientError as e:
+            # Fatal errors — fail immediately, don't fall back
+            if e.status_code in (400, 401, 403):
+                raise
+            # Retryable errors — log and try next model
+            logger.warning(
+                "Groq model %s failed (status=%s): %s. Falling back...",
+                model,
+                e.status_code,
+                e,
+            )
+            last_error = e
+        except Exception as e:
+            logger.warning(
+                "Groq model %s failed unexpectedly: %s. Falling back...",
+                model,
+                e,
+            )
+            last_error = e
+
+    # All models exhausted
+    if isinstance(last_error, GroqClientError):
+        raise last_error
+    msg = f"All models in fallback chain failed: {last_error or 'unknown error'}"
+    raise GroqClientError(msg, status_code=503)
+
+
 def truncate_query(query: str, max_bytes: int = _MAX_QUERY_BYTES) -> str:
     """Truncate a query to stay within Groq's internal request-body size limit."""
     query = " ".join(query.split())

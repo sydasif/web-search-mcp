@@ -64,7 +64,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 | Tool           | What It Does                           | When To Use                                  |
 | -------------- | -------------------------------------- | -------------------------------------------- |
 | `groq_analyze` | Fetch URL + AI query on its content    | Extract specific facts from a long docs page |
-| `groq_search`  | AI-powered search (browse or compound) | Deep research, multi-source synthesis        |
+| `groq_search`  | Interactive browsing via GPT-OSS models  | Navigate multi-step guides, JS-rendered pages |
 
 ---
 
@@ -178,7 +178,7 @@ Pick 1-2 highest-signal sources and go deep:
 ```bash
 groq_analyze url="{long article}" q="Extract key facts about {specific aspect}"
 groq_search "What changed between v2 and v3 of {topic}?"
-groq_search "Walk through the {topic} setup guide" model="openai/gpt-oss-20b"
+groq_search "Walk through the {topic} setup guide"
 ```
 
 ### Phase 4 — Synthesis (You Do This Manually)

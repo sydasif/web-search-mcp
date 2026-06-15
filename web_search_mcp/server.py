@@ -107,9 +107,8 @@ def search_web(
     """Search the web via DuckDuckGo — free, fast, returns raw structured results.
 
     Role: Discovery. Use this as your first-pass search for broad coverage.
-    Workflow: Feed results into groq_search for deep validation, or
-    fetch_web_page to get full page content. Alternative: groq_search
-    provides a synthesized answer instead of raw links.
+    Workflow: Feed results into fetch_web_page to get full page content or
+    groq_analyze for AI-powered page analysis.
 
     Args:
         query: Search query string
@@ -259,8 +258,7 @@ def search_reddit(
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed.
 
     Role: Discovery. Use this for Reddit-specific discussions, opinions, and
-    community insights. Alternative: search_web for general web results,
-    groq_search for synthesized multi-source research.
+    community insights.    Alternative: search_web for general web results.
 
     Workflow: Three-tier keyless pipeline:
     - Tier 0: Legacy .json search (often 403, tried once)
@@ -326,8 +324,7 @@ def search_hackernews(
     """Search Hacker News via Algolia API — free, no API key needed.
 
     Role: Tech discourse. Use this for developer news, startup discussions,
-    and technical opinions. Alternative: search_web for general results,
-    groq_search for synthesized multi-source research.
+    and technical opinions. Alternative: search_web for general results.
 
     Args:
         query: Search query string
@@ -387,8 +384,7 @@ def search_arxiv(
 
     Role: Academic research. Use this to find papers by keyword, author,
     or category. Supports Lucene field prefixes for targeted searches.
-    Alternative: search_web for general results, groq_search for synthesized
-    multi-source research with validation.
+    Alternative: search_web for general results.
 
     Field prefixes:
     - ``all:`` — Search all fields (default)
@@ -587,19 +583,10 @@ def get_github_issue(url: str) -> str | ErrorResponse:
         return format_error(f"Failed to fetch issue: {e}")
 
 
-# ─────────────────────────────────────────────────────────────
-
-
-# Groq tools — AI-powered web search (browse + compound)
-# Best for: deep research, validation, multi-step synthesis
-# Costs tokens — use DDG tools for quick lookups
-# ─────────────────────────────────────────────────────────────
-
-
 @mcp.tool(
     name="groq_search",
     annotations={
-        "title": "AI-powered web search via Groq",
+        "title": "Interactive web browsing via Groq GPT-OSS models",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -608,51 +595,42 @@ def get_github_issue(url: str) -> str | ErrorResponse:
 )
 def groq_search(
     query: str,
-    model: Literal[
-        "openai/gpt-oss-20b",
-        "openai/gpt-oss-120b",
-        "groq/compound",
-        "groq/compound-mini",
-    ] = "groq/compound-mini",
+    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
-    """AI-powered web search via Groq — browse interactively or auto-research.
+    """Interactive web browsing via GPT-OSS models — explores pages step by step.
 
-    Role: AI-assisted search. Use when you need the model to actively browse
-    and synthesize information from multiple pages.
+    Role: Interactive browsing. Use when you need the model to navigate through
+    documentation, click through multi-step guides, or handle JS-rendered pages.
+    The model actively browses pages and synthesizes what it finds.
 
-    Two modes based on model selection:
-    - GPT-OSS models (openai/gpt-oss-20b/120b): Interactive browsing with
-      explicit page navigation. Use reasoning_effort to control depth.
-    - Compound models (groq/compound/compound-mini): Auto-selects search tools
-      and synthesis strategy. compound-mini is faster (1 tool call),
-      compound supports up to 10 tool calls.
+    Alternative: search_web for raw DDG results (free, no tokens), or
+    groq_analyze for analyzing a specific URL via Compound.
 
-    Alternative: search_web for raw DDG results (free, no tokens).
+    Note: GPT-OSS models use explicit ``browser_search`` tool configuration.
+    Long queries may hit Groq's payload size limit (413 error). If this happens,
+    shorten your query or split it into smaller parts.
 
     Args:
-        query: Search question or topic
-        model: Which Groq model to use:
-            - 'groq/compound-mini' (default): Fast auto-research, 1 tool call
-            - 'groq/compound': Deep auto-research, up to 10 tool calls
-            - 'openai/gpt-oss-20b': Interactive browsing (fast)
-            - 'openai/gpt-oss-120b': Interactive browsing (thorough)
-        reasoning_effort: Reasoning intensity for GPT-OSS models ('low', 'medium', 'high').
-            'low' balances quality vs token cost; 'high' explores more pages.
+        query: Search question or browsing task
+        model: GPT-OSS model to use:
+            - 'openai/gpt-oss-20b' (default): Faster, lighter browsing
+            - 'openai/gpt-oss-120b': More thorough, handles complex tasks
+        reasoning_effort: Reasoning intensity ('low', 'medium', 'high').
+            'low' balances speed vs depth; 'high' explores more.
 
     Returns:
-        str: Synthesized research results from multiple web sources
+        str: Synthesized research results from browsing
         ErrorResponse: Error response if applicable
 
     Examples:
-        - "Analyze the current state of quantum computing breakthroughs in 2026"
-        - "Find the latest pricing for NVIDIA H200 across three different vendors"
-        - "Compare the performance of React vs Vue in 2026"
+        - "Walk through the uv setup guide on docs.astral.sh"
+        - "Find the latest pricing for NVIDIA H200 across three vendors"
+        - "Compare React vs Vue features from their official docs"
 
     Error Handling:
         - API Key Missing: Ensure GROQ_API_KEY is set in your environment.
-        - Rate Limit: Groq API limit reached. Wait a few minutes before retrying.
-        - Request too long: Keep your query under 150 characters.
+        - Request too large: Keep your query under ~100 characters or split it.
 
     """
     return _groq_search(query=query, model=model, reasoning_effort=reasoning_effort)

@@ -1,11 +1,9 @@
-"""Domain logic for Groq-powered web tools.
-Provides unified search and page analysis via Groq's API.
+"""Domain logic for Groq-powered tools.
+Provides interactive browsing via GPT-OSS models and page analysis via Compound API.
 """
 
 import logging
 from typing import Literal
-
-from tenacity import RetryError
 
 from .._models import ErrorResponse
 from .._utils import (
@@ -14,75 +12,52 @@ from .._utils import (
     format_empty_response_error,
     format_error,
 )
-from .groq_client import GroqClientError, call_groq_api, truncate_query
+from .groq_client import GroqClientError, call_groq_api_with_fallback, truncate_query
 
 logger = logging.getLogger(__name__)
 
 
-def _unwrap_error(e: BaseException) -> BaseException:
-    """Unwrap tenacity.RetryError to get the original underlying exception."""
-    if isinstance(e, RetryError):
-        return e.last_attempt.exception() or e
-    return e
-
-
-GroqModel = Literal[
-    "openai/gpt-oss-20b",
-    "openai/gpt-oss-120b",
-    "groq/compound",
-    "groq/compound-mini",
-]
-
-_BROWSE_MODELS = {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}
-
-
 def search(
     query: str,
-    model: GroqModel = "groq/compound-mini",
+    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
     reasoning_effort: Literal["low", "medium", "high"] = "low",
 ) -> str | ErrorResponse:
-    """AI-powered web search via Groq — browse interactively or auto-research."""
+    """Interactive web browsing via GPT-OSS models — navigates pages step by step.
+
+    GPT-OSS models use explicit ``browser_search`` tool configuration to interactively
+    browse and explore web pages. Best for multi-step tutorials, JS-heavy pages,
+    and situations where you need the model to click through documentation.
+
+    **Fallback:** Tries the selected model first. If it fails with a retryable
+    error (413, 429, 5xx), automatically falls back to the other GPT-OSS model.
+    """
     if not query.strip():
         return format_empty_query_error()
 
-    is_browse = model in _BROWSE_MODELS
+    # Build fallback chain: prefer the user's choice, then try the other
+    all_models = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+    fallback_chain = [model] + [m for m in all_models if m != model]
 
     try:
-        if is_browse:
-            response = call_groq_api(
-                messages=[{"role": "user", "content": query}],
-                model=model,
-                reasoning_effort=reasoning_effort,
-                tools=[{"type": "browser_search"}],
-            )
-        else:
-            safe_query = truncate_query(query)
-            response = call_groq_api(
-                messages=[{"role": "user", "content": safe_query}],
-                model=model,
-                max_tokens=4096,
-            )
-
+        response = call_groq_api_with_fallback(
+            models=fallback_chain,
+            messages=[{"role": "user", "content": query}],
+            max_tokens=4096,
+            reasoning_effort=reasoning_effort,
+            tools=[{"type": "browser_search"}],
+        )
         content = response.choices[0].message.content
         if not content:
-            return format_empty_response_error("Groq search")
+            return format_empty_response_error("Groq browse search")
         return content
     except Exception as e:
-        err = _unwrap_error(e)
-        if isinstance(err, GroqClientError):
-            if err.status_code == 401:
-                return format_auth_error()
-            if err.status_code == 413:
-                logger.exception("Groq search request too large (%s): %s", model, err)
-                return format_error(
-                    f"Request too large for {model}",
-                    "The request exceeded Groq's limit. Try a shorter query or use web_search for raw results.",
-                )
+        if isinstance(e, GroqClientError) and e.status_code == 401:
+            return format_auth_error()
 
-        logger.exception("Groq search failed (%s): %s", model, err)
+        logger.exception("Groq browse search failed: %s", e)
         return format_error(
-            f"Groq search failed ({model})",
-            f"{err}. Try using web_search for raw results or groq_analyze for a specific URL.",
+            "All Groq browse models failed",
+            f"{e}. Try using web_search for raw results or groq_analyze for page analysis.",
         )
 
 
@@ -91,7 +66,11 @@ def groq_analyze(
     query: str = "Summarize the key points of this page.",
     model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
 ) -> str | ErrorResponse:
-    """Analyze a web page via Groq Compound — fetches and interprets content."""
+    """Analyze a web page via Groq Compound — fetches and interprets content.
+
+    **Fallback:** Tries the selected model first. If it fails with a retryable
+    error (413, 429, 5xx), automatically falls back to the other compound model.
+    """
     if not url.strip():
         return format_error(
             "URL cannot be empty",
@@ -100,10 +79,14 @@ def groq_analyze(
 
     safe_query = truncate_query(query)
 
+    # Build fallback chain: prefer the user's choice, then try the other
+    all_models = ["groq/compound-mini", "groq/compound"]
+    fallback_chain = [model] + [m for m in all_models if m != model]
+
     try:
-        response = call_groq_api(
+        response = call_groq_api_with_fallback(
+            models=fallback_chain,
             messages=[{"role": "user", "content": f"{safe_query}\n\n{url}"}],
-            model=model,
             max_tokens=4096,
         )
         content = response.choices[0].message.content
@@ -111,20 +94,11 @@ def groq_analyze(
             return format_empty_response_error("Groq analyze")
         return content
     except Exception as e:
-        err = _unwrap_error(e)
-        if isinstance(err, GroqClientError):
-            if err.status_code == 401:
-                return format_auth_error()
-            if err.status_code == 413:
-                logger.exception("Groq analyze request too large (%s): %s", model, err)
-                return format_error(
-                    f"Page too large for Groq's internal limit ({model})",
-                    "The request exceeded Groq's internal payload limit. "
-                    "Try using fetch_page to get raw content first, or use a more focused query.",
-                )
+        if isinstance(e, GroqClientError) and e.status_code == 401:
+            return format_auth_error()
 
-        logger.exception("Groq analyze failed (%s): %s", model, err)
+        logger.exception("Groq analyze failed: %s", e)
         return format_error(
-            f"Groq analyze failed ({model})",
-            f"{err}. Try using fetch_page to get raw content instead.",
+            "All Groq analyze models failed",
+            f"{e}. Try using fetch_page to get raw content instead.",
         )

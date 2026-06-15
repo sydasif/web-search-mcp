@@ -45,7 +45,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | Tool           | What It Does                                                                         | When To Use                                                                                                     |
 | -------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | `groq_analyze` | Fetches a URL and runs an AI query against its content                               | Extracting specific technical details from a long docs page, changelog, or spec without reading the whole thing |
-| `groq_search`  | AI-powered web search — GPT-OSS for interactive browsing, Compound for auto-research | Deep investigation: "What changed between v2 and v3?" or navigating multi-step docs                             |
+| `groq_search`  | Interactive browsing via GPT-OSS models — navigates pages step by step                | Multi-step docs, JS-rendered pages, "What changed between v2 and v3?" |
 
 #### Not Used
 
@@ -118,8 +118,8 @@ For library/framework docs, APIs, configuration, version-specific examples, and 
 | Scenario                                                 | Tool                                                | Why                                                                             |
 | -------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
 | "What exactly does this 2000-line doc page say about X?" | `groq_analyze` with the URL and a specific question | Skips reading the full page; AI extracts just the relevant parts                |
-| "What changed across versions that could cause this?"    | `groq_search` with a question comparing versions    | Auto-searches and synthesizes across multiple sources                           |
-| "Walk through this multi-step troubleshooting guide"     | `groq_search` with `openai/gpt-oss-20b` model       | Interactive navigation handles pages that need clicking through or JS rendering |
+| "What changed across versions that could cause this?"    | `groq_search` with a question comparing versions    | Interactive browsing across multiple sources                           |
+| "Walk through this multi-step troubleshooting guide"     | `groq_search` to navigate step by step             | Interactive navigation handles pages that need clicking through or JS rendering |
 
 Prefer primary sources: official docs, changelogs, release notes, source code, and upstream issues. Use community posts only as leads unless they include reproducible evidence.
 
