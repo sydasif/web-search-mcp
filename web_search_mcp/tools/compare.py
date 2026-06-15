@@ -180,7 +180,7 @@ def gather_info(name: str, category: str = "library") -> TechInfo:
             info.last_updated = gh["updated_at"]
             info.homepage = info.homepage or gh["homepage"]
 
-    npm_name = _NPM_NAMES.get(key, key if "." not in key and key[0] != "@" else None)
+    npm_name = _NPM_NAMES.get(key, key if key and "." not in key and key[0] != "@" else None)
     if npm_name:
         result = lookup_package(npm_name, registry="npm")
         if isinstance(result, PackageInfo):
