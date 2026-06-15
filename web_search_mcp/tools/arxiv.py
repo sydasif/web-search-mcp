@@ -7,7 +7,7 @@ keyword, author, or category. Free, no API key required.
 import logging
 from typing import Literal
 
-import arxiv
+import arxiv  # type: ignore[import-untyped]
 
 from .._models import ErrorResponse
 from .._utils import format_results_markdown

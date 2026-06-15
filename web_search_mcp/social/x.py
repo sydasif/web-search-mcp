@@ -17,7 +17,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict, cast
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._utils import format_results_markdown
@@ -175,14 +175,17 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
 
     text = str(tweet.get("text", tweet.get("full_text", ""))).strip()[:500]
 
-    return {
-        "id": f"X{index + 1}",
-        "text": text,
-        "url": url,
-        "author_handle": author_handle.lstrip("@"),
-        "date": date,
-        "engagement": engagement,
-    }
+    return cast(
+        TweetItem,
+        {
+            "id": f"X{index + 1}",
+            "text": text,
+            "url": url,
+            "author_handle": author_handle.lstrip("@"),
+            "date": date,
+            "engagement": engagement,
+        },
+    )
 
 
 def _safe_int(val: Any) -> int | None:
@@ -286,4 +289,4 @@ def format_x_markdown(items: list[TweetItem], query: str) -> str:
             lines.append(f"   {item['date']}")
         return lines
 
-    return format_results_markdown(items, query, "X/Twitter", "posts", _item_lines)
+    return format_results_markdown(cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines)

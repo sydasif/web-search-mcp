@@ -1,5 +1,5 @@
 import logging
-from typing import Literal
+from typing import Literal, cast
 
 from fastmcp import FastMCP
 
@@ -740,7 +740,7 @@ def search_x(
         items = _search_x(query=query, from_date=from_date, depth=depth)[:max_results]
         if response_format == "markdown":
             return _format_x_markdown(items, query)
-        return items
+        return cast(list[dict], items)
     except Exception as e:
         logger.exception("X search failed")
         return format_error(f"X search failed: {e}")

@@ -29,7 +29,7 @@ where = ["."]
 include = ["web_search_mcp*"]
 
 [tool.setuptools.package-data]
-"web_search_mcp" = ["vendor/**/*"]
+"web_search_mcp" = ["vendor/**/*", "py.typed"]
 
 [tool.uv]
 package = true
