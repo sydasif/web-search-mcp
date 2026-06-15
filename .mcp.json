@@ -10,9 +10,9 @@
       "env": {
         "GROQ_API_KEY": "${GROQ_API_KEY}",
         "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "EXA_API_KEY": "${EXA_API_KEY}",
         "AUTH_TOKEN": "${AUTH_TOKEN}",
-        "CT0": "${CT0}",
-        "EXA_API_KEY": "${EXA_API_KEY}"
+        "CT0": "${CT0}"
       }
     }
   }

@@ -26,36 +26,21 @@ Add to your MCP client config:
 }
 ```
 
-Optional — enable AI-powered research via Groq:
-
-```json
-{
-  "mcpServers": {
-    "web-search": {
-      "command": "web-search-mcp",
-      "env": {
-        "SEARCH_MCP_GROQ_API_KEY": "gsk_your_key_here"
-      }
-    }
-  }
-}
-```
-
-[Get a free Groq API key](https://console.groq.com/keys)
-
 ---
 
 ## Documentation
 
-Full documentation is on the [GitHub Wiki](https://github.com/sydasif/web-search-mcp/wiki):
+Full documentation:
 
 | Page                                                                          | Contents                                              |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [Home](https://github.com/sydasif/web-search-mcp/wiki)                        |                                                       |
 | [Tools](https://github.com/sydasif/web-search-mcp/wiki/Tools)                 | All 15 tools, what they do, and when to use them      |
 | [Tools Status](https://github.com/sydasif/web-search-mcp/wiki/Tools-Status)   | Live functional test results and known quirks         |
 | [Configuration](https://github.com/sydasif/web-search-mcp/wiki/Configuration) | Environment variables, X/Twitter cookies, GitHub auth |
 | [Architecture](https://github.com/sydasif/web-search-mcp/wiki/Architecture)   | Project structure, design principles, data flow       |
 | [Development](https://github.com/sydasif/web-search-mcp/wiki/Development)     | Setup, testing, linting, coding standards             |
+| [Plugins](https://github.com/sydasif/web-search-mcp/wiki/Plugin)              | Available plugins and their usage                     |
 
 ---
 
