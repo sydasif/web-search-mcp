@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web_search_mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "FastMCP-based server that provides comprehensive web search functionality for LLM clients through the Model Context Protocol"
 readme = "README.md"
 requires-python = ">=3.11"
