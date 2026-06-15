@@ -1,4 +1,14 @@
-"""Keyless Reddit listing card fetch — scores posts via public HTML pages."""
+"""Keyless Reddit listing card fetch — scores posts via shreddit SVC endpoint.
+
+Uses the SVC partial endpoint (``/svc/shreddit/community-more-posts/``) which
+serves fully server-rendered ``<shreddit-post>`` HTML elements with real score,
+comment count, and subreddit data. Unlike new Reddit's public HTML pages (which
+are JS-rendered shells ~8 KB), the SVC endpoint returns rich server HTML with
+real upvote scores.
+
+This is the source repo's approach (mvanhorn/last30days-skill) and provides more
+data (876 KB vs 365 KB) than old.reddit.com's <div class="thing"> structure.
+"""
 
 import html as _html
 import logging
@@ -6,7 +16,6 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from ..._config import FEED_TIMEOUT
 from ..._utils import score_relevance
 from . import client
 from .parsers import LISTING_SORTS, _iso_to_date, _iso_to_epoch
@@ -14,6 +23,10 @@ from .parsers import LISTING_SORTS, _iso_to_date, _iso_to_epoch
 logger = logging.getLogger(__name__)
 
 MAX_WORKERS = 3
+SVC_TIMEOUT = 15
+
+# Match <shreddit-post> custom elements (same pattern as the original parser)
+_SHREDDIT_POST = re.compile(r"<shreddit-post(?=[\s>])[^>]*>")
 
 
 def _post_id(url: str) -> str:
@@ -22,42 +35,63 @@ def _post_id(url: str) -> str:
     return m.group(1) if m else ""
 
 
-def _parse_listing(html_text: str, subreddit: str, query: str) -> list[dict[str, Any]]:
-    """Parse a listing page HTML into post dicts with real scores. Never raises."""
+def _attr(tag: str, name: str) -> str | None:
+    """Extract an attribute value from an HTML tag."""
+    m = re.search(rf'\b{name}="([^"]*)"', tag)
+    return _html.unescape(m.group(1)) if m else None
+
+
+def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
+    """Parse ``<shreddit-post>`` cards from the SVC endpoint into post dicts.
+
+    The SVC endpoint returns ``<shreddit-post>`` elements with these attributes:
+    - ``score``, ``comment-count`` — real upvote/comment numbers
+    - ``post-title`` — the post title (not ``title`` like other endpoints)
+    - ``subreddit-name`` — subreddit name (not ``subreddit``)
+    - ``permalink``, ``author``, ``created-timestamp`` — same as other endpoints
+    - No ``post-id`` attribute — extracted from the permalink instead
+    """
     if not html_text:
         return []
 
     posts: list[dict[str, Any]] = []
 
-    shreddit_pattern = re.compile(r"<shreddit-post[^>]*>")
-    for m in shreddit_pattern.finditer(html_text):
+    for m in _SHREDDIT_POST.finditer(html_text):
         tag = m.group(0)
 
-        post_id = re.search(r'post-id="([^"]*)"', tag)
-        title_match = re.search(r'title="([^"]*)"', tag)
-        score_match = re.search(r'score="([^"]*)"', tag)
-        comments_match = re.search(r'comment-count="([^"]*)"', tag)
-        author_match = re.search(r'author="([^"]*)"', tag)
-        permalink_match = re.search(r'permalink="([^"]*)"', tag)
-        created_match = re.search(r'created-timestamp="([^"]*)"', tag)
+        # Get permalink first — needed for post ID and URL
+        permalink = _attr(tag, "permalink") or ""
+        if "/comments/" not in permalink:
+            continue
 
-        pid = post_id.group(1) if post_id else ""
+        # Extract post ID from permalink
+        pid = _post_id(permalink)
         if not pid:
             continue
 
-        title = _html.unescape(title_match.group(1)) if title_match else ""
+        # Score and comment count (same attributes as other endpoints)
         try:
-            score = int(score_match.group(1)) if score_match else 0
+            score = int(_attr(tag, "score") or 0)
         except (ValueError, TypeError):
             score = 0
         try:
-            num_comments = int(comments_match.group(1)) if comments_match else 0
+            num_comments = int(_attr(tag, "comment-count") or 0)
         except (ValueError, TypeError):
             num_comments = 0
-        author = author_match.group(1) if author_match else "[deleted]"
-        permalink = permalink_match.group(1) if permalink_match else ""
-        created = created_match.group(1) if created_match else ""
 
+        # Title: SVC endpoint uses ``post-title`` instead of ``title``
+        title = _attr(tag, "post-title") or _attr(tag, "title") or ""
+
+        # Author
+        author = _attr(tag, "author") or "[deleted]"
+
+        # Subreddit: SVC has ``subreddit-name`` attribute
+        subreddit = _attr(tag, "subreddit-name") or ""
+
+        # Created timestamp (ISO-8601)
+        created = _attr(tag, "created-timestamp")
+
+        # Build URL
         url = f"https://www.reddit.com{permalink}" if permalink else ""
 
         relevance = score_relevance(query, title)
@@ -80,7 +114,7 @@ def _parse_listing(html_text: str, subreddit: str, query: str) -> list[dict[str,
                     "upvote_ratio": None,
                 },
                 "relevance": relevance,
-                "why_relevant": "Reddit Listing",
+                "why_relevant": "Reddit listing (SVC)",
                 "metadata": {"post_id": pid},
             },
         )
@@ -88,14 +122,26 @@ def _parse_listing(html_text: str, subreddit: str, query: str) -> list[dict[str,
     return posts
 
 
-def _fetch_listing(subreddit: str, sort: str, depth: str, query: str) -> list[dict[str, Any]]:
-    """Fetch and parse one listing page. Never raises."""
+def _svc_url(subreddit: str, sort: str) -> str:
+    """Build the SVC community-more-posts URL for a subreddit + sort."""
+    sub = subreddit.removeprefix("r/").strip()
+    url = f"https://www.reddit.com/svc/shreddit/community-more-posts/{sort}/?name={sub}"
+    if sort == "top":
+        url += "&t=month"
+    return url
+
+
+def _fetch_listing(subreddit: str, sort: str, query: str) -> list[dict[str, Any]]:
+    """Fetch and parse one SVC listing page. Never raises."""
     try:
-        url = f"https://www.reddit.com/r/{subreddit}/{sort}/?t=month"
-        text = client.get_text(url, timeout=FEED_TIMEOUT, accept="text/html")
-        return _parse_listing(text, subreddit, query) if text else []
+        text = client.get_text(
+            _svc_url(subreddit, sort),
+            timeout=SVC_TIMEOUT,
+            accept="text/html",
+        )
+        return parse_cards(text, query) if text else []
     except Exception as e:
-        logger.debug("listing fetch failed for r/%s/%s: %s", subreddit, sort, e)
+        logger.debug("SVC listing failed for r/%s/%s: %s", subreddit, sort, e)
         return []
 
 
@@ -104,28 +150,33 @@ def fetch_listings(
     depth: str = "default",
     query: str = "",
 ) -> list[dict[str, Any]]:
-    """Fetch listing cards for multiple subreddits to backfill scores."""
+    """Fetch scored listing cards from the SVC endpoint for multiple subreddits.
+
+    Uses the shreddit ``/svc/shreddit/community-more-posts/`` endpoint (the same
+    approach as mvanhorn/last30days-skill) which returns server-rendered
+    ``<shreddit-post>`` elements with real upvote scores and comment counts.
+
+    Unlike www.reddit.com's public HTML (JS shells ~8 KB), this endpoint
+    returns rich server HTML (~876 KB) with all engagement data.
+    """
     sorts = LISTING_SORTS.get(depth, LISTING_SORTS["default"])
 
     all_posts: list[dict[str, Any]] = []
 
-    tasks = []
-    for sub in subreddits:
-        for sort in sorts:
-            tasks.append((sub, sort))
+    tasks = [(sub, sort) for sub in subreddits for sort in sorts]
 
     workers = min(MAX_WORKERS, len(tasks)) or 1
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {
-            executor.submit(_fetch_listing, sub, sort, depth, query): (sub, sort)
+            executor.submit(_fetch_listing, sub, sort, query): (sub, sort)
             for sub, sort in tasks
         }
         for future in futures:
             try:
-                all_posts.extend(future.result(timeout=FEED_TIMEOUT + 5))
+                all_posts.extend(future.result(timeout=SVC_TIMEOUT + 5))
             except Exception as e:
                 sub, sort = futures[future]
-                logger.debug("listing future failed for r/%s/%s: %s", sub, sort, e)
+                logger.debug("SVC listing future failed for r/%s/%s: %s", sub, sort, e)
 
     # Dedupe by post_id in metadata
     seen: set = set()
