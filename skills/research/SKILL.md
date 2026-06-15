@@ -45,8 +45,8 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 | Tool                  | What It Does                                                        | When To Use                                         |
 | --------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
-| `web_search`          | DuckDuckGo web/news search                                          | First pass: news, background, official sources      |
-| `web_search` (domain) | DuckDuckGo scoped to a domain                                       | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
+| `search_web`          | DuckDuckGo web/news search                                          | First pass: news, background, official sources      |
+| `search_web` (domain) | DuckDuckGo scoped to a domain                                       | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
 | `search_exa`          | Exa AI semantic search                                              | Deep topic research, filtered by category/domains   |
 | `fetch_web_page`      | Clean HTML-to-markdown from a URL (Exa fallback for JS-heavy pages) | Read articles, changelogs, specs, papers            |
 
@@ -57,14 +57,14 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 | `search_reddit`     | Reddit via RSS + shreddit enrichment | Real-user discussions, product feedback, niche opinions     |
 | `search_hackernews` | HN via Algolia + comment enrichment  | Tech debate, architectural analysis, deep critical takes    |
 | `search_github`     | GitHub Issues/PR search              | Upstream discussions, feature requests, deprecation notices |
-| `x_search`          | X/Twitter via Bird CLI               | Real-time announcements, expert takes, breaking news        |
+| `search_x`          | X/Twitter via Bird CLI               | Real-time announcements, expert takes, breaking news        |
 
 ### Tier 3 — AI-Powered Depth
 
-| Tool           | What It Does                           | When To Use                                  |
-| -------------- | -------------------------------------- | -------------------------------------------- |
-| `groq_analyze` | Fetch URL + AI query on its content    | Extract specific facts from a long docs page |
-| `groq_search`  | Interactive browsing via GPT-OSS models  | Navigate multi-step guides, JS-rendered pages |
+| Tool           | What It Does                            | When To Use                                   |
+| -------------- | --------------------------------------- | --------------------------------------------- |
+| `groq_analyze` | Fetch URL + AI query on its content     | Extract specific facts from a long docs page  |
+| `groq_search`  | Interactive browsing via GPT-OSS models | Navigate multi-step guides, JS-rendered pages |
 
 ---
 
@@ -120,7 +120,7 @@ Before any searches, check for these failure classes:
 
 Before community searches, resolve platform-scoped targeting. This is where you do manual lookups that drastically improve signal quality.
 
-**Subreddits:** Run `web_search "{topic} subreddit"` to find 3-5 relevant subreddits. For product/tool topics, also add 2-3 category-peer subs from the table below (where cross-product discussion actually happens):
+**Subreddits:** Run `search_web "{topic} subreddit"` to find 3-5 relevant subreddits. For product/tool topics, also add 2-3 category-peer subs from the table below (where cross-product discussion actually happens):
 
 | Category          | Peer Subs                                         |
 | ----------------- | ------------------------------------------------- |
@@ -131,7 +131,7 @@ Before community searches, resolve platform-scoped targeting. This is where you 
 | AI chat models    | `LocalLLaMA, ChatGPT, ClaudeAI, singularity`      |
 | SaaS/productivity | `SaaS, productivity, Entrepreneur`                |
 
-**X handles:** For person/product topics, run `web_search "{topic} X handle"` for the primary handle and 1-2 commentators.
+**X handles:** For person/product topics, run `search_web "{topic} X handle"` for the primary handle and 1-2 commentators.
 
 **GitHub:** For developer topics, resolve `github.com/{handle}`. For projects, resolve `owner/repo`.
 
@@ -146,9 +146,9 @@ Use these resolved values when calling community search tools (e.g., `search_red
 Run 2-3 searches to map the landscape. Vary the angle:
 
 ```bash
-web_search "{topic} 2026"              # direct
-web_search "{topic}" (news mode)        # news
-web_search "{topic}" domain="docs.python.org"  # official docs
+search_web "{topic} 2026"              # direct
+search_web "{topic}" (news mode)        # news
+search_web "{topic}" domain="docs.python.org"  # official docs
 ```
 
 From results, pick 1-2 long-form sources to deep-read later.
@@ -162,7 +162,7 @@ Mine 3-4 platforms. Use resolved handles/subreddits/repos to scope. The tool res
 | `search_reddit`     | Topic + `subreddits` parameter | Real experiences, complaints, workarounds. Top comments are highest-signal. |
 | `search_hackernews` | Topic + keywords               | The _why_ behind the news. Comments from domain experts.                    |
 | `search_github`     | Topic as issue/PR keyword      | Roadmap signals, breaking changes, community wishlists.                     |
-| `x_search`          | Topic + resolved handles       | Real-time reactions, expert threads, announcements.                         |
+| `search_x`          | Topic + resolved handles       | Real-time reactions, expert threads, announcements.                         |
 
 **Per-platform notes (read before searching):**
 
@@ -346,5 +346,5 @@ After delivering the report, treat yourself as an expert for the rest of the con
 - **Too broad:** Narrow with one clarifying question, or auto-scope to the most common interpretation. Mention the choice.
 - **Zero results:** Widen the query. Check for typos. If still empty: "no significant discussion found."
 - **Conflicting evidence:** Present both sides with source authority notes. Don't cherry-pick.
-- **Breaking news:** Use `web_search` (news mode) + `x_search`. Timestamp everything. Flag volatility.
-- **SEO pollution:** Add `-site:spam-site.com` exclusions. Prefer `web_search` with `domain="..."` on known-good domains. Community platforms (Reddit, HN) resist SEO gaming.
+- **Breaking news:** Use `search_web` (news mode) + `search_x`. Timestamp everything. Flag volatility.
+- **SEO pollution:** Add `-site:spam-site.com` exclusions. Prefer `search_web` with `domain="..."` on known-good domains. Community platforms (Reddit, HN) resist SEO gaming.
