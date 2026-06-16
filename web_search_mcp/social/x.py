@@ -1,13 +1,14 @@
-"""X/Twitter search via vendored Bird CLI — requires AUTH_TOKEN + CT0 cookies.
+"""X/Twitter search via Xquik or vendored Bird CLI.
 
 Uses the vendored bird-search.mjs (MIT, @steipete/bird v0.8.0) to query
 Twitter's GraphQL API directly. No API key needed, just two cookies from
-a logged-in X session.
+a logged-in X session. If XQUIK_API_KEY is set, searches use Xquik instead.
 
 Authentication:
-    Set AUTH_TOKEN and CT0 environment variables. Extract these from your
-    browser's cookies after logging in to x.com. These are session cookies
-    that expire periodically — refresh them when searches start failing.
+    Set XQUIK_API_KEY for Xquik. Otherwise set AUTH_TOKEN and CT0 environment
+    variables. Extract cookies from your browser after logging in to x.com.
+    These are session cookies that expire periodically - refresh them when
+    searches start failing.
 """
 
 import json
@@ -19,13 +20,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, NotRequired, TypedDict, cast
 
+import httpx
+
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
+from .._http import get_json_client
 from .._utils import format_results_markdown
 
 logger = logging.getLogger(__name__)
 
 # Path to vendored bird-search
 _BIRD_SEARCH_MJS = Path(__file__).parent.parent / "vendor" / "bird-search" / "bird-search.mjs"
+_XQUIK_SEARCH_URL = "https://xquik.com/api/v1/x/tweets/search"
 
 # Depth configurations: number of results to request
 DEPTH_CONFIG = _ALL_DEPTH_LIMITS["x"]
@@ -51,6 +56,11 @@ def is_available() -> bool:
 def is_authenticated() -> bool:
     """Check if X credentials are available in environment."""
     return bool(os.environ.get("AUTH_TOKEN")) and bool(os.environ.get("CT0"))
+
+
+def _xquik_api_key() -> str:
+    """Return the configured Xquik API key, if present."""
+    return os.environ.get("XQUIK_API_KEY", "").strip()
 
 
 def _build_env() -> dict[str, str]:
@@ -83,7 +93,7 @@ def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
         logger.warning("X search timed out after %ds for query: %s", timeout, query)
         return {"error": f"Search timed out after {timeout}s", "items": []}
     except FileNotFoundError as e:
-        logger.exception("X search failed — node not found")
+        logger.exception("X search failed - node not found")
         return {"error": f"Node.js not found: {e}", "items": []}
     except Exception as e:
         logger.exception("X search subprocess error")
@@ -112,6 +122,49 @@ def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
     return parsed
 
 
+def _extract_xquik_items(payload: Any) -> list[Any]:
+    """Extract tweet arrays from common Xquik response envelopes."""
+    if isinstance(payload, list):
+        return payload
+    if not isinstance(payload, dict):
+        return []
+
+    for key in ("tweets", "items", "results", "data"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            return value
+        if isinstance(value, dict):
+            nested = _extract_xquik_items(value)
+            if nested:
+                return nested
+    return []
+
+
+def _run_xquik_search(query: str, count: int, timeout: int) -> dict[str, Any]:
+    """Run a single Xquik search request and return a normalized item envelope."""
+    api_key = _xquik_api_key()
+    if not api_key:
+        return {"items": []}
+
+    try:
+        with get_json_client(timeout=timeout) as client:
+            response = client.get(
+                _XQUIK_SEARCH_URL,
+                params={"q": query, "queryType": "Latest", "limit": str(count)},
+                headers={"x-api-key": api_key},
+            )
+            response.raise_for_status()
+            payload = response.json()
+    except httpx.HTTPStatusError as e:
+        logger.warning("Xquik X search returned HTTP %d", e.response.status_code)
+        return {"error": f"Xquik X search returned HTTP {e.response.status_code}", "items": []}
+    except (httpx.RequestError, ValueError) as e:
+        logger.warning("Xquik X search failed: %s", e)
+        return {"error": str(e), "items": []}
+
+    return {"items": _extract_xquik_items(payload)}
+
+
 class TweetItem(TypedDict):
     """Normalized tweet dict returned by search_x."""
 
@@ -123,16 +176,40 @@ class TweetItem(TypedDict):
     engagement: NotRequired[dict[str, int]]
 
 
+def _dict_or_empty(value: Any) -> dict[str, Any]:
+    """Return dict values as-is and coerce all other values to an empty dict."""
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _first_string(*values: Any) -> str:
+    """Return the first non-empty string from a candidate list."""
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
 def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     """Parse a single tweet dict into a normalized item."""
     if not isinstance(tweet, dict):
         return None
 
+    author = _dict_or_empty(tweet.get("author") or tweet.get("user"))
+    screen_name = _first_string(
+        author.get("username"),
+        author.get("screen_name"),
+        tweet.get("author_handle"),
+        tweet.get("authorUsername"),
+        tweet.get("author_screen_name"),
+        tweet.get("username"),
+        tweet.get("screen_name"),
+    )
+
     # Extract URL
     url = tweet.get("permanent_url") or tweet.get("url", "")
     if not url and tweet.get("id"):
-        author = tweet.get("author", {}) or tweet.get("user", {})
-        screen_name = author.get("username") or author.get("screen_name", "")
         if screen_name:
             url = f"https://x.com/{screen_name}/status/{tweet['id']}"
     if not url:
@@ -140,7 +217,13 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
 
     # Parse date
     date = None
-    created_at = tweet.get("createdAt") or tweet.get("created_at", "")
+    created_at = (
+        tweet.get("createdAt")
+        or tweet.get("created_at")
+        or tweet.get("publishedAt")
+        or tweet.get("published_at")
+        or ""
+    )
     if created_at:
         try:
             if len(created_at) > 10 and created_at[10] == "T":
@@ -152,10 +235,7 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
             pass
 
     # User info
-    author = tweet.get("author", {}) or tweet.get("user", {})
-    author_handle = (
-        author.get("username") or author.get("screen_name", "") or tweet.get("author_handle", "")
-    )
+    author_handle = screen_name
 
     # Engagement
     engagement = {
@@ -173,7 +253,13 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     if not engagement:
         engagement = {}
 
-    text = str(tweet.get("text", tweet.get("full_text", ""))).strip()[:500]
+    text = str(
+        tweet.get("text")
+        or tweet.get("full_text")
+        or tweet.get("fullText")
+        or tweet.get("content")
+        or "",
+    ).strip()[:500]
 
     return cast(
         TweetItem,
@@ -203,7 +289,7 @@ def search_x(
     from_date: str | None = None,
     depth: str = "default",
 ) -> list[TweetItem]:
-    """Search X/Twitter using the vendored Bird CLI.
+    """Search X/Twitter using Xquik when configured, otherwise the vendored Bird CLI.
 
     Args:
         query: Search query string
@@ -214,26 +300,6 @@ def search_x(
         List of normalized tweet dicts with text, url, author_handle, date, engagement.
 
     """
-    if not is_available():
-        return [
-            {
-                "id": "XERR",
-                "text": "X search unavailable: bird-search.mjs not found or Node.js missing",
-                "url": "",
-                "author_handle": "",
-            },
-        ]
-
-    if not is_authenticated():
-        return [
-            {
-                "id": "XERR",
-                "text": "X search requires AUTH_TOKEN and CT0 environment variables. Extract these from your browser cookies after logging into x.com.",
-                "url": "",
-                "author_handle": "",
-            },
-        ]
-
     count = DEPTH_CONFIG.get(depth, DEPTH_CONFIG["default"])
     timeout = _TIMEOUT_SECS.get(depth, _TIMEOUT_SECS["default"])
 
@@ -244,7 +310,30 @@ def search_x(
 
     logger.info("X searching '%s' (depth=%s, count=%d)", query, depth, count)
 
-    response = _run_bird_search(search_query, count, timeout)
+    if _xquik_api_key():
+        response = _run_xquik_search(search_query, count, timeout)
+    else:
+        if not is_available():
+            return [
+                {
+                    "id": "XERR",
+                    "text": "X search unavailable: bird-search.mjs not found or Node.js missing",
+                    "url": "",
+                    "author_handle": "",
+                },
+            ]
+
+        if not is_authenticated():
+            return [
+                {
+                    "id": "XERR",
+                    "text": "X search requires AUTH_TOKEN and CT0 environment variables. Extract these from your browser cookies after logging into x.com.",
+                    "url": "",
+                    "author_handle": "",
+                },
+            ]
+
+        response = _run_bird_search(search_query, count, timeout)
 
     items = response.get("items", [])
     if not isinstance(items, list):
@@ -289,4 +378,6 @@ def format_x_markdown(items: list[TweetItem], query: str) -> str:
             lines.append(f"   {item['date']}")
         return lines
 
-    return format_results_markdown(cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines)
+    return format_results_markdown(
+        cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines
+    )
