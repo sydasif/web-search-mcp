@@ -18,7 +18,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 - **Local CLI first:** `rg`, `rg --files`, `git status`, `git diff`, focused tests, logs, dependency manifests, lockfiles, and local dependency source.
 - **Context7:** use for current, version-aware library/framework documentation and code examples when dependency behavior matters.
 - **GitHub CLI (`gh`):** use for GitHub-native evidence such as issues, PRs, checks, releases, repo metadata, source files, and API calls from the terminal.
-- **Web Search MCP:** 11 tools organized into three tiers for external evidence. Use the cheapest tool that answers the question.
+- **Web Search MCP:** 7 tools organized into two tiers for external evidence. Use the cheapest tool that answers the question.
 
 ### Web Search MCP — Tool Reference
 
@@ -40,20 +40,13 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | `search_reddit`     | Reddit search via RSS + shreddit enrichment            | Real-world troubleshooting threads, niche library issues, configuration gotchas                               |
 | `search_x`          | X/Twitter search via Bird CLI                          | Real-time announcements, outage reports, release alerts, short workaround threads                             |
 
-#### Tier 3 — AI-Powered Synthesis (for complex/composite questions)
-
-| Tool           | What It Does                                                           | When To Use                                                                                                     |
-| -------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `groq_analyze` | Fetches a URL and runs an AI query against its content                 | Extracting specific technical details from a long docs page, changelog, or spec without reading the whole thing |
-| `groq_search`  | Interactive browsing via GPT-OSS models — navigates pages step by step | Multi-step docs, JS-rendered pages, "What changed between v2 and v3?"                                           |
-
 #### Not Used
 
 ## Tool Sources
 
 - Context7 for current library/framework docs and examples. Source: https://github.com/upstash/context7
 - GitHub CLI `gh` for issues, PRs, checks, releases, source/API access. Source: https://cli.github.com/
-- Web Search MCP for web search, docs search, page extraction, community mining, and AI-powered research (11 tools). Source: https://github.com/sydasif/web-search-mcp
+- Web Search MCP for web search, docs search, page extraction, and community mining (9 tools). Source: https://github.com/sydasif/web-search-mcp
 
 ## CLI Workflow
 
@@ -113,14 +106,6 @@ For library/framework docs, APIs, configuration, version-specific examples, and 
 | "What are real users saying about this?"        | `search_reddit` for niche/subreddit-specific chatter | Practical troubleshooting, config fixes, version-specific gotchas         |
 | "Any breaking news about this outage/incident?" | `search_x` for real-time posts                       | Time-sensitive: service outages, zero-days, urgent releases               |
 
-#### 4e. Deep Research — Tier 3
-
-| Scenario                                                 | Tool                                                | Why                                                                             |
-| -------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
-| "What exactly does this 2000-line doc page say about X?" | `groq_analyze` with the URL and a specific question | Skips reading the full page; AI extracts just the relevant parts                |
-| "What changed across versions that could cause this?"    | `groq_search` with a question comparing versions    | Interactive browsing across multiple sources                                    |
-| "Walk through this multi-step troubleshooting guide"     | `groq_search` to navigate step by step              | Interactive navigation handles pages that need clicking through or JS rendering |
-
 Prefer primary sources: official docs, changelogs, release notes, source code, and upstream issues. Use community posts only as leads unless they include reproducible evidence.
 
 ### 5. Confirm Root Cause Before Editing
@@ -172,5 +157,5 @@ When finished, keep the summary evidence-based:
 - Root cause in plain language.
 - Files changed and why.
 - Verification commands and outcomes.
-- External sources used, with the specific tool that found each (e.g., "found via `search_github`", "confirmed on docs via `groq_analyze`").
+- External sources used, with the specific tool that found each (e.g., "found via `search_github`").
 - Remaining risk or unverified areas, if any.

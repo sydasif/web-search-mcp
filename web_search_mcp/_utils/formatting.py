@@ -23,14 +23,6 @@ def format_error(message: str, details: str | None = None) -> ErrorResponse:
     )
 
 
-def format_auth_error() -> ErrorResponse:
-    """Returns a consistent authentication error."""
-    return ErrorResponse(
-        error="Groq API key not configured",
-        details="Set SEARCH_MCP_GROQ_API_KEY in your MCP config or environment.",
-    )
-
-
 def format_empty_query_error() -> ErrorResponse:
     """Returns a consistent empty-query error."""
     return ErrorResponse(
@@ -39,11 +31,11 @@ def format_empty_query_error() -> ErrorResponse:
     )
 
 
-def format_empty_response_error(source: str = "Groq") -> ErrorResponse:
+def format_empty_response_error(source: str = "Search") -> ErrorResponse:
     """Returns a consistent empty-content error."""
     return ErrorResponse(
         error=f"{source} returned empty content",
-        details="The model produced no response. Try rephrasing your query with more specific detail, or switch to a different tool (e.g. web_search for DDG results, groq_analyze for page analysis).",
+        details="The model produced no response. Try rephrasing your query with more specific detail, or switch to a different tool (e.g. web_search for DDG results).",
     )
 
 

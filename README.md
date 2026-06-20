@@ -35,7 +35,7 @@ Full documentation:
 | Page                                                                          | Contents                                              |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
 | [Home](https://github.com/sydasif/web-search-mcp/wiki)                        |                                                       |
-| [Tools](https://github.com/sydasif/web-search-mcp/wiki/Tools)                 | All 16 tools, what they do, and when to use them      |
+| [Tools](https://github.com/sydasif/web-search-mcp/wiki/Tools)                 | All 14 tools, what they do, and when to use them      |
 | [Tools Status](https://github.com/sydasif/web-search-mcp/wiki/Tools-Status)   | Live functional test results and known quirks         |
 | [Configuration](https://github.com/sydasif/web-search-mcp/wiki/Configuration) | Environment variables, X/Twitter cookies, GitHub auth |
 | [Architecture](https://github.com/sydasif/web-search-mcp/wiki/Architecture)   | Project structure, design principles, data flow       |

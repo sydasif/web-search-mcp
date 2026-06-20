@@ -23,7 +23,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 **The MCP gives you:**
 
-- Search and retrieval across 8 platforms + 3 Groq AI tools
+- Search and retrieval across 8 platforms
 - Clean extracted content from URLs
 - Rich engagement data (upvotes, comments, views) from community platforms
 
@@ -39,7 +39,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 ---
 
-## Tool Reference — 12 Web Search Tools
+## Tool Reference — 7 Web Search Tools
 
 ### Tier 1 — Broad Discovery
 
@@ -58,13 +58,6 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 | `search_hackernews` | HN via Algolia + comment enrichment  | Tech debate, architectural analysis, deep critical takes    |
 | `search_github`     | GitHub Issues/PR search              | Upstream discussions, feature requests, deprecation notices |
 | `search_x`          | X/Twitter via Bird CLI               | Real-time announcements, expert takes, breaking news        |
-
-### Tier 3 — AI-Powered Depth
-
-| Tool           | What It Does                            | When To Use                                   |
-| -------------- | --------------------------------------- | --------------------------------------------- |
-| `groq_analyze` | Fetch URL + AI query on its content     | Extract specific facts from a long docs page  |
-| `groq_search`  | Interactive browsing via GPT-OSS models | Navigate multi-step guides, JS-rendered pages |
 
 ---
 
@@ -171,17 +164,7 @@ Mine 3-4 platforms. Use resolved handles/subreddits/repos to scope. The tool res
 - **GitHub:** `search_github` returns `state` (open/closed), `labels`, `engagement.reactions`, and `top_comments`. Look for closed PRs to see how something was fixed.
 - **X:** No engagement enrichment in the current response. Treat X as real-time signal; cross-reference against other sources.
 
-### Phase 3 — Deep Dive (Tier 3)
-
-Pick 1-2 highest-signal sources and go deep:
-
-```bash
-groq_analyze url="{long article}" q="Extract key facts about {specific aspect}"
-groq_search "What changed between v2 and v3 of {topic}?"
-groq_search "Walk through the {topic} setup guide"
-```
-
-### Phase 4 — Synthesis (You Do This Manually)
+### Phase 3 — Synthesis (You Do This Manually)
 
 After reading all results, answer these questions:
 

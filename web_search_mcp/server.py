@@ -31,8 +31,6 @@ from .social.x import search_x as _search_x
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
 from .tools.compare import compare_tech as _compare_tech
 from .tools.errors import translate_error as _translate_error
-from .tools.groq_tools import groq_analyze as _groq_analyze
-from .tools.groq_tools import search as _groq_search
 from .tools.registries import (
     format_package_info as _fmt_pkg_info,
 )
@@ -107,8 +105,7 @@ def search_web(
     """Search the web via DuckDuckGo — free, fast, returns raw structured results.
 
     Role: Discovery. Use this as your first-pass search for broad coverage.
-    Workflow: Feed results into fetch_web_page to get full page content or
-    groq_analyze for AI-powered page analysis.
+    Workflow: Feed results into fetch_web_page to get full page content.
 
     Args:
         query: Search query string
@@ -189,9 +186,6 @@ def fetch_web_page(
 
     Role: Retrieval. Use this when you need the actual page content (not a
     summary). Supports bot-detection bypass and multiple output formats.
-    Workflow: Pipe the content into groq_analyze for AI interpretation.
-    Alternative: groq_analyze fetches AND interprets in one step, but
-    costs tokens and gives you no raw content.
 
     Args:
         url: The URL to fetch and extract content from
@@ -581,106 +575,6 @@ def get_github_issue(url: str) -> str | ErrorResponse:
     except Exception as e:
         logger.exception("get_github_issue failed")
         return format_error(f"Failed to fetch issue: {e}")
-
-
-@mcp.tool(
-    name="groq_search",
-    annotations={
-        "title": "Interactive web browsing via Groq GPT-OSS models",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def groq_search(
-    query: str,
-    model: Literal["openai/gpt-oss-20b", "openai/gpt-oss-120b"] = "openai/gpt-oss-20b",
-    reasoning_effort: Literal["low", "medium", "high"] = "low",
-) -> str | ErrorResponse:
-    """Interactive web browsing via GPT-OSS models — explores pages step by step.
-
-    Role: Interactive browsing. Use when you need the model to navigate through
-    documentation, click through multi-step guides, or handle JS-rendered pages.
-    The model actively browses pages and synthesizes what it finds.
-
-    Alternative: search_web for raw DDG results (free, no tokens), or
-    groq_analyze for analyzing a specific URL via Compound.
-
-    Note: GPT-OSS models use explicit ``browser_search`` tool configuration.
-    Long queries may hit Groq's payload size limit (413 error). If this happens,
-    shorten your query or split it into smaller parts.
-
-    Args:
-        query: Search question or browsing task
-        model: GPT-OSS model to use:
-            - 'openai/gpt-oss-20b' (default): Faster, lighter browsing
-            - 'openai/gpt-oss-120b': More thorough, handles complex tasks
-        reasoning_effort: Reasoning intensity ('low', 'medium', 'high').
-            'low' balances speed vs depth; 'high' explores more.
-
-    Returns:
-        str: Synthesized research results from browsing
-        ErrorResponse: Error response if applicable
-
-    Examples:
-        - "Walk through the uv setup guide on docs.astral.sh"
-        - "Find the latest pricing for NVIDIA H200 across three vendors"
-        - "Compare React vs Vue features from their official docs"
-
-    Error Handling:
-        - API Key Missing: Ensure GROQ_API_KEY is set in your environment.
-        - Request too large: Keep your query under ~100 characters or split it.
-
-    """
-    return _groq_search(query=query, model=model, reasoning_effort=reasoning_effort)
-
-
-@mcp.tool(
-    name="groq_analyze",
-    annotations={
-        "title": "Analyze a web page via Groq Compound",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def groq_analyze(
-    url: str,
-    query: str = "Summarize the key points of this page.",
-    model: Literal["groq/compound", "groq/compound-mini"] = "groq/compound-mini",
-) -> str | ErrorResponse:
-    """Visit and analyze a URL via Groq Compound — fetches and interprets content.
-
-    Role: Interpretation. Use this AFTER fetch_web_page when you need AI analysis
-    of the content (e.g. "Find the argument for X", "Extract the data table").
-    Alternative: fetch_web_page gives you raw content for free — use that when
-    you just need to read the text yourself.
-
-    Note: Large pages may hit Groq's internal request-body limit. If so,
-    use fetch_web_page first, then ask a specific question about the content.
-
-    Args:
-        url: The URL to visit and analyze
-        query: What to do with the page content (default: summarize key points)
-        model: Compound system to use. 'groq/compound-mini' (default) is more
-               reliable; 'groq/compound' may hit request-body limits on large pages.
-
-    Returns:
-        str: AI analysis based on the visited page content
-        ErrorResponse: Error response if applicable
-
-    Examples:
-        - url="https://openai.com/blog/sora", query="What are the key limitations of Sora?"
-        - url="https://arxiv.org/pdf/2401.00000.pdf", query="Extract the main findings of the results section"
-
-    Error Handling:
-        - Page too large: The content exceeds Groq's context window. Use fetch_page first.
-        - Access Denied: The page is behind a paywall or blocking the analyzer.
-
-    """
-    return _groq_analyze(url=url, query=query, model=model)
 
 
 # ─────────────────────────────────────────────────────────────
