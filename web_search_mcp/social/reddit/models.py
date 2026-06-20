@@ -168,8 +168,7 @@ def fetch_listings(
     workers = min(MAX_WORKERS, len(tasks)) or 1
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {
-            executor.submit(_fetch_listing, sub, sort, query): (sub, sort)
-            for sub, sort in tasks
+            executor.submit(_fetch_listing, sub, sort, query): (sub, sort) for sub, sort in tasks
         }
         for future in futures:
             try:

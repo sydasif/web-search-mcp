@@ -242,7 +242,6 @@ def fetch_web_page(
 )
 def search_reddit(
     query: str,
-    search_type: Literal["text", "news"] = "text",
     max_results: int = 25,
     time_range: str | None = None,
     depth: Literal["quick", "default", "deep"] = "default",
@@ -261,7 +260,6 @@ def search_reddit(
 
     Args:
         query: Search query string
-        search_type: Type of search (only 'text' supported for Reddit)
         max_results: Max results (capped by depth: quick=10, default=25, deep=50)
         time_range: Time filter ('d', 'w', 'm', 'y') — mapped to date range
         depth: Search depth — controls result limits and enrichment
@@ -284,7 +282,6 @@ def search_reddit(
     """
     return _reddit_search_tool(
         query=query,
-        search_type=search_type,
         max_results=max_results,
         time_range=time_range,
         depth=depth,

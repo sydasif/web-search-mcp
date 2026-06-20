@@ -289,4 +289,6 @@ def format_x_markdown(items: list[TweetItem], query: str) -> str:
             lines.append(f"   {item['date']}")
         return lines
 
-    return format_results_markdown(cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines)
+    return format_results_markdown(
+        cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines
+    )

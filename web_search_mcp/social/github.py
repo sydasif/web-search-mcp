@@ -127,6 +127,10 @@ def search_github(
     count = DEPTH_LIMITS.get(depth, DEPTH_LIMITS["default"])
     resolved_token = _resolve_token(token)
 
+    if not topic or not topic.strip():
+        logger.warning("GitHub search called with empty topic")
+        return []
+
     if not resolved_token:
         logger.warning("No GitHub token available (set GITHUB_TOKEN or install gh CLI)")
         return []

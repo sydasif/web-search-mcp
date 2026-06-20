@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 def _convert_to_search_results(
     posts: list[dict],
     query: str,
-    search_type: Literal["text", "news"] = "text",
 ) -> SearchResponse:
     """Convert reddit_engine output to SearchResponse format."""
     results = []
@@ -40,7 +39,7 @@ def _convert_to_search_results(
 
     return SearchResponse(
         query=query,
-        search_type=search_type,
+        search_type="text",
         total_results=len(results),
         results=results,
         has_more=False,
@@ -50,7 +49,6 @@ def _convert_to_search_results(
 
 def reddit_search_tool(
     query: str,
-    search_type: Literal["text", "news"] = "text",
     max_results: int = 25,
     time_range: str | None = None,
     depth: Literal["quick", "default", "deep"] = "default",
@@ -89,7 +87,7 @@ def reddit_search_tool(
             subreddits=subreddits,
         )
 
-        response = _convert_to_search_results(posts, query, search_type)
+        response = _convert_to_search_results(posts, query)
 
         if response_format == "markdown":
             # Format as markdown
