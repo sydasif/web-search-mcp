@@ -183,7 +183,7 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     text = str(tweet.get("text", tweet.get("full_text", ""))).strip()[:500]
 
     return cast(
-        TweetItem,
+        "TweetItem",
         {
             "id": f"X{index + 1}",
             "text": text,
@@ -297,5 +297,5 @@ def format_x_markdown(items: list[TweetItem], query: str) -> str:
         return lines
 
     return format_results_markdown(
-        cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines
+        cast("list[dict[str, Any]]", items), query, "X/Twitter", "posts", _item_lines
     )

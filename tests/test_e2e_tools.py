@@ -159,19 +159,6 @@ def test_search_wikipedia() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  10. compare_technologies
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-def test_compare_technologies() -> None:
-    from web_search_mcp.tools.compare import compare_tech
-
-    result = compare_tech("React", "Vue", category="framework")
-    ok = isinstance(result, str) and "React" in result and "Vue" in result
-    _check("compare_technologies", ok, f"len={len(result)}")
-
-
-# ═══════════════════════════════════════════════════════════════════════════
 #  main
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -187,7 +174,6 @@ def main() -> int:
         ("get_github_issue", test_get_github_issue),
         ("search_arxiv", test_search_arxiv),
         ("search_wikipedia", test_search_wikipedia),
-        ("compare_technologies", test_compare_technologies),
     ]
 
     print("=" * 72)

@@ -6,7 +6,7 @@ from typing import Literal, cast
 from fastmcp import FastMCP
 
 from ._models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
-from ._models.types import Depth, ResponseFormat, SearchType
+from ._models.types import Depth, ResponseFormat
 from ._utils import format_error
 from .search.ddg import ddg_search, format_search_results_markdown
 from .search.ddg import fetch_page as _fetch_page
@@ -30,8 +30,6 @@ from .social.x import format_x_markdown as _format_x_markdown
 from .social.x import search_x as _search_x
 from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
-from .tools.compare import Category
-from .tools.compare import compare_tech as _compare_tech
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
 # Set up logging
@@ -614,62 +612,10 @@ def search_x(
         items = _search_x(query=query, from_date=from_date, depth=depth)[:max_results]
         if response_format == "markdown":
             return _format_x_markdown(items, query)
-        return cast(list[dict], items)
+        return cast("list[dict]", items)
     except Exception as e:
         logger.exception("X search failed")
         return format_error(f"X search failed: {e}")
-
-
-# ─────────────────────────────────────────────────────────────
-# Developer tools — technology comparisons
-# Best for: developer workflows, technology evaluation
-# ─────────────────────────────────────────────────────────────
-
-
-@mcp.tool(
-    name="compare_technologies",
-    annotations={
-        "title": "Compare two technologies side-by-side",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def compare_technologies(
-    tech_a: str,
-    tech_b: str,
-    category: Category = "library",
-) -> str | ErrorResponse:
-    """Compare two technologies side-by-side using GitHub and registry data.
-
-    Role: Developer tooling. Use this to evaluate technology choices with
-    real data: GitHub stars, download counts, version info, and license.
-
-    Args:
-        tech_a: First technology name (e.g. ``"React"``).
-        tech_b: Second technology name (e.g. ``"Vue"``).
-        category: Category hint (``"framework"``, ``"library"``,
-            ``"database"``, ``"language"``, ``"tool"``).
-
-    Returns:
-        Markdown table with side-by-side comparison and detail sections.
-
-    Examples:
-        - compare_tech("React", "Vue", category="framework")
-        - compare_tech("Django", "FastAPI", category="framework")
-        - compare_tech("PostgreSQL", "MongoDB", category="database")
-
-    Error Handling:
-        - Unknown technology: Returns partial data for found items.
-        - GitHub API rate limited: Returns what data is available.
-
-    """
-    try:
-        return _compare_tech(tech_a, tech_b, category=category)
-    except Exception as e:
-        logger.exception("compare_tech failed")
-        return format_error("Comparison failed", str(e))
 
 
 def main() -> None:

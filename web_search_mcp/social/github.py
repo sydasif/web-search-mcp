@@ -346,11 +346,12 @@ def parse_github_url(url: str) -> tuple[str, str, int, str]:
     if m:
         return (m.group(1), m.group(2), int(m.group(3)), "pr")
 
-    raise ValueError(
+    msg = (
         "URL is not a recognized GitHub Issue or PR URL. "
         "Expected format: https://github.com/owner/repo/issues/{number} "
-        "or https://github.com/owner/repo/pull/{number}",
+        "or https://github.com/owner/repo/pull/{number}"
     )
+    raise ValueError(msg)
 
 
 _REACTION_EMOJI: dict[str, str] = {

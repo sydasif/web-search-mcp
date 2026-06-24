@@ -11,7 +11,7 @@ import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
-from functools import lru_cache
+from functools import cache
 from urllib.parse import urlencode
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
@@ -44,7 +44,7 @@ def _unix_to_date(ts: int) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
 
 
-@lru_cache(maxsize=None)
+@cache
 def _make_word_boundary_re(word: str) -> re.Pattern[str]:
     return re.compile(rf"\b{re.escape(word)}\b")
 

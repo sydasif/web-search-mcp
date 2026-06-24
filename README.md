@@ -28,10 +28,6 @@ The server provides a diverse suite of tools categorized by their primary use ca
 - **`search_arxiv`**: Specialized search for academic papers, supporting Lucene field prefixes (e.g., `au:`, `cat:`).
 - **`search_wikipedia`**: Factual summaries and background research via the MediaWiki API.
 
-### 🛠️ Developer Tooling
-
-- **`compare_technologies`**: Side-by-side technical comparisons using real-world GitHub and registry data.
-
 ## 📋 Prerequisites
 
 - **Python 3.11+**
@@ -85,7 +81,6 @@ Most tools are keyless. However, some require specific environment variables for
 ### Technical Analysis
 
 - **Issue Tracking**: `search_github(query="uv package manager")`
-- **Tech Comparison**: `compare_technologies(tech_a="FastAPI", tech_b="Django", category="framework")`
 
 ### Community Sentiment
 

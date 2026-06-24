@@ -7,7 +7,6 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote_plus
 
@@ -270,10 +269,7 @@ def fetch_comments(
 
     comments = parse_comments(html_text, limit=MAX_COMMENTS)
 
-    insights = []
-    for c in comments[:3]:
-        if c["excerpt"]:
-            insights.append(c["excerpt"])
+    insights = [c["excerpt"] for c in comments[:3] if c["excerpt"]]
 
     return {
         "top_comments": [

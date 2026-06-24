@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
@@ -166,11 +166,11 @@ def fetch_listings(
         futures = {
             executor.submit(_fetch_listing, sub, sort, query): (sub, sort) for sub, sort in tasks
         }
-        for future in futures:
+        for future in as_completed(futures):
+            sub, sort = futures[future]
             try:
                 all_posts.extend(future.result(timeout=SVC_TIMEOUT + 5))
             except Exception as e:
-                sub, sort = futures[future]
                 logger.debug("SVC listing future failed for r/%s/%s: %s", sub, sort, e)
 
     # Dedupe by post_id in metadata

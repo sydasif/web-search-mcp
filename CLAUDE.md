@@ -29,7 +29,7 @@ The project is a **FastMCP** server that exposes a suite of web search and data 
 - **Implementation Layers**:
   - `search/`: Implements core web search engines (e.g., DuckDuckGo, Exa).
   - `social/`: Integrates with community platforms (GitHub, Reddit, Hacker News, X).
-  - `tools/`: Contains specialized utilities (arXiv, Wikipedia, Package registries).
+  - `tools/`: Contains specialized utilities (arXiv, Wikipedia).
 - **Internal Infrastructure (`_` prefixed folders)**:
   - `_http/`: Centralized HTTP client logic to ensure consistent timeouts, headers, and error handling.
   - `_models/`: Shared Pydantic models for requests and responses to ensure type safety across the server.

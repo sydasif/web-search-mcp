@@ -102,20 +102,20 @@ def request(
         err = HTTPError(f"HTTP {e.code}: {e.reason}", e.code, body)
 
         if e.code == 429 or (e.code and e.code >= 500):
-            raise err
-        raise err
+            raise err from e
+        raise err from e
     except urllib.error.URLError as e:
         if _is_dns_failure(e):
             msg = f"DNS failure: {e.reason}"
-            raise HTTPError(msg)
+            raise HTTPError(msg) from e
         msg = f"URL Error: {e.reason}"
-        raise HTTPError(msg)
+        raise HTTPError(msg) from e
     except json.JSONDecodeError as e:
         msg = f"Invalid JSON response: {e}"
-        raise HTTPError(msg)
+        raise HTTPError(msg) from e
     except (OSError, TimeoutError, ConnectionResetError) as e:
         msg = f"Connection error: {type(e).__name__}: {e}"
-        raise HTTPError(msg)
+        raise HTTPError(msg) from e
 
 
 def get(url: str, headers: dict[str, str] | None = None, **kwargs) -> dict[str, Any]:
