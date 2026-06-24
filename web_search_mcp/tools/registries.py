@@ -119,45 +119,6 @@ def _lookup_npm(name: str) -> PackageInfo | None:
     )
 
 
-def _search_npm(query: str, max_results: int = 5) -> list[PackageInfo]:
-    """Search npm by keyword."""
-    try:
-        with get_json_client() as c:
-            resp = c.get(
-                "https://registry.npmjs.org/-/v1/search",
-                params={"text": query, "size": max_results},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except Exception as e:
-        logger.warning("npm search failed for '%s': %s", query, e)
-        return []
-
-    results: list[PackageInfo] = []
-    for item in data.get("objects", []):
-        pkg = item.get("package", {})
-        name = pkg.get("name", "")
-        if not name:
-            continue
-        popularity = item.get("score", {}).get("detail", {}).get("popularity", 0)
-        downloads = f"popularity: {popularity:.2%}" if popularity else None
-        results.append(
-            PackageInfo(
-                name=name,
-                registry="npm",
-                version=pkg.get("version", "unknown"),
-                description=pkg.get("description", ""),
-                license=pkg.get("license"),
-                downloads=downloads,
-                last_updated=_fmt_date(pkg.get("date")),
-                repository=pkg.get("links", {}).get("npm"),
-                homepage=pkg.get("links", {}).get("homepage"),
-                keywords=pkg.get("keywords", []),
-            ),
-        )
-    return results
-
-
 # ── PyPI ──
 
 
@@ -202,45 +163,6 @@ def _lookup_pypi(name: str) -> PackageInfo | None:
     )
 
 
-def _search_pypi(query: str, max_results: int = 5) -> list[PackageInfo]:
-    """Search PyPI via GitHub search (PyPI has no official search API)."""
-    try:
-        with get_json_client() as c:
-            resp = c.get(
-                "https://api.github.com/search/repositories",
-                params={
-                    "q": f"{query} language:python",
-                    "sort": "stars",
-                    "order": "desc",
-                    "per_page": max_results,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except Exception as e:
-        logger.warning("PyPI search (GitHub proxy) failed for '%s': %s", query, e)
-        return []
-
-    results: list[PackageInfo] = []
-    for repo in data.get("items", []):
-        name = repo.get("name", "")
-        results.append(
-            PackageInfo(
-                name=name,
-                registry="pypi",
-                version="unknown",
-                description=repo.get("description", ""),
-                license=None,
-                downloads=None,
-                last_updated=_fmt_date(repo.get("updated_at")),
-                repository=repo.get("html_url"),
-                homepage=f"https://pypi.org/project/{name}/",
-                keywords=[],
-            ),
-        )
-    return results
-
-
 # ── crates.io ──
 
 
@@ -272,42 +194,6 @@ def _lookup_crates(name: str) -> PackageInfo | None:
     )
 
 
-def _search_crates(query: str, max_results: int = 5) -> list[PackageInfo]:
-    """Search crates.io by keyword."""
-    try:
-        with get_json_client() as c:
-            resp = c.get(
-                "https://crates.io/api/v1/crates",
-                params={"q": query, "per_page": max_results},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except Exception as e:
-        logger.warning("crates.io search failed for '%s': %s", query, e)
-        return []
-
-    results: list[PackageInfo] = []
-    for crate in data.get("crates", []):
-        name = crate.get("name", "")
-        if not name:
-            continue
-        dl = crate.get("downloads", 0)
-        results.append(
-            PackageInfo(
-                name=name,
-                registry="crates.io",
-                version=crate.get("max_version", "unknown"),
-                description=crate.get("description", ""),
-                license=crate.get("license"),
-                downloads=f"{_fmt_downloads(dl)} total",
-                last_updated=_fmt_date(crate.get("updated_at")),
-                repository=crate.get("repository"),
-                homepage=crate.get("homepage"),
-            ),
-        )
-    return results
-
-
 # ── Go modules ──
 
 
@@ -334,45 +220,6 @@ def _lookup_go(module: str) -> PackageInfo | None:
         repository=f"https://{module}" if module.startswith("github.com/") else None,
         homepage=f"https://pkg.go.dev/{module}",
     )
-
-
-def _search_go(query: str, max_results: int = 5) -> list[PackageInfo]:
-    """Search Go modules via GitHub search for Go repos."""
-    try:
-        with get_json_client() as c:
-            resp = c.get(
-                "https://api.github.com/search/repositories",
-                params={
-                    "q": f"{query} language:go",
-                    "sort": "stars",
-                    "order": "desc",
-                    "per_page": max_results,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except Exception as e:
-        logger.warning("Go search (GitHub proxy) failed for '%s': %s", query, e)
-        return []
-
-    results: list[PackageInfo] = []
-    for repo in data.get("items", []):
-        full_name = repo.get("full_name", "")
-        go_module = f"github.com/{full_name}"
-        results.append(
-            PackageInfo(
-                name=go_module,
-                registry="go",
-                version="unknown",
-                description=repo.get("description", ""),
-                license=None,
-                downloads=None,
-                last_updated=_fmt_date(repo.get("updated_at")),
-                repository=repo.get("html_url"),
-                homepage=f"https://pkg.go.dev/{go_module}",
-            ),
-        )
-    return results
 
 
 # ── public API ──
@@ -419,86 +266,3 @@ def lookup_package(
         )
 
     return result
-
-
-def search_packages(
-    query: str,
-    registry: Registry = "npm",
-    max_results: int = 5,
-) -> list[PackageInfo] | ErrorResponse:
-    """Search for packages by keyword across a registry."""
-    query = query.strip()
-    if not query:
-        return format_error("Search query must not be empty")
-
-    max_results = max(1, min(max_results, 20))
-    search_map = {
-        "npm": _search_npm,
-        "pypi": _search_pypi,
-        "crates": _search_crates,
-        "go": _search_go,
-    }
-
-    fn = search_map.get(registry)
-    if not fn:
-        return format_error(f"Unknown registry '{registry}'", "Supported: npm, pypi, crates, go")
-
-    try:
-        return fn(query, max_results=max_results)
-    except Exception as e:
-        logger.exception("Search failed on %s", registry)
-        return format_error(f"Search failed on {registry}", str(e))
-
-
-# ── markdown formatters ──
-
-
-def format_package_info(info: PackageInfo) -> str:
-    """Render a single PackageInfo as markdown."""
-    lines = [
-        f"# {info.name} ({info.registry})",
-        f"**Version:** {info.version}",
-    ]
-    if info.description:
-        lines.append(f"**Description:** {info.description}")
-    if info.license:
-        lines.append(f"**License:** {info.license}")
-    if info.downloads:
-        lines.append(f"**Downloads:** {info.downloads}")
-    if info.last_updated:
-        lines.append(f"**Updated:** {info.last_updated}")
-    if info.dependencies_count is not None:
-        lines.append(f"**Dependencies:** {info.dependencies_count}")
-    if info.homepage:
-        lines.append(f"**Homepage:** {info.homepage}")
-    if info.repository:
-        lines.append(f"**Repository:** {info.repository}")
-    if info.keywords:
-        lines.append(f"**Keywords:** {', '.join(info.keywords[:10])}")
-    return "\n".join(lines) + "\n"
-
-
-def format_package_list(packages: list[PackageInfo], query: str, registry: str) -> str:
-    """Render a list of packages as markdown."""
-    if not packages:
-        return f"No packages found for '{query}' on {registry}.\n"
-    lines = [
-        f"# {registry} search results for '{query}'",
-        f"Found {len(packages)} packages.",
-        "",
-    ]
-    for i, pkg in enumerate(packages, 1):
-        lines.append(f"{i}. **{pkg.name}** v{pkg.version}")
-        if pkg.description:
-            lines.append(f"   {pkg.description[:150]}")
-        parts = []
-        if pkg.license:
-            parts.append(pkg.license)
-        if pkg.downloads:
-            parts.append(f"{pkg.downloads}")
-        if pkg.last_updated:
-            parts.append(pkg.last_updated)
-        if parts:
-            lines.append(f"   {' | '.join(parts)}")
-        lines.append("")
-    return "\n".join(lines)
