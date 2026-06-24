@@ -47,8 +47,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 | --------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
 | `search_web`          | DuckDuckGo web/news search                                          | First pass: news, background, official sources      |
 | `search_web` (domain) | DuckDuckGo scoped to a domain                                       | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
-| `search_exa`          | Exa AI semantic search                                              | Deep topic research, filtered by category/domains   |
-| `fetch_web_page`      | Clean HTML-to-markdown from a URL (Exa fallback for JS-heavy pages) | Read articles, changelogs, specs, papers            |
+| `fetch_web_page`      | Clean HTML-to-markdown + Exa fallback for bot-heavy/JS/PDF pages    | Read articles, changelogs, specs, papers            |
 
 ### Tier 2 — Community & Social Signal
 

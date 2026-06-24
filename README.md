@@ -14,7 +14,6 @@ The server provides a diverse suite of tools categorized by their primary use ca
 
 - **`search_web`**: Fast, free web search via DuckDuckGo. Ideal for broad discovery and news.
 - **`fetch_web_page`**: High-fidelity text extraction from URLs with bot-detection bypass and multiple output formats.
-- **`search_exa`**: Semantic search via Exa AI for AI-understood relevance and filtered discovery.
 
 ### 💬 Social & Community Intelligence
 

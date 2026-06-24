@@ -28,8 +28,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | --------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `search_web`          | DuckDuckGo web/news search with JSON or markdown output | Broad search for error messages, known bugs, solutions, release notes                                          |
 | `search_web` (domain) | DuckDuckGo scoped to a domain via the `domain` param    | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                         |
-| `search_exa`          | Exa AI semantic search with filters                     | Deep research on specific topics, category/domain/date-scoped searches                                         |
-| `fetch_web_page`      | Clean HTML-to-markdown extraction from any URL          | Reading docs, changelogs, error pages, issue threads cleanly; supports metadata extraction and table inclusion |
+| `fetch_web_page`      | Clean HTML-to-markdown extraction from any URL          | Reading docs, changelogs, error pages, issue threads cleanly; Exa fallback handles JS/PDF/bot-blocked pages |
 
 #### Tier 2 — Community & Issue Mining
 

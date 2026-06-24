@@ -7,9 +7,6 @@ from ._models import ErrorResponse, FetchOutputFormat, PageResponse, SearchReque
 from ._utils import format_error
 from .search.ddg import ddg_search, format_search_results_markdown
 from .search.ddg import fetch_page as _fetch_page
-from .search.exa import exa_search as _exa_search
-from .search.exa import exa_search_advanced as _exa_search_advanced
-from .search.exa import format_exa_markdown as _format_exa_markdown
 from .social.github import (
     enrich_with_comments as _enrich_gh,
 )
@@ -827,107 +824,6 @@ def compare_technologies(
     except Exception as e:
         logger.exception("compare_tech failed")
         return format_error("Comparison failed", str(e))
-
-
-# ─────────────────────────────────────────────────────────────
-# Exa AI tools — semantic search, free, no API key
-# Best for: semantic discovery, filtered search, JS-heavy pages
-# ─────────────────────────────────────────────────────────────
-
-
-@mcp.tool(
-    name="search_exa",
-    annotations={
-        "title": "Semantic web search via Exa AI",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def search_exa(
-    query: str,
-    max_results: int = 5,
-    category: str | None = None,
-    include_domains: list[str] | None = None,
-    exclude_domains: list[str] | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
-    search_type: str | None = None,
-    contents_text: bool = False,
-    contents_highlights: bool = False,
-    response_format: Literal["json", "markdown"] = "markdown",
-) -> str | list[dict] | ErrorResponse:
-    """Semantic web search via Exa AI. Optional EXA_API_KEY increases rate limits.
-
-    Role: Semantic discovery. Use when keyword search gives poor results
-    or you need AI-understood relevance. Exa uses semantic matching instead
-    of keyword matching.
-
-    Args:
-        query: Natural language query (Exa works best with full sentences)
-        max_results: Max results (default 5)
-        category: Content type filter ('company', 'research paper', 'news', 'tweet')
-        include_domains: Only search these domains (e.g. ['github.com'])
-        exclude_domains: Exclude these domains
-        start_date: Only results after this date (YYYY-MM-DD)
-        end_date: Only results before this date (YYYY-MM-DD)
-        search_type: Search mode ('auto', 'instant', 'fast', 'deep-lite', 'deep', 'deep-reasoning')
-        contents_text: Include full page text in results
-        contents_highlights: Include highlighted snippets in results
-        response_format: 'json' for structured data, 'markdown' for readable
-
-    Returns:
-        list: Results with title, url, snippet
-        str: Markdown-formatted results
-
-    Examples:
-        - "What are the best Python async frameworks in 2026"
-        - query="Claude code review", include_domains=["reddit.com"]
-        - query="AI regulation news", category="news", start_date="2026-01-01"
-        - query="compare Rust vs Go", search_type="deep"
-
-    Error Handling:
-        - Empty results: Try a more general query or remove domain filters.
-        - Rate limit: Exa free tier is 20K req/month. Wait if exhausted.
-    """
-    try:
-        has_filters = any([category, include_domains, exclude_domains, start_date, end_date])
-        use_advanced = has_filters or search_type or contents_text or contents_highlights
-        if use_advanced:
-            contents = {}
-            if contents_text:
-                contents["text"] = True
-            if contents_highlights:
-                contents["highlights"] = True
-            data = _exa_search_advanced(
-                query,
-                num_results=max_results,
-                category=category,
-                include_domains=include_domains,
-                exclude_domains=exclude_domains,
-                start_date=start_date,
-                end_date=end_date,
-                search_type=search_type,
-                contents=contents if contents else None,
-            )
-            if not data:
-                return format_error("Exa search returned no results")
-            results = data.get("results", []) if isinstance(data, dict) else []
-            if response_format == "json":
-                return results if results else []
-            return _format_exa_markdown(results, query)
-
-        items = _exa_search(query, num_results=max_results)
-        if not items:
-            return format_error("Exa search returned no results")
-        if response_format == "json":
-            return items
-
-        return _format_exa_markdown(items, query)
-    except Exception as e:
-        logger.exception("Exa search failed")
-        return format_error(f"Exa search failed: {e}")
 
 
 def main() -> None:
