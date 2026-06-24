@@ -28,7 +28,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | ----------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `search_web`            | DuckDuckGo or Exa web/news search (via `provider` param)   | Broad search for error messages, known bugs, solutions, release notes                                          |
 | `search_web` (domain)   | DuckDuckGo (site:) or Exa (include_domains) scoped to domain | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                         |
-| `fetch_web_page`        | Clean HTML-to-markdown extraction from any URL              | Reading docs, changelogs, error pages, issue threads cleanly; Exa fallback handles JS/PDF/bot-blocked pages    |
+| `fetch_page`        | Clean HTML-to-markdown extraction from any URL              | Reading docs, changelogs, error pages, issue threads cleanly; Exa fallback handles JS/bot-blocked pages    |
 | `search_wikipedia`      | Wikipedia article search via MediaWiki API                  | Fact-checking, background reference, terminology lookups                                                       |
 | `search_arxiv`          | Academic paper search via arXiv API                         | Finding research papers, literature reviews, citations                                                         |
 
@@ -97,7 +97,7 @@ For library/framework docs, APIs, configuration, version-specific examples, and 
 | ------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
 | "Does this error message have a known cause?"     | `search_web` with the exact error string     | Broadest coverage of blog posts, Stack Overflow, docs, forums |
 | "What does the official docs say about this API?" | `search_web` with `domain="docs.python.org"` | Skips noise from unofficial sources                           |
-| "Read this changelog / issue / PR in full"        | `fetch_web_page` with the URL                | Clean extraction without JS or paywalls                       |
+| "Read this changelog / issue / PR in full"        | `fetch_page` with the URL                | Clean extraction without JS or paywalls                       |
 
 #### 4d. Issue & Community Mining — Tier 2
 

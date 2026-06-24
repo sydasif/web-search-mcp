@@ -11,13 +11,6 @@ from typing import Literal
 import httpx
 import trafilatura
 from ddgs import DDGS
-from tenacity import (
-    RetryError,
-    retry,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from .._config import settings
 from .._http import http_client, validate_url
@@ -31,20 +24,6 @@ logger = logging.getLogger(__name__)
 search_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_search)
 fetch_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_fetch)
 
-
-def _should_retry_ddg(exception: BaseException) -> bool:
-    """Retry on rate limits (429) or server errors (5xx)."""
-    if isinstance(exception, httpx.HTTPStatusError):
-        status = exception.response.status_code if exception.response is not None else None
-        return status == 429 or (status is not None and status >= 500)
-    return bool(isinstance(exception, (httpx.TimeoutException, httpx.RequestError)))
-
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception(_should_retry_ddg),
-)
 def _fetch_httpx(url: str, timeout: int) -> str:
     """Fetches a URL using the shared httpx client."""
     response = http_client.get(url, timeout=timeout)
@@ -53,16 +32,15 @@ def _fetch_httpx(url: str, timeout: int) -> str:
 
 
 def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) -> tuple[str, bool]:
-    """Fetch a URL. Tries httpx (with retries), falls back to Exa server-side render.
+    """Fetch a URL. Tries httpx once, falls back to Exa server-side render.
 
     Returns (content, used_exa_fallback). When used_exa_fallback is True, content is markdown.
     """
     validate_url(url)
     try:
         return _fetch_httpx(url, timeout=timeout), False
-    except (httpx.HTTPStatusError, httpx.RequestError, RetryError) as e:
-        cause = e.last_attempt.exception() if isinstance(e, RetryError) and e.last_attempt else e
-        logger.warning("httpx failed for %s (%s); using Exa fallback", url, cause)
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
+        logger.warning("httpx failed for %s (%s); using Exa fallback", url, e)
         try:
             content = exa_fetch([url], timeout=timeout, max_chars=max_chars)
         except Exception as exa_err:
@@ -71,40 +49,6 @@ def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) 
         if content:
             return content, True
         raise
-
-
-def _fetch_pdf_text(url: str, timeout: int = 30, max_length: int = 15000) -> str | None:
-    """Download a PDF and extract its text content using pypdf."""
-    validate_url(url)
-    import io
-
-    import pypdf
-
-    try:
-        response = http_client.get(url, timeout=timeout, follow_redirects=True)
-        response.raise_for_status()
-
-        pdf_file = io.BytesIO(response.content)
-        reader = pypdf.PdfReader(pdf_file)
-
-        text_parts: list[str] = []
-        total = 0
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
-                total += len(page_text)
-                if total >= max_length:
-                    break
-
-        if not text_parts:
-            return None
-
-        result = "\n\n".join(text_parts)
-        return result[:max_length]
-    except Exception:
-        logger.exception("PDF extraction failed for %s", url)
-        return None
 
 
 def format_search_results_markdown(results: SearchResponse | ErrorResponse) -> str:
@@ -194,13 +138,6 @@ def fetch_page(
     """Extracts clean text content from a web page or PDF URL."""
     fetch_rate_limiter.acquire()
 
-    # PDF URLs: extract text directly from the binary PDF
-    if url.lower().endswith(".pdf") or "/pdf/" in url.lower() or "pdf=" in url.lower():
-        pdf_text = _fetch_pdf_text(url, timeout=timeout, max_length=max_length)
-        if pdf_text:
-            return PageResponse(url=url, length=len(pdf_text), content=pdf_text)
-        # Fall through to normal HTML extraction if PDF fails
-
     try:
         raw_content, used_exa = _request_with_fallback(url, timeout=timeout, max_chars=max_length)
 
@@ -277,10 +214,9 @@ def fetch_page(
                 response.warning = "Could not extract metadata."
 
         return response
-    except (httpx.HTTPStatusError, httpx.RequestError, RetryError) as e:
-        cause = e.last_attempt.exception() if isinstance(e, RetryError) and e.last_attempt else e
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
         logger.exception("Fetch error")
-        return format_error(f"HTTP request failed: {cause!s}")
+        return format_error(f"HTTP request failed: {e!s}")
     except Exception as e:
         logger.exception("Reader error")
         return format_error(str(e))

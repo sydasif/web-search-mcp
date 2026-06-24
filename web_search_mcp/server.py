@@ -91,7 +91,7 @@ def search_web(
     """Search the web via DuckDuckGo or Exa — fast, free, returns structured results.
 
     Role: Discovery. Use this as your first-pass search for broad coverage.
-    Workflow: Feed results into fetch_web_page to get full page content.
+    Workflow: Feed results into fetch_page to get full page content.
 
     Args:
         query: Search query string
@@ -170,7 +170,7 @@ def search_web(
 
 
 @mcp.tool(
-    name="fetch_web_page",
+    name="fetch_page",
     annotations={
         "title": "Extract text content from a URL",
         "readOnlyHint": True,
@@ -179,7 +179,7 @@ def search_web(
         "openWorldHint": True,
     },
 )
-def fetch_web_page(
+def fetch_page(
     url: str,
     output_format: FetchOutputFormat = "txt",
     include_metadata: bool = False,
@@ -188,10 +188,7 @@ def fetch_web_page(
     max_length: int = 15000,
     timeout: int = 30,
 ) -> PageResponse | ErrorResponse:
-    """Extract raw text content from a URL — fast, free, full control.
-
-    Role: Retrieval. Use this when you need the actual page content (not a
-    summary). Supports bot-detection bypass and multiple output formats.
+    """Extract clean text content from a URL.
 
     Args:
         url: The URL to fetch and extract content from
@@ -205,14 +202,6 @@ def fetch_web_page(
     Returns:
         PageResponse: Extracted content and metadata
         ErrorResponse: Error response if applicable
-
-    Examples:
-        - "https://docs.python.org/3/library/os.html"
-        - "https://www.nature.com/articles/s41586-024-00000-0"
-
-    Error Handling:
-        - HTTP 403 Forbidden: The site is blocking the request. The server automatically falls back to Exa.
-        - Timeout: The page is taking too long to respond. Increase the timeout parameter.
 
     """
     return _fetch_page(

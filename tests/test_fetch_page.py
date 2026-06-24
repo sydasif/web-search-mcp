@@ -1,15 +1,13 @@
 """Tests for fetch_page and _request_with_fallback in ddg.py.
 
 Covers: httpx success/failure, trafilatura success/failure, Exa fallback
-paths, PDF detection, max_length truncation, metadata handling, and
-error propagation.
+paths, max_length truncation, metadata handling, and error propagation.
 """
 
 from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-from tenacity import RetryError
 
 from web_search_mcp._models.responses import ErrorResponse, PageResponse
 from web_search_mcp.search.ddg import _request_with_fallback, fetch_page
@@ -75,10 +73,10 @@ def test_httpx_fails_exa_succeeds(mock_client: MagicMock, mock_exa: MagicMock) -
 @patch("web_search_mcp.search.ddg.exa_fetch", return_value=None)
 @patch("web_search_mcp.search.ddg.http_client")
 def test_httpx_fails_exa_returns_none(mock_client: MagicMock, mock_exa: MagicMock) -> None:
-    """httpx raises (500 retries exhausted -> RetryError), Exa returns None -- re-raises."""
+    """httpx raises HTTPStatusError, Exa returns None -- re-raises HTTPStatusError."""
     mock_client.get.return_value = _error_response(500)
 
-    with pytest.raises(RetryError):
+    with pytest.raises(httpx.HTTPStatusError):
         _request_with_fallback("https://example.com")
 
 
@@ -115,15 +113,7 @@ def test_httpx_timeout_error(mock_client: MagicMock) -> None:
         assert used_exa is True
 
 
-@patch("web_search_mcp.search.ddg.http_client")
-def test_retry_error_triggers_exa(mock_client: MagicMock) -> None:
-    """tenacity RetryError (exhausted retries) triggers Exa fallback."""
-    mock_client.get.side_effect = RetryError(last_attempt=MagicMock(exception=MagicMock))
 
-    with patch("web_search_mcp.search.ddg.exa_fetch", return_value=EXA_MARKDOWN):
-        content, used_exa = _request_with_fallback("https://example.com")
-        assert content == EXA_MARKDOWN
-        assert used_exa is True
 
 
 # ===========================================================================
@@ -351,20 +341,7 @@ def test_httpx_timeout_caught(
         assert "HTTP request failed" in result.error
 
 
-@patch("web_search_mcp.search.ddg.fetch_rate_limiter")
-@patch("web_search_mcp.search.ddg.http_client")
-def test_retry_error_caught(
-    mock_client: MagicMock,
-    mock_limiter: MagicMock,
-) -> None:
-    """tenacity RetryError with no Exa -> error response."""
-    mock_client.get.side_effect = RetryError(last_attempt=MagicMock(exception=MagicMock()))
 
-    with patch("web_search_mcp.search.ddg.exa_fetch", return_value=None):
-        result = fetch_page("https://example.com")
-
-        assert isinstance(result, ErrorResponse)
-        assert "HTTP request failed" in result.error
 
 
 # ===========================================================================
@@ -404,61 +381,7 @@ def test_raw_content_empty_string(
     assert "Could not download content" in result.error
 
 
-# ===========================================================================
-# fetch_page — PDF detection
-# ===========================================================================
 
-
-@patch("web_search_mcp.search.ddg.fetch_rate_limiter")
-@patch("web_search_mcp.search.ddg._fetch_pdf_text", return_value="PDF content here")
-def test_pdf_url_dot_pdf(mock_pdf: MagicMock, mock_limiter: MagicMock) -> None:
-    """URL ending in .pdf -> PDF extraction."""
-    result = fetch_page("https://example.com/file.pdf")
-
-    assert isinstance(result, PageResponse)
-    assert result.content == "PDF content here"
-    mock_pdf.assert_called_once()
-
-
-@patch("web_search_mcp.search.ddg.fetch_rate_limiter")
-@patch("web_search_mcp.search.ddg._fetch_pdf_text", return_value="PDF content here")
-def test_pdf_url_path_contains_pdf(mock_pdf: MagicMock, mock_limiter: MagicMock) -> None:
-    """URL with /pdf/ in path -> PDF extraction."""
-    result = fetch_page("https://example.com/papers/document.pdf")
-
-    assert isinstance(result, PageResponse)
-    assert result.content == "PDF content here"
-
-
-@patch("web_search_mcp.search.ddg.fetch_rate_limiter")
-@patch("web_search_mcp.search.ddg._fetch_pdf_text", return_value="PDF content here")
-def test_pdf_url_query_param(mock_pdf: MagicMock, mock_limiter: MagicMock) -> None:
-    """URL with pdf= query param -> PDF extraction."""
-    result = fetch_page("https://example.com/view?pdf=123")
-
-    assert isinstance(result, PageResponse)
-    assert result.content == "PDF content here"
-
-
-@patch("web_search_mcp.search.ddg.fetch_rate_limiter")
-@patch("web_search_mcp.search.ddg._fetch_pdf_text", return_value=None)
-@patch("web_search_mcp.search.ddg.trafilatura")
-@patch("web_search_mcp.search.ddg.http_client")
-def test_pdf_fails_falls_through_to_html(
-    mock_client: MagicMock,
-    mock_trafilatura: MagicMock,
-    mock_pdf: MagicMock,
-    mock_limiter: MagicMock,
-) -> None:
-    """PDF extraction fails -> falls through to normal HTML path."""
-    mock_client.get.return_value = _ok_response(HTML_CONTENT)
-    mock_trafilatura.extract.return_value = "Extracted text"
-
-    result = fetch_page("https://example.com/file.pdf")
-
-    assert isinstance(result, PageResponse)
-    assert result.content == "Extracted text"
-    mock_trafilatura.extract.assert_called_once()
 
 
 # ===========================================================================

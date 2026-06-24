@@ -67,20 +67,20 @@ def test_search_web_provider_ddg() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  2. fetch_web_page
+#  2. fetch_page
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def test_fetch_web_page() -> None:
-    from web_search_mcp.search.ddg import fetch_page
+def test_fetch_page() -> None:
+    from web_search_mcp.search.ddg import fetch_page as _fetch_func
 
-    result = fetch_page("https://example.com", max_length=500)
+    result = _fetch_func("https://example.com", max_length=500)
     if isinstance(result, PageResponse):
         ok = len(result.content) > 0 and "example" in result.content.lower()
-        _check("fetch_web_page", ok, f"len={result.length}")
+        _check("fetch_page", ok, f"len={result.length}")
     else:
         err = getattr(result, "error", str(result))
-        _check("fetch_web_page", False, f"ErrorResponse: {err}")
+        _check("fetch_page", False, f"ErrorResponse: {err}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -188,7 +188,7 @@ def main() -> int:
         ("search_web", test_search_web),
         ("search_web_exa", test_search_web_exa),
         ("search_web_ddg_provider", test_search_web_provider_ddg),
-        ("fetch_web_page", test_fetch_web_page),
+        ("fetch_page", test_fetch_page),
         ("search_reddit", test_search_reddit),
         ("search_hackernews", test_search_hackernews),
         ("search_github", test_search_github),

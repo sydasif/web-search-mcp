@@ -13,7 +13,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 ### 🌐 General Web Search & Retrieval
 
 - **`search_web`**: Fast web search via DuckDuckGo or Exa (SDK). Supports domain-scoping, date filtering, news mode, and geographic region. Default auto-provider tries DDG first, falls back to Exa.
-- **`fetch_web_page`**: High-fidelity text extraction from URLs with bot-detection bypass and multiple output formats.
+- **`fetch_page`**: High-fidelity text extraction from URLs with bot-detection bypass and multiple output formats.
 
 ### 💬 Social & Community Intelligence
 
@@ -78,7 +78,7 @@ Most tools are keyless. However, some require specific environment variables for
 - **Targeted Docs**: `search_web(query="useEffect cleanup", domain="react.dev")`
 - **News with region**: `search_web(query="elections", search_type="news", region="us-en", provider="exa")`
 - **Date-filtered**: `search_web(query="uv package manager", time_range="w", provider="auto")`
-- **Deep Read**: `fetch_web_page(url="https://docs.python.org/3/library/os.html")`
+- **Deep Read**: `fetch_page(url="https://docs.python.org/3/library/os.html")`
 
 ### Technical Analysis
 
