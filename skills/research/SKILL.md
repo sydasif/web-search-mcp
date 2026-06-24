@@ -23,7 +23,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 **The MCP gives you:**
 
-- Search and retrieval across 8 platforms
+- Search and retrieval across 13 tools covering web, social, academic, and developer platforms
 - Clean extracted content from URLs
 - Rich engagement data (upvotes, comments, views) from community platforms
 
@@ -39,24 +39,28 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 ---
 
-## Tool Reference — 7 Web Search Tools
+## Tool Reference — 13 Web Search Tools
 
-### Tier 1 — Broad Discovery
+### Tier 1 — Broad Discovery & Reference
 
 | Tool                  | What It Does                                                        | When To Use                                         |
 | --------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
 | `search_web`          | DuckDuckGo web/news search                                          | First pass: news, background, official sources      |
 | `search_web` (domain) | DuckDuckGo scoped to a domain                                       | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
 | `fetch_web_page`      | Clean HTML-to-markdown + Exa fallback for bot-heavy/JS/PDF pages    | Read articles, changelogs, specs, papers            |
+| `search_wikipedia`    | Full article text via MediaWiki API                                 | Factual summaries, background research, citations   |
+| `search_arxiv`        | Academic paper search w/ Lucene field prefixes                      | Research papers, literature reviews, citations      |
 
 ### Tier 2 — Community & Social Signal
 
-| Tool                | What It Does                         | When To Use                                                 |
-| ------------------- | ------------------------------------ | ----------------------------------------------------------- |
-| `search_reddit`     | Reddit via RSS + shreddit enrichment | Real-user discussions, product feedback, niche opinions     |
-| `search_hackernews` | HN via Algolia + comment enrichment  | Tech debate, architectural analysis, deep critical takes    |
-| `search_github`     | GitHub Issues/PR search              | Upstream discussions, feature requests, deprecation notices |
-| `search_x`          | X/Twitter via Bird CLI               | Real-time announcements, expert takes, breaking news        |
+| Tool                  | What It Does                             | When To Use                                                 |
+| --------------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| `search_reddit`       | Reddit via RSS + shreddit enrichment     | Real-user discussions, product feedback, niche opinions     |
+| `search_hackernews`   | HN via Algolia + comment enrichment      | Tech debate, architectural analysis, deep critical takes    |
+| `search_github`       | GitHub Issues/PR search                  | Upstream discussions, feature requests, deprecation notices |
+| `get_github_issue`    | Full GitHub Issue/PR thread with comments | Complete conversation context sorted by reactions            |
+| `search_x`            | X/Twitter via Bird CLI                   | Real-time announcements, expert takes, breaking news        |
+| `compare_technologies`| Side-by-side comparison via GitHub + registry data | Evaluate tech choices with real metrics                     |
 
 ---
 
