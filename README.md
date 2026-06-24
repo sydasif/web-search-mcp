@@ -70,10 +70,9 @@ Most tools are keyless. However, some require specific environment variables for
 
 | Tool            | Required/Optional | Environment Variable | Note                                                              |
 | :-------------- | :---------------- | :------------------- | :---------------------------------------------------------------- |
-| **GitHub**      | Optional          | `GITHUB_TOKEN`       | Or use `gh auth login` on the host machine.                       |
-| **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`  | Session cookies extracted from a logged-in x.com browser session. |
-| **Exa AI**      | Optional          | `EXA_API_KEY`        | Increases rate limits for semantic search.                        |
-| **GitHub Issue** | Optional          | `gh` CLI auth        | Used for fetching full issue/PR threads with comments.            |
+| **GitHub**      | Optional          | `GITHUB_TOKEN` or `gh` CLI | Authenticates with the GitHub API for issues/PR search and full thread retrieval. |
+| **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`       | Session cookies extracted from a logged-in x.com browser session.               |
+| **Exa AI**      | Optional          | `EXA_API_KEY`             | Increases rate limits for semantic search.                                      |
 
 ## 💡 Usage Examples
 
@@ -87,7 +86,6 @@ Most tools are keyless. However, some require specific environment variables for
 
 - **Issue Tracking**: `search_github(query="uv package manager")`
 - **Tech Comparison**: `compare_technologies(tech_a="FastAPI", tech_b="Django", category="framework")`
-- **Debugging**: `analyze_error(error_message="AttributeError: 'NoneType' object has no attribute 'get'")`
 
 ### Community Sentiment
 
