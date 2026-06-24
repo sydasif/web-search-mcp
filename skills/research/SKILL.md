@@ -23,7 +23,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 **The MCP gives you:**
 
-- Search and retrieval across 13 tools covering web, social, academic, and developer platforms
+- Search and retrieval across 10 tools covering web, social, academic, and developer platforms
 - Clean extracted content from URLs
 - Rich engagement data (upvotes, comments, views) from community platforms
 
@@ -39,7 +39,7 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 ---
 
-## Tool Reference — 13 Web Search Tools
+## Tool Reference — 10 Web Search Tools
 
 ### Tier 1 — Broad Discovery & Reference
 

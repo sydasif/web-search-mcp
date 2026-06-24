@@ -4,6 +4,8 @@ Uses the arxiv Python library (v4+) for searching academic papers by
 keyword, author, or category. Free, no API key required.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Literal
 

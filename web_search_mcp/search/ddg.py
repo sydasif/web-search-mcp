@@ -3,6 +3,8 @@
 Consolidates search and reading functionality with professional resilience.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Literal
 
@@ -18,7 +20,7 @@ from tenacity import (
 )
 
 from .._config import settings
-from .._http import http_client
+from .._http import http_client, validate_url
 from .._models import ErrorResponse, PageResponse, SearchRequest, SearchResponse, SearchResult
 from .._utils import RateLimiter, format_error
 from .exa import exa_fetch
@@ -55,6 +57,7 @@ def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) 
 
     Returns (content, used_exa_fallback). When used_exa_fallback is True, content is markdown.
     """
+    validate_url(url)
     try:
         return _fetch_httpx(url, timeout=timeout), False
     except (httpx.HTTPStatusError, httpx.RequestError, RetryError) as e:
@@ -72,6 +75,7 @@ def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) 
 
 def _fetch_pdf_text(url: str, timeout: int = 30, max_length: int = 15000) -> str | None:
     """Download a PDF and extract its text content using pypdf."""
+    validate_url(url)
     import io
 
     import pypdf

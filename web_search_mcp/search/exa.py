@@ -10,13 +10,15 @@ Three functions:
 - exa_fetch(): fetch URL content as clean markdown
 """
 
+from __future__ import annotations
+
 import json
 import logging
 
 import httpx
 
 from .._config import settings
-from .._utils import RateLimiter, format_results_markdown
+from .._utils import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -209,21 +211,3 @@ def exa_fetch(urls: list[str], max_chars: int = 15000, timeout: int = EXA_TIMEOU
         timeout=timeout,
     )
     return _extract_text(result)
-
-
-def format_exa_markdown(items: list[dict], query: str) -> str:
-    """Format Exa results as markdown."""
-
-    def _item_lines(item: dict, i: int) -> list[str]:
-        title = item.get("title", "Untitled")
-        url = item.get("url", "#")
-        lines = [f"{i}. **[{title}]({url})**"]
-        highlights = item.get("highlights", [])
-        snippet = (
-            highlights[0][:200] if highlights else item.get("text", "") or item.get("snippet", "")
-        )
-        if snippet:
-            lines.append(f"   {snippet[:200]}")
-        return lines
-
-    return format_results_markdown(items, query, "Exa", "results", _item_lines)

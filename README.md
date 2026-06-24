@@ -30,8 +30,6 @@ The server provides a diverse suite of tools categorized by their primary use ca
 
 ### 🛠️ Developer Tooling
 
-- **`get_package_info` & `search_packages`**: Metadata lookup and discovery across npm, PyPI, crates.io, and Go modules.
-- **`analyze_error`**: Automated error message parsing and solution discovery from Stack Overflow.
 - **`compare_technologies`**: Side-by-side technical comparisons using real-world GitHub and registry data.
 
 ## 📋 Prerequisites
@@ -75,6 +73,7 @@ Most tools are keyless. However, some require specific environment variables for
 | **GitHub**      | Optional          | `GITHUB_TOKEN`       | Or use `gh auth login` on the host machine.                       |
 | **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`  | Session cookies extracted from a logged-in x.com browser session. |
 | **Exa AI**      | Optional          | `EXA_API_KEY`        | Increases rate limits for semantic search.                        |
+| **GitHub Issue** | Optional          | `gh` CLI auth        | Used for fetching full issue/PR threads with comments.            |
 
 ## 💡 Usage Examples
 

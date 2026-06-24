@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import logging
 from typing import Literal, cast
 
 from fastmcp import FastMCP
 
 from ._models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
+from ._models.types import Depth, ResponseFormat, SearchType
 from ._utils import format_error
 from .search.ddg import ddg_search, format_search_results_markdown
 from .search.ddg import fetch_page as _fetch_page
@@ -25,21 +28,10 @@ from .social.hackernews import search_hackernews as _search_hn
 from .social.reddit import reddit_search_tool as _reddit_search_tool
 from .social.x import format_x_markdown as _format_x_markdown
 from .social.x import search_x as _search_x
+from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
+from .tools.compare import Category
 from .tools.compare import compare_tech as _compare_tech
-from .tools.errors import translate_error as _translate_error
-from .tools.registries import (
-    format_package_info as _fmt_pkg_info,
-)
-from .tools.registries import (
-    format_package_list as _fmt_pkg_list,
-)
-from .tools.registries import (
-    lookup_package as _lookup_package,
-)
-from .tools.registries import (
-    search_packages as _search_packages,
-)
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
 # Set up logging
@@ -96,7 +88,7 @@ def search_web(
     safesearch: Literal["moderate", "off", "on"] = "moderate",
     page: int = 1,
     backend: Literal["auto", "legacy", "api"] = "auto",
-    response_format: Literal["json", "markdown"] = "markdown",
+    response_format: ResponseFormat = "markdown",
     domain: str | None = None,
 ) -> str | SearchResponse | ErrorResponse:
     """Search the web via DuckDuckGo — free, fast, returns raw structured results.
@@ -235,9 +227,9 @@ def search_reddit(
     query: str,
     max_results: int = 25,
     time_range: str | None = None,
-    depth: Literal["quick", "default", "deep"] = "default",
+    depth: Depth = "default",
     subreddits: list[str] | None = None,
-    response_format: Literal["json", "markdown"] = "markdown",
+    response_format: ResponseFormat = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed.
 
@@ -300,8 +292,8 @@ def search_reddit(
 def search_hackernews(
     query: str,
     max_results: int = 30,
-    depth: Literal["quick", "default", "deep"] = "default",
-    response_format: Literal["json", "markdown"] = "markdown",
+    depth: Depth = "default",
+    response_format: ResponseFormat = "markdown",
 ) -> str | list[dict] | ErrorResponse:
     """Search Hacker News via Algolia API — free, no API key needed.
 
@@ -360,7 +352,7 @@ def search_hackernews(
 def search_arxiv(
     query: str,
     max_results: int = 10,
-    sort_by: Literal["relevance", "submitted_date", "updated_date"] = "relevance",
+    sort_by: SortCriterion = "relevance",
 ) -> str | ErrorResponse:
     """Search arXiv for academic papers — free, no API key needed.
 
@@ -469,9 +461,9 @@ def search_wikipedia(
 def search_github(
     query: str,
     max_results: int = 30,
-    depth: Literal["quick", "default", "deep"] = "default",
+    depth: Depth = "default",
     token: str | None = None,
-    response_format: Literal["json", "markdown"] = "markdown",
+    response_format: ResponseFormat = "markdown",
 ) -> str | list[dict] | ErrorResponse:
     """Search GitHub Issues and PRs via the GitHub Search API.
 
@@ -585,8 +577,8 @@ def search_x(
     query: str,
     from_date: str | None = None,
     max_results: int = 30,
-    depth: Literal["quick", "default", "deep"] = "default",
-    response_format: Literal["json", "markdown"] = "markdown",
+    depth: Depth = "default",
+    response_format: ResponseFormat = "markdown",
 ) -> str | list[dict] | ErrorResponse:
     """Search X/Twitter via Bird CLI — requires AUTH_TOKEN and CT0 cookies.
 
@@ -629,155 +621,9 @@ def search_x(
 
 
 # ─────────────────────────────────────────────────────────────
-# Developer tools — package registries, error translation, comparisons
-# Best for: developer workflows, debugging, technology evaluation
+# Developer tools — technology comparisons
+# Best for: developer workflows, technology evaluation
 # ─────────────────────────────────────────────────────────────
-
-
-@mcp.tool(
-    name="get_package_info",
-    annotations={
-        "title": "Look up a package from npm, PyPI, crates.io, or Go modules",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def get_package_info(
-    name: str,
-    registry: Literal["npm", "pypi", "crates", "go"] | None = None,
-) -> str | ErrorResponse:
-    """Look up a specific package from npm, PyPI, crates.io, or Go modules.
-
-    Role: Developer tooling. Use this to get version, description, downloads,
-    license, dependencies count, and repository info for any package.
-
-    Args:
-        name: Package name (e.g. ``"express"``, ``"numpy"``, ``"serde"``).
-            Auto-detects registry from the name format.
-        registry: Force a specific registry (``"npm"``, ``"pypi"``,
-            ``"crates"``, ``"go"``). Auto-detected if omitted.
-
-    Returns:
-        Markdown-formatted package metadata.
-
-    Examples:
-        - ``"requests"`` → PyPI lookup (auto-detected)
-        - ``"express"`` → npm lookup (auto-detected)
-        - ``"serde"`` → crates.io lookup (explicit registry)
-
-    Error Handling:
-        - Package not found: Returns clear message with registry info.
-        - Registry down: Returns error message.
-
-    """
-    try:
-        result = _lookup_package(name, registry=registry)
-        if isinstance(result, ErrorResponse):
-            return result
-        return _fmt_pkg_info(result)
-    except Exception as e:
-        logger.exception("package_info failed")
-        return format_error(f"Package lookup failed for '{name}'", str(e))
-
-
-@mcp.tool(
-    name="search_packages",
-    annotations={
-        "title": "Search packages by keyword on npm, PyPI, crates.io, or Go",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def search_packages(
-    query: str,
-    registry: Literal["npm", "pypi", "crates", "go"] = "npm",
-    max_results: int = 5,
-) -> str | ErrorResponse:
-    """Search for packages by keyword across a package registry.
-
-    Role: Developer tooling. Use this to discover packages related to a
-    topic. Follow up with ``get_package_info`` for detailed metadata.
-
-    Args:
-        query: Search keywords (e.g. ``"async http client"``).
-        registry: Registry to search (``"npm"``, ``"pypi"``,
-            ``"crates"``, ``"go"``). Defaults to ``"npm"``.
-        max_results: Max results (1-20).
-
-    Returns:
-        Markdown-formatted list of matching packages.
-
-    Examples:
-        - ``"async http client"`` on npm
-        - ``"dataframe"`` on PyPI
-        - ``"serialization"`` on crates.io
-
-    Error Handling:
-        - Empty query: Returns error message.
-        - No results: Returns "No packages found" message.
-
-    """
-    try:
-        result = _search_packages(query, registry=registry, max_results=max_results)
-        if isinstance(result, ErrorResponse):
-            return result
-        return _fmt_pkg_list(result, query, registry)
-    except Exception as e:
-        logger.exception("package_search failed")
-        return format_error(f"Package search failed for '{query}'", str(e))
-
-
-@mcp.tool(
-    name="analyze_error",
-    annotations={
-        "title": "Analyze error messages and find solutions from Stack Overflow",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def analyze_error(
-    error_message: str,
-    max_results: int = 5,
-    language: str | None = None,
-) -> str | ErrorResponse:
-    """Parse an error message and search Stack Overflow for solutions.
-
-    Role: Developer tooling. Use this when you get an error in your code
-    and want to understand what caused it and how to fix it. The tool
-    auto-detects the programming language and framework from the error.
-
-    Args:
-        error_message: The full error message or stack trace. Pass the
-            entire error - the parser extracts the relevant parts.
-        max_results: Number of Stack Overflow results to return (1-10).
-        language: Optionally specify the language (``"python"``,
-            ``"javascript"``, ``"typescript"``, ``"rust"``, ``"go"``,
-            ``"java"``). Auto-detected if omitted.
-
-    Returns:
-        Markdown with parsed error analysis and Stack Overflow solutions.
-
-    Examples:
-        - Python traceback with ``AttributeError``
-        - Node.js ``Cannot read property`` error
-        - Rust borrow checker error E0502
-
-    Error Handling:
-        - Empty input: Returns error message.
-        - No Stack Overflow results: Returns partial analysis with note.
-
-    """
-    try:
-        return _translate_error(error_message, max_results=max_results, language=language)
-    except Exception as e:
-        logger.exception("translate_error failed")
-        return format_error("Error analysis failed", str(e))
 
 
 @mcp.tool(
@@ -793,7 +639,7 @@ def analyze_error(
 def compare_technologies(
     tech_a: str,
     tech_b: str,
-    category: Literal["framework", "library", "database", "language", "tool"] = "library",
+    category: Category = "library",
 ) -> str | ErrorResponse:
     """Compare two technologies side-by-side using GitHub and registry data.
 

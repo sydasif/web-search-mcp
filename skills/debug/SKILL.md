@@ -18,9 +18,9 @@ Use the best available tool for the evidence needed. Do not block debugging just
 - **Local CLI first:** `rg`, `rg --files`, `git status`, `git diff`, focused tests, logs, dependency manifests, lockfiles, and local dependency source.
 - **Context7:** use for current, version-aware library/framework documentation and code examples when dependency behavior matters.
 - **GitHub CLI (`gh`):** use for GitHub-native evidence such as issues, PRs, checks, releases, repo metadata, source files, and API calls from the terminal.
-- **Web Search MCP:** 13 tools total — the most relevant ones for debugging are organized into two tiers below. Use the cheapest tool that answers the question.
+- **Web Search MCP:** 10 tools total — the most relevant ones for debugging are organized into two tiers below. Use the cheapest tool that answers the question.
 
-### Web Search MCP — Tool Reference (13 tools)
+### Web Search MCP — Tool Reference (10 tools)
 
 #### Tier 1 — Direct Search & Retrieval (start here)
 
@@ -41,7 +41,6 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | `search_hackernews`   | Hacker News search via Algolia with comment enrichment      | Tech community discussions about bugs, regressions, architectural root causes, known workarounds              |
 | `search_reddit`       | Reddit search via RSS + shreddit enrichment                 | Real-world troubleshooting threads, niche library issues, configuration gotchas                               |
 | `search_x`            | X/Twitter search via Bird CLI                               | Real-time announcements, outage reports, release alerts, short workaround threads                             |
-| `analyze_error`       | Error message parser + Stack Overflow solution search       | Debug errors directly — auto-detects language/framework, finds fixes from SO                                  |
 
 #### Not Used
 
@@ -49,7 +48,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 
 - Context7 for current library/framework docs and examples. Source: https://github.com/upstash/context7
 - GitHub CLI `gh` for issues, PRs, checks, releases, source/API access. Source: https://cli.github.com/
-- Web Search MCP for web search, docs search, page extraction, and community mining (13 tools). Source: https://github.com/sydasif/web-search-mcp
+- Web Search MCP for web search, docs search, page extraction, and community mining (10 tools). Source: https://github.com/sydasif/web-search-mcp
 
 ## CLI Workflow
 

@@ -1,5 +1,7 @@
 """Keyless Reddit pipeline: tiered free search + comment enrichment."""
 
+from __future__ import annotations
+
 import concurrent.futures
 import logging
 import re

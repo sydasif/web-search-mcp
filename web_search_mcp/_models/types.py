@@ -1,5 +1,7 @@
 """Shared Literal type aliases used across modules."""
 
+from __future__ import annotations
+
 from typing import Literal
 
 Depth = Literal["quick", "default", "deep"]

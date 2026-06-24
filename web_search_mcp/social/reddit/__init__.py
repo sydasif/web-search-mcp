@@ -1,11 +1,13 @@
 """Reddit search tool for MCP — keyless, free Reddit search."""
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta
-from typing import Literal
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models import ErrorResponse, SearchResponse, SearchResult
+from ..._models.types import Depth, ResponseFormat
 from ..._utils import format_error
 from . import engine
 
@@ -51,9 +53,9 @@ def reddit_search_tool(
     query: str,
     max_results: int = 25,
     time_range: str | None = None,
-    depth: Literal["quick", "default", "deep"] = "default",
+    depth: Depth = "default",
     subreddits: list[str] | None = None,
-    response_format: Literal["json", "markdown"] = "markdown",
+    response_format: ResponseFormat = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed."""
     if not query or not query.strip():

@@ -5,6 +5,8 @@ per-item comment enrichment. Auth via GITHUB_TOKEN env var or
 `gh auth token` subprocess fallback.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -18,7 +20,7 @@ import httpx
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from .._config import settings
-from .._utils import compute_relevance, format_results_markdown
+from .._utils import compute_relevance, format_results_markdown, iso_to_date, truncate_content
 
 logger = logging.getLogger(__name__)
 
@@ -91,16 +93,6 @@ def _parse_repo_from_url(html_url: str) -> str:
     if len(parts) >= 2:
         return f"{parts[0]}/{parts[1]}"
     return ""
-
-
-def _parse_date(iso_str: str | None) -> str | None:
-    """Parse GitHub ISO 8601 datetime to YYYY-MM-DD."""
-    if not iso_str:
-        return None
-    try:
-        return iso_str[:10]
-    except (IndexError, TypeError):
-        return None
 
 
 # ─────────────────────────────────────────────────────────────
@@ -180,7 +172,7 @@ def _parse_items(
         state = item.get("state", "")
         is_pr = "pull_request" in item
         author = item.get("user", {}).get("login", "") if isinstance(item.get("user"), dict) else ""
-        created = _parse_date(item.get("created_at"))
+        created = iso_to_date(item.get("created_at"))
 
         relevance = compute_relevance(topic, title, i, reactions_total + comment_count)
 
@@ -330,10 +322,6 @@ def enrich_with_comments(
 # ─────────────────────────────────────────────────────────────
 
 
-class GitHubUrlError(ValueError):
-    pass
-
-
 _GITHUB_ISSUE_RE = re.compile(r"^/([^/]+)/([^/]+)/issues/(\d+)(?:/|$)")
 _GITHUB_PR_RE = re.compile(r"^/([^/]+)/([^/]+)/pull/(\d+)(?:/|$)")
 
@@ -347,7 +335,7 @@ def parse_github_url(url: str) -> tuple[str, str, int, str]:
     host = (parsed.hostname or "").lower()
     if host not in {"github.com", "www.github.com"}:
         msg = f"Unsupported GitHub host: {host or '(missing)'}"
-        raise GitHubUrlError(msg)
+        raise ValueError(msg)
     path = parsed.path or ""
 
     m = _GITHUB_ISSUE_RE.match(path)
@@ -358,13 +346,10 @@ def parse_github_url(url: str) -> tuple[str, str, int, str]:
     if m:
         return (m.group(1), m.group(2), int(m.group(3)), "pr")
 
-    msg = (
+    raise ValueError(
         "URL is not a recognized GitHub Issue or PR URL. "
         "Expected format: https://github.com/owner/repo/issues/{number} "
-        "or https://github.com/owner/repo/pull/{number}"
-    )
-    raise GitHubUrlError(
-        msg,
+        "or https://github.com/owner/repo/pull/{number}",
     )
 
 
@@ -434,7 +419,7 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
     author_data = data.get("author")
     if isinstance(author_data, dict):
         author = str(author_data.get("login") or "")
-    created = _parse_date(data.get("createdAt")) or ""
+    created = iso_to_date(data.get("createdAt")) or ""
     state = (data.get("state") or "").lower()
     match state:
         case "merged":
@@ -487,7 +472,7 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
             if isinstance(ca, dict):
                 c_author = str(ca.get("login") or "")
             c_assoc = (c.get("authorAssociation") or "").upper()
-            c_date = _parse_date(c.get("createdAt")) or ""
+            c_date = iso_to_date(c.get("createdAt")) or ""
             c_url = c.get("url") or ""
             c_body = (c.get("body") or "").strip()
             c_rx = _sum_reactions(c.get("reactionGroups"))
@@ -556,7 +541,7 @@ def get_github_issue(url: str) -> str:
 
     try:
         owner, repo, number, kind = parse_github_url(url)
-    except GitHubUrlError as e:
+    except ValueError as e:
         return f"_Error: {e}_\n"
 
     if not _gh_available():
@@ -607,12 +592,4 @@ def get_github_issue(url: str) -> str:
 
     md = render_issue_markdown(data, kind=kind)
 
-    max_chars_env = os.environ.get("GITHUB_ISSUE_MAX_CHARS", "30000")
-    try:
-        max_chars = int(max_chars_env)
-    except (TypeError, ValueError):
-        max_chars = 30000
-    if max_chars > 0 and len(md) > max_chars:
-        md = md[:max_chars].rstrip() + "\n\n_Truncated._\n"
-
-    return md
+    return truncate_content(md, "GITHUB_ISSUE_MAX_CHARS")

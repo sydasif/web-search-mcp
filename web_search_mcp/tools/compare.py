@@ -4,6 +4,8 @@ Fetches GitHub stats, npm/PyPI registry data, and license information
 to produce side-by-side comparisons of two technologies.
 """
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from typing import Literal

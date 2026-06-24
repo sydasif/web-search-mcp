@@ -10,15 +10,17 @@ This is the source repo's approach (mvanhorn/last30days-skill) and provides more
 data (876 KB vs 365 KB) than old.reddit.com's <div class="thing"> structure.
 """
 
-import html as _html
+from __future__ import annotations
+
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from ..._utils import score_relevance
+from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
 from . import client
-from .parsers import LISTING_SORTS, _iso_to_date, _iso_to_epoch
+from ._utils import extract_attr
+from .parsers import LISTING_SORTS
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +35,6 @@ def _post_id(url: str) -> str:
     """Extract post ID from Reddit URL."""
     m = re.search(r"/comments/([A-Za-z0-9]+)", url or "")
     return m.group(1) if m else ""
-
-
-def _attr(tag: str, name: str) -> str | None:
-    """Extract an attribute value from an HTML tag."""
-    m = re.search(rf'\b{name}="([^"]*)"', tag)
-    return _html.unescape(m.group(1)) if m else None
 
 
 def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
@@ -60,7 +56,7 @@ def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
         tag = m.group(0)
 
         # Get permalink first — needed for post ID and URL
-        permalink = _attr(tag, "permalink") or ""
+        permalink = extract_attr(tag, "permalink") or ""
         if "/comments/" not in permalink:
             continue
 
@@ -71,30 +67,30 @@ def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
 
         # Score and comment count (same attributes as other endpoints)
         try:
-            score = int(_attr(tag, "score") or 0)
+            score = int(extract_attr(tag, "score") or 0)
         except (ValueError, TypeError):
             score = 0
         try:
-            num_comments = int(_attr(tag, "comment-count") or 0)
+            num_comments = int(extract_attr(tag, "comment-count") or 0)
         except (ValueError, TypeError):
             num_comments = 0
 
         # Title: SVC endpoint uses ``post-title`` instead of ``title``
-        title = _attr(tag, "post-title") or _attr(tag, "title") or ""
+        title = extract_attr(tag, "post-title") or extract_attr(tag, "title") or ""
 
         # Author
-        author = _attr(tag, "author") or "[deleted]"
+        author = extract_attr(tag, "author") or "[deleted]"
 
         # Subreddit: SVC has ``subreddit-name`` attribute
-        subreddit = _attr(tag, "subreddit-name") or ""
+        subreddit = extract_attr(tag, "subreddit-name") or ""
 
         # Created timestamp (ISO-8601)
-        created = _attr(tag, "created-timestamp")
+        created = extract_attr(tag, "created-timestamp")
 
         # Build URL
         url = f"https://www.reddit.com{permalink}" if permalink else ""
 
-        relevance = score_relevance(query, title)
+        relevance = token_overlap_relevance(query, title)
 
         posts.append(
             {
@@ -104,10 +100,10 @@ def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
                 "score": score,
                 "num_comments": num_comments,
                 "subreddit": subreddit,
-                "created_utc": _iso_to_epoch(created),
+                "created_utc": iso_to_epoch(created),
                 "author": author,
                 "selftext": "",
-                "date": _iso_to_date(created),
+                "date": iso_to_date(created),
                 "engagement": {
                     "score": score,
                     "num_comments": num_comments,

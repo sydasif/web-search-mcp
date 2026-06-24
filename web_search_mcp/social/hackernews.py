@@ -4,11 +4,14 @@ Uses hn.algolia.com/api/v1 for story discovery and comment enrichment.
 No API key needed - just HTTP calls via httpx.
 """
 
+from __future__ import annotations
+
 import html as _html
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
+from functools import lru_cache
 from urllib.parse import urlencode
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
@@ -27,7 +30,6 @@ MAX_WORKERS = 5
 TIMEOUT = 30
 
 _HN_PREFIXES = re.compile(r"^(Tell HN|Show HN|Ask HN|Launch HN)\s*:\s*", re.IGNORECASE)
-_WORD_BOUNDARY_RE_CACHE: dict[str, re.Pattern[str]] = {}
 
 
 def _date_to_unix(date_str: str) -> int:
@@ -40,6 +42,11 @@ def _date_to_unix(date_str: str) -> int:
 def _unix_to_date(ts: int) -> str:
     """Convert Unix timestamp to YYYY-MM-DD."""
     return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
+
+
+@lru_cache(maxsize=None)
+def _make_word_boundary_re(word: str) -> re.Pattern[str]:
+    return re.compile(rf"\b{re.escape(word)}\b")
 
 
 def _strip_html(text: str) -> str:
@@ -63,14 +70,7 @@ def _title_matches_query(title: str, query: str) -> bool:
     query_words = [w for w in _flatten_query(query.lower()).split() if w]
     if not query_words:
         return True
-    for word in query_words:
-        pattern = _WORD_BOUNDARY_RE_CACHE.get(word)
-        if pattern is None:
-            pattern = re.compile(rf"\b{re.escape(word)}\b")
-            _WORD_BOUNDARY_RE_CACHE[word] = pattern
-        if pattern.search(stripped):
-            return True
-    return False
+    return any(_make_word_boundary_re(w).search(stripped) for w in query_words)
 
 
 # ─────────────────────────────────────────────────────────────

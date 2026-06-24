@@ -10,6 +10,8 @@ Authentication:
     that expire periodically — refresh them when searches start failing.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -60,12 +62,17 @@ def _build_env() -> dict[str, str]:
     return env
 
 
+def _sanitize_query(query: str) -> str:
+    """Strip control characters from a query string for safe subprocess use."""
+    return "".join(ch for ch in query if ch >= " " or ch in "\t\n\r")
+
+
 def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
     """Run a single bird-search subprocess and return parsed JSON."""
     cmd = [
         "node",
         str(_BIRD_SEARCH_MJS),
-        query,
+        _sanitize_query(query),
         "--count",
         str(count),
         "--json",

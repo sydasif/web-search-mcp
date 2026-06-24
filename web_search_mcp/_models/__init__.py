@@ -2,16 +2,13 @@
 
 from .requests import SearchRequest
 from .responses import ErrorResponse, PageResponse, SearchResponse, SearchResult
-from .types import Depth, FetchOutputFormat, ResponseFormat, SearchType
+from .types import FetchOutputFormat
 
 __all__ = [
-    "Depth",
     "ErrorResponse",
     "FetchOutputFormat",
     "PageResponse",
-    "ResponseFormat",
     "SearchRequest",
     "SearchResponse",
     "SearchResult",
-    "SearchType",
 ]

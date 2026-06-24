@@ -1,5 +1,7 @@
 """Relevance scoring utilities."""
 
+from __future__ import annotations
+
 import math
 import re
 
@@ -13,12 +15,7 @@ def token_overlap_relevance(query: str, text: str) -> float:
     if not q_tokens or not t_tokens:
         return 0.0
     intersection = q_tokens & t_tokens
-    return len(intersection) / len(q_tokens)
-
-
-def score_relevance(query: str, text: str) -> float:
-    """Score token overlap relevance with rounding. Wraps token_overlap_relevance."""
-    return round(token_overlap_relevance(query, text), 3) if query else 0.0
+    return round(len(intersection) / len(q_tokens), 3)
 
 
 def compute_relevance(

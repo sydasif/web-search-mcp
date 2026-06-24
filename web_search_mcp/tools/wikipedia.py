@@ -4,11 +4,13 @@ Uses the MediaWiki action API with ``explaintext`` for clean,
 section-marked plain text extraction. No API key required.
 """
 
+from __future__ import annotations
+
 import logging
-import os
 from urllib.parse import quote, urlencode
 
 from .._http import get_json_client
+from .._utils import truncate_content
 
 logger = logging.getLogger(__name__)
 
@@ -143,12 +145,4 @@ def wikipedia_search_tool(query: str, max_results: int = 5) -> str:
 
     md = "\n".join(lines).strip() + "\n"
 
-    max_chars_env = os.environ.get("WIKIPEDIA_MAX_CHARS", "30000")
-    try:
-        max_chars = int(max_chars_env)
-    except (TypeError, ValueError):
-        max_chars = 30000
-    if max_chars > 0 and len(md) > max_chars:
-        md = md[:max_chars].rstrip() + "\n\n_Truncated._\n"
-
-    return md
+    return truncate_content(md, "WIKIPEDIA_MAX_CHARS")

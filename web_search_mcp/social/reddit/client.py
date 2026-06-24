@@ -2,6 +2,8 @@
 Consolidates legacy .json search and HTTP utilities.
 """
 
+from __future__ import annotations
+
 import contextlib
 import json
 import socket
@@ -19,7 +21,7 @@ from tenacity import (
 )
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
-from ..._utils import score_relevance
+from ..._utils import token_overlap_relevance
 
 DEFAULT_TIMEOUT = 30
 USER_AGENT = "web-search-mcp/1.0 (Reddit Search)"
@@ -171,7 +173,7 @@ def _parse_json_posts(data: dict[str, Any], query: str = "") -> list[dict[str, A
             created_dt = datetime.fromtimestamp(created_utc, tz=UTC) if created_utc else None
             date_str = created_dt.date().isoformat() if created_dt else None
 
-            relevance = score_relevance(query, title)
+            relevance = token_overlap_relevance(query, title)
 
             posts.append(
                 {

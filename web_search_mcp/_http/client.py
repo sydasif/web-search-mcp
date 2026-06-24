@@ -1,13 +1,25 @@
 """Shared httpx client instances and JSON API client factory."""
 
+from __future__ import annotations
+
 import logging
 import ssl
+from urllib.parse import urlparse
 
 import httpx
 
 from .._config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def validate_url(url: str) -> str:
+    """Validate URL has a supported scheme. Returns url unchanged or raises ValueError."""
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        msg = f"Unsupported URL scheme: {parsed.scheme!r}"
+        raise ValueError(msg)
+    return url
 
 
 def _get_ssl_context() -> ssl.SSLContext | None:
