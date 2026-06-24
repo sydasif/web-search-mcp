@@ -50,7 +50,7 @@ def _fetch_httpx(url: str, timeout: int) -> str:
     return response.text
 
 
-def _request_with_fallback(url: str, timeout: int = 30) -> tuple[str, bool]:
+def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) -> tuple[str, bool]:
     """Fetch a URL. Tries httpx (with retries), falls back to Exa server-side render.
 
     Returns (content, used_exa_fallback). When used_exa_fallback is True, content is markdown.
@@ -61,7 +61,7 @@ def _request_with_fallback(url: str, timeout: int = 30) -> tuple[str, bool]:
         cause = e.last_attempt.exception() if isinstance(e, RetryError) and e.last_attempt else e
         logger.warning("httpx failed for %s (%s); using Exa fallback", url, cause)
         try:
-            content = exa_fetch([url], timeout=timeout)
+            content = exa_fetch([url], timeout=timeout, max_chars=max_chars)
         except Exception as exa_err:
             logger.warning("Exa fallback also failed for %s: %s", url, exa_err)
             raise
@@ -183,8 +183,6 @@ def fetch_page(
     ] = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
-    include_comments: bool = False,
-    include_images: bool = False,
     deduplicate: bool = True,
     max_length: int = 15000,
     timeout: int = 30,
@@ -200,7 +198,7 @@ def fetch_page(
         # Fall through to normal HTML extraction if PDF fails
 
     try:
-        raw_content, used_exa = _request_with_fallback(url, timeout=timeout)
+        raw_content, used_exa = _request_with_fallback(url, timeout=timeout, max_chars=max_length)
 
         if not raw_content:
             return format_error("Could not download content.")
@@ -219,13 +217,25 @@ def fetch_page(
             output_format=output_format,
             with_metadata=include_metadata,
             include_tables=include_tables,
-            include_comments=include_comments,
             include_links=True,
-            include_images=include_images,
             deduplicate=deduplicate,
         )
 
+        # trafilatura failed — try Exa server-side render as second fallback
         if not extracted_data:
+            logger.info("trafilatura returned no text for %s; trying Exa fallback", url)
+            try:
+                exa_content = exa_fetch([url], timeout=timeout, max_chars=max_length)
+            except Exception as exa_err:
+                logger.warning("Exa fallback failed for %s: %s", url, exa_err)
+                exa_content = None
+            if exa_content:
+                actual_length = len(exa_content)
+                return PageResponse(
+                    url=url,
+                    length=actual_length,
+                    content=exa_content[:max_length],
+                )
             return format_error("No readable text found.")
 
         if include_metadata:

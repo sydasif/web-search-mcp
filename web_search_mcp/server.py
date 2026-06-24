@@ -176,8 +176,6 @@ def fetch_web_page(
     output_format: FetchOutputFormat = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
-    include_comments: bool = False,
-    include_images: bool = False,
     deduplicate: bool = True,
     max_length: int = 15000,
     timeout: int = 30,
@@ -192,8 +190,6 @@ def fetch_web_page(
         output_format: Format for extracted content ('csv', 'html', 'json', 'markdown', 'python', 'txt', 'xml', 'xmltei')
         include_metadata: Whether to include document metadata (title, author, date, etc.)
         include_tables: Whether to include table content in extraction
-        include_comments: Whether to include comment content in extraction
-        include_images: Whether to include image descriptions in extraction
         deduplicate: Whether to remove duplicated content
         max_length: Maximum length of content to return (default 15000)
         timeout: Request timeout in seconds (default 30)
@@ -216,8 +212,6 @@ def fetch_web_page(
         output_format=output_format,
         include_metadata=include_metadata,
         include_tables=include_tables,
-        include_comments=include_comments,
-        include_images=include_images,
         deduplicate=deduplicate,
         max_length=max_length,
         timeout=timeout,
