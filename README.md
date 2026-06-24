@@ -12,7 +12,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 
 ### 🌐 General Web Search & Retrieval
 
-- **`search_web`**: Fast, free web search via DuckDuckGo. Ideal for broad discovery and news.
+- **`search_web`**: Fast web search via DuckDuckGo or Exa (SDK). Supports domain-scoping, date filtering, news mode, and geographic region. Default auto-provider tries DDG first, falls back to Exa.
 - **`fetch_web_page`**: High-fidelity text extraction from URLs with bot-detection bypass and multiple output formats.
 
 ### 💬 Social & Community Intelligence
@@ -68,7 +68,7 @@ Most tools are keyless. However, some require specific environment variables for
 | :-------------- | :---------------- | :------------------- | :---------------------------------------------------------------- |
 | **GitHub**      | Optional          | `GITHUB_TOKEN` or `gh` CLI | Authenticates with the GitHub API for issues/PR search and full thread retrieval. |
 | **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`       | Session cookies extracted from a logged-in x.com browser session.               |
-| **Exa AI**      | Optional          | `EXA_API_KEY`             | Increases rate limits for semantic search.                                      |
+| **Exa AI**      | Optional          | `EXA_API_KEY`             | Enables Exa as a search provider (via exa_py SDK) and increases fetch rate limits. |
 
 ## 💡 Usage Examples
 
@@ -76,6 +76,8 @@ Most tools are keyless. However, some require specific environment variables for
 
 - **Broad Search**: `search_web(query="Latest NVIDIA H200 benchmarks")`
 - **Targeted Docs**: `search_web(query="useEffect cleanup", domain="react.dev")`
+- **News with region**: `search_web(query="elections", search_type="news", region="us-en", provider="exa")`
+- **Date-filtered**: `search_web(query="uv package manager", time_range="w", provider="auto")`
 - **Deep Read**: `fetch_web_page(url="https://docs.python.org/3/library/os.html")`
 
 ### Technical Analysis

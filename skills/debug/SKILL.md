@@ -26,8 +26,8 @@ Use the best available tool for the evidence needed. Do not block debugging just
 
 | Tool                    | What It Does                                                | When To Use                                                                                                    |
 | ----------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `search_web`            | DuckDuckGo web/news search with JSON or markdown output     | Broad search for error messages, known bugs, solutions, release notes                                          |
-| `search_web` (domain)   | DuckDuckGo scoped to a domain via the `domain` param        | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                         |
+| `search_web`            | DuckDuckGo or Exa web/news search (via `provider` param)   | Broad search for error messages, known bugs, solutions, release notes                                          |
+| `search_web` (domain)   | DuckDuckGo (site:) or Exa (include_domains) scoped to domain | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                         |
 | `fetch_web_page`        | Clean HTML-to-markdown extraction from any URL              | Reading docs, changelogs, error pages, issue threads cleanly; Exa fallback handles JS/PDF/bot-blocked pages    |
 | `search_wikipedia`      | Wikipedia article search via MediaWiki API                  | Fact-checking, background reference, terminology lookups                                                       |
 | `search_arxiv`          | Academic paper search via arXiv API                         | Finding research papers, literature reviews, citations                                                         |

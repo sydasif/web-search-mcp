@@ -10,6 +10,7 @@ from ._models.types import Depth, ResponseFormat
 from ._utils import format_error
 from .search.ddg import ddg_search, format_search_results_markdown
 from .search.ddg import fetch_page as _fetch_page
+from .search.exa import exa_search as _exa_search
 from .social.github import (
     enrich_with_comments as _enrich_gh,
 )
@@ -70,7 +71,7 @@ mcp = FastMCP("Web Search Tools")
 @mcp.tool(
     name="search_web",
     annotations={
-        "title": "Search the web via DuckDuckGo",
+        "title": "Search the web via DuckDuckGo or Exa",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -79,33 +80,31 @@ mcp = FastMCP("Web Search Tools")
 )
 def search_web(
     query: str,
-    search_type: Literal["text", "news"] = "text",
     max_results: int = 5,
+    search_type: Literal["text", "news"] = "text",
     time_range: str | None = None,
     region: str | None = None,
-    safesearch: Literal["moderate", "off", "on"] = "moderate",
-    page: int = 1,
-    backend: Literal["auto", "legacy", "api"] = "auto",
-    response_format: ResponseFormat = "markdown",
     domain: str | None = None,
+    response_format: ResponseFormat = "markdown",
+    provider: Literal["auto", "ddg", "exa"] = "auto",
 ) -> str | SearchResponse | ErrorResponse:
-    """Search the web via DuckDuckGo — free, fast, returns raw structured results.
+    """Search the web via DuckDuckGo or Exa — fast, free, returns structured results.
 
     Role: Discovery. Use this as your first-pass search for broad coverage.
     Workflow: Feed results into fetch_web_page to get full page content.
 
     Args:
         query: Search query string
-        search_type: Type of search ('text' or 'news')
         max_results: Max number of results to return (default 5)
-        time_range: Time filter ('d', 'w', 'm', 'y') or None
-        region: Geographic region (e.g. 'us-en', 'uk-en') or None
-        safesearch: Safe search level ('moderate', 'off', 'on')
-        page: Page number for pagination (default 1)
-        backend: Backend to use ('auto', 'legacy', 'api')
-        response_format: Output format - 'markdown' for human-readable, 'json' for structured data
+        search_type: Type of search ('text' or 'news').
+        time_range: Time filter ('d', 'w', 'm', 'y') or None.
+        region: Geographic region (e.g. 'us-en', 'uk-en'). DDG: passed directly.
+            Exa: converts to two-letter ISO country code (user_location).
         domain: Optional domain to scope results (e.g. 'docs.python.org').
-            Automatically adds a site: prefix. Use for targeted documentation searches.
+            DDG: adds a site: prefix. Exa: maps to include_domains.
+        response_format: Output format - 'markdown' for human-readable, 'json' for structured data
+        provider: Search provider ('auto', 'ddg', 'exa'). Default 'auto' tries
+            DuckDuckGo first, falls back to Exa if DDG returns an error.
 
     Returns:
         str: Markdown-formatted search results (when response_format="markdown")
@@ -125,25 +124,47 @@ def search_web(
     """
     try:
         effective_query = f"site:{domain} {query}" if domain else query
+
         req = SearchRequest(
             query=effective_query,
             search_type=search_type,
             max_results=max_results,
             time_range=time_range,
             region=region,
-            safesearch=safesearch,
-            page=page,
-            backend=backend,
+            provider=provider,
             response_format=response_format,
         )
-        result = ddg_search(req)
+
+        def _run_ddg() -> SearchResponse | ErrorResponse:
+            return ddg_search(req)
+
+        def _run_exa() -> SearchResponse | ErrorResponse:
+            return _exa_search(
+                query=query,
+                max_results=max_results,
+                search_type=search_type,
+                time_range=time_range,
+                region=region,
+                domain=domain,
+            )
+
+        if provider == "ddg":
+            result = _run_ddg()
+        elif provider == "exa":
+            result = _run_exa()
+        else:  # "auto"
+            result = _run_ddg()
+            if isinstance(result, ErrorResponse) or (isinstance(result, SearchResponse) and result.total_results == 0):
+                logger.info("DDG returned no results for %r; falling back to Exa", query)
+                result = _run_exa()
+
         if response_format == "markdown":
             return format_search_results_markdown(result)
         return result
     except Exception as e:
         logger.exception("Search failed")
         return format_error(
-            "DuckDuckGo search failed",
+            "Search failed",
             f"{e}. Try reducing max_results, switching search_type, or using a more specific query.",
         )
 

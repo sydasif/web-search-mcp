@@ -46,6 +46,26 @@ def test_search_web() -> None:
     _check("search_web", ok, detail)
 
 
+def test_search_web_exa() -> None:
+    from web_search_mcp.search.exa import exa_search
+
+    result = exa_search(query="Python programming", max_results=2)
+    ok = isinstance(result, SearchResponse) and len(result.results) > 0
+    detail = f"results={result.total_results}" if isinstance(result, SearchResponse) else f"type={type(result).__name__}"
+    _check("search_web_exa", ok, detail, warn_if_fail=True)
+
+
+def test_search_web_provider_ddg() -> None:
+    from web_search_mcp._models.requests import SearchRequest
+    from web_search_mcp.search.ddg import ddg_search
+
+    req = SearchRequest(query="Python programming", max_results=2, provider="ddg")
+    result = ddg_search(req)
+    ok = isinstance(result, SearchResponse) and len(result.results) > 0
+    detail = f"results={result.total_results}" if isinstance(result, SearchResponse) else f"type={type(result).__name__}"
+    _check("search_web_ddg_provider", ok, detail)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  2. fetch_web_page
 # ═══════════════════════════════════════════════════════════════════════════
@@ -166,6 +186,8 @@ def test_search_wikipedia() -> None:
 def main() -> int:
     tests = [
         ("search_web", test_search_web),
+        ("search_web_exa", test_search_web_exa),
+        ("search_web_ddg_provider", test_search_web_provider_ddg),
         ("fetch_web_page", test_fetch_web_page),
         ("search_reddit", test_search_reddit),
         ("search_hackernews", test_search_hackernews),

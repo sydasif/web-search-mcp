@@ -45,8 +45,8 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 | Tool                  | What It Does                                                        | When To Use                                         |
 | --------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
-| `search_web`          | DuckDuckGo web/news search                                          | First pass: news, background, official sources      |
-| `search_web` (domain) | DuckDuckGo scoped to a domain                                       | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
+| `search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)            | First pass: news, background, official sources      |
+| `search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to a domain      | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
 | `fetch_web_page`      | Clean HTML-to-markdown + Exa fallback for bot-heavy/JS/PDF pages    | Read articles, changelogs, specs, papers            |
 | `search_wikipedia`    | Full article text via MediaWiki API                                 | Factual summaries, background research, citations   |
 | `search_arxiv`        | Academic paper search w/ Lucene field prefixes                      | Research papers, literature reviews, citations      |

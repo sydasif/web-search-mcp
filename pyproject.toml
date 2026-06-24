@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "arxiv>=4.0.0",
     "ddgs>=9.10.0",
+    "exa-py",
     "fastmcp>=2.14.4",
     "httpx>=0.28.1",
     "pydantic>=2.12.5",

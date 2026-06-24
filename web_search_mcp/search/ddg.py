@@ -143,7 +143,7 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
     search_rate_limiter.acquire()
 
     kwargs = request.model_dump(
-        exclude={"query", "search_type", "response_format"},
+        exclude={"query", "search_type", "response_format", "provider"},
         exclude_none=True,
     )
     if "time_range" in kwargs:
@@ -166,7 +166,7 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
                 total_results=len(raw_results),
                 results=[SearchResult(**res) for res in raw_results],
                 has_more=has_more,
-                next_page=request.page + 1 if has_more else None,
+                next_page=None,
             )
     except Exception as e:
         logger.exception("DuckDuckGo search failed for query %r", request.query)
