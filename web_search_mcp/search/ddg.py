@@ -6,7 +6,6 @@ Consolidates search and reading functionality with professional resilience.
 from __future__ import annotations
 
 import logging
-from typing import Literal
 
 import httpx
 import trafilatura
@@ -14,7 +13,14 @@ from ddgs import DDGS
 
 from .._config import settings
 from .._http import http_client, validate_url
-from .._models import ErrorResponse, PageResponse, SearchRequest, SearchResponse, SearchResult
+from .._models import (
+    ErrorResponse,
+    FetchOutputFormat,
+    PageResponse,
+    SearchRequest,
+    SearchResponse,
+    SearchResult,
+)
 from .._utils import RateLimiter, format_error
 from .exa import exa_fetch
 
@@ -23,6 +29,7 @@ logger = logging.getLogger(__name__)
 # Rate limiters
 search_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_search)
 fetch_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_fetch)
+
 
 def _fetch_httpx(url: str, timeout: int) -> str:
     """Fetches a URL using the shared httpx client."""
@@ -119,16 +126,7 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
 
 def fetch_page(
     url: str,
-    output_format: Literal[
-        "csv",
-        "html",
-        "json",
-        "markdown",
-        "python",
-        "txt",
-        "xml",
-        "xmltei",
-    ] = "txt",
+    output_format: FetchOutputFormat = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
     deduplicate: bool = True,
@@ -192,7 +190,7 @@ def fetch_page(
         if not content:
             return format_error("No readable text found.")
 
-        actual_length = len(str(content))
+        actual_length = len(content)
 
         response = PageResponse(
             url=url,
@@ -216,7 +214,7 @@ def fetch_page(
         return response
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         logger.exception("Fetch error")
-        return format_error(f"HTTP request failed: {e!s}")
+        return format_error(f"HTTP request failed: {e}")
     except Exception as e:
         logger.exception("Reader error")
         return format_error(str(e))

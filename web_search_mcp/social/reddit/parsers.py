@@ -13,6 +13,7 @@ from urllib.parse import quote_plus
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from ..._config import FEED_TIMEOUT
+from ..._models.types import Depth
 from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
 from . import client
 from ._utils import extract_attr
@@ -123,7 +124,7 @@ def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
     return posts
 
 
-def _build_urls(query: str, depth: str, subreddits: list[str] | None) -> list[str]:
+def _build_urls(query: str, depth: Depth, subreddits: list[str] | None) -> list[str]:
     """Build the keyless RSS feed URLs to fan out across."""
     q = quote_plus(query)
     urls: list[str] = [f"https://www.reddit.com/search.rss?q={q}&sort=relevance&t=month"]
@@ -151,7 +152,7 @@ def _fetch_feed(url: str, query: str) -> list[dict[str, Any]]:
 
 def search_rss(
     query: str,
-    depth: str = "default",
+    depth: Depth = "default",
     subreddits: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Discover Reddit posts for a query via keyless RSS feeds."""

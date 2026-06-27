@@ -20,6 +20,7 @@ import httpx
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from .._config import settings
+from .._models.types import Depth
 from .._utils import compute_relevance, format_results_markdown, iso_to_date, truncate_content
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ def _parse_repo_from_url(html_url: str) -> str:
 
 def search_github(
     topic: str,
-    depth: str = "default",
+    depth: Depth = "default",
     token: str | None = None,
 ) -> list[dict]:
     """Search GitHub Issues and PRs via the GitHub Search API.
@@ -265,7 +266,7 @@ def _fetch_item_comments(
 
 def enrich_with_comments(
     items: list[dict],
-    depth: str = "default",
+    depth: Depth = "default",
     token: str | None = None,
 ) -> list[dict]:
     """Fetch top comments for top-K items by reactions.

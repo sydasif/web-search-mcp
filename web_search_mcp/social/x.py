@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict, cast
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
+from .._models.types import Depth
 from .._utils import format_results_markdown
 
 logger = logging.getLogger(__name__)
@@ -177,8 +178,6 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     }
     # Remove None values
     engagement = {k: v for k, v in engagement.items() if v is not None}
-    if not engagement:
-        engagement = {}
 
     text = str(tweet.get("text", tweet.get("full_text", ""))).strip()[:500]
 
@@ -208,7 +207,7 @@ def _safe_int(val: Any) -> int | None:
 def search_x(
     query: str,
     from_date: str | None = None,
-    depth: str = "default",
+    depth: Depth = "default",
 ) -> list[TweetItem]:
     """Search X/Twitter using the vendored Bird CLI.
 

@@ -33,7 +33,6 @@ from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
-# Set up logging
 LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
 
 
@@ -154,7 +153,9 @@ def search_web(
             result = _run_exa()
         else:  # "auto"
             result = _run_ddg()
-            if isinstance(result, ErrorResponse) or (isinstance(result, SearchResponse) and result.total_results == 0):
+            if isinstance(result, ErrorResponse) or (
+                isinstance(result, SearchResponse) and result.total_results == 0
+            ):
                 logger.info("DDG returned no results for %r; falling back to Exa", query)
                 result = _run_exa()
 

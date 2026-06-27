@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
+from ..._models.types import Depth
 from . import client, models, parsers
 
 logger = logging.getLogger(__name__)
@@ -139,7 +140,7 @@ def _infer_query_intent(topic: str) -> str:
     return "general"
 
 
-def expand_queries(topic: str, depth: str) -> list[str]:
+def expand_queries(topic: str, depth: Depth) -> list[str]:
     """Generate 1-4 query variants from topic based on intent and depth."""
     core = _extract_core_subject(topic)
     queries = [core] if core else [topic.strip()]
@@ -173,7 +174,7 @@ def expand_queries(topic: str, depth: str) -> list[str]:
     return unique
 
 
-def _tier0_json(topic: str, depth: str) -> list[dict[str, Any]]:
+def _tier0_json(topic: str, depth: Depth) -> list[dict[str, Any]]:
     """One cheap global ``.json`` discovery attempt. Returns [] on the 403 wall."""
     try:
         return client.search_json(topic, depth=depth) or []
@@ -195,7 +196,7 @@ def _apply_scores(post: dict[str, Any], scored: dict[str, int]) -> None:
     post["engagement"]["num_comments"] = scored["num_comments"]
 
 
-def _discover(topic: str, depth: str, subreddits: list[str] | None) -> list[dict[str, Any]]:
+def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[dict[str, Any]]:
     posts: list[dict[str, Any]] = []
     if not subreddits:
         posts = _tier0_json(topic, depth)
@@ -274,7 +275,7 @@ def _enrich_one(post: dict[str, Any]) -> dict[str, Any]:
     return post
 
 
-def _enrich(posts: list[dict[str, Any]], depth: str) -> list[dict[str, Any]]:
+def _enrich(posts: list[dict[str, Any]], depth: Depth) -> list[dict[str, Any]]:
     """Enrich the top N posts with comments under a total time budget."""
     limit = ENRICH_LIMITS.get(depth, ENRICH_LIMITS["default"])
     to_enrich = posts[:limit]
@@ -308,7 +309,7 @@ def _run_single_pipeline(
     query: str,
     from_date: str,
     to_date: str,
-    depth: str,
+    depth: Depth,
     subreddits: list[str] | None,
 ) -> list[dict[str, Any]]:
     """Run the full pipeline for a single query variant. Never raises."""
@@ -345,7 +346,7 @@ def search_and_enrich(
     topic: str,
     from_date: str,
     to_date: str,
-    depth: str = "default",
+    depth: Depth = "default",
     subreddits: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Full keyless Reddit pipeline with query expansion + parallel fan-out."""

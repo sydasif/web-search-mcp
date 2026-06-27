@@ -17,6 +17,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
+from ..._models.types import Depth
 from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
 from . import client
 from ._utils import extract_attr
@@ -143,7 +144,7 @@ def _fetch_listing(subreddit: str, sort: str, query: str) -> list[dict[str, Any]
 
 def fetch_listings(
     subreddits: list[str],
-    depth: str = "default",
+    depth: Depth = "default",
     query: str = "",
 ) -> list[dict[str, Any]]:
     """Fetch scored listing cards from the SVC endpoint for multiple subreddits.

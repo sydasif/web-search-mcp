@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from .._config import settings
 from .._models import ErrorResponse, SearchResponse, SearchResult
+from .._models.types import SearchType
 from .._utils import RateLimiter, format_error
 
 if TYPE_CHECKING:
@@ -34,9 +35,7 @@ def _get_client() -> Exa:
 
             _exa_client = Exa(api_key=settings.exa_api_key)
         except ImportError:
-            raise RuntimeError(
-                "exa_py SDK is not installed. Run: uv add exa-py"
-            ) from None
+            raise RuntimeError("exa_py SDK is not installed. Run: uv add exa-py") from None
         except Exception as e:
             raise RuntimeError(f"Failed to initialize Exa SDK: {e}") from e
     return _exa_client
@@ -86,7 +85,7 @@ def _region_to_user_location(region: str | None) -> str | None:
 def exa_search(
     query: str,
     max_results: int = 5,
-    search_type: str = "text",
+    search_type: SearchType = "text",
     time_range: str | None = None,
     domain: str | None = None,
     region: str | None = None,
@@ -159,7 +158,7 @@ def exa_search(
 
     return SearchResponse(
         query=query,
-        search_type=search_type,  # type: ignore[arg-type]
+        search_type=search_type,
         total_results=len(results_list),
         results=results_list,
         has_more=False,
