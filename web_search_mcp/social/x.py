@@ -80,7 +80,7 @@ def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
     ]
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             cmd,
             capture_output=True,
             text=True,
@@ -234,7 +234,11 @@ def search_x(
         return [
             {
                 "id": "XERR",
-                "text": "X search requires AUTH_TOKEN and CT0 environment variables. Extract these from your browser cookies after logging into x.com.",
+                "text": (
+                    "X search requires AUTH_TOKEN and CT0 environment variables."
+                    " Extract these from your browser cookies after logging"
+                    " into x.com."
+                ),
                 "url": "",
                 "author_handle": "",
             },

@@ -49,7 +49,7 @@ def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) 
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         logger.warning("httpx failed for %s (%s); using Exa fallback", url, e)
         try:
-            content = exa_fetch([url], timeout=timeout, max_chars=max_chars)
+            content = exa_fetch([url], max_chars=max_chars)
         except Exception as exa_err:
             logger.warning("Exa fallback also failed for %s: %s", url, exa_err)
             raise
@@ -133,7 +133,11 @@ def fetch_page(
     max_length: int = 15000,
     timeout: int = 30,
 ) -> PageResponse | ErrorResponse:
-    """Extracts clean text content from a web page or PDF URL."""
+    """Extract clean text content from a web page URL.
+
+    Timeout applies to the httpx extraction path only. The Exa fallback
+    uses the SDK's own client-level timeout.
+    """
     fetch_rate_limiter.acquire()
 
     try:
@@ -164,7 +168,7 @@ def fetch_page(
         if not extracted_data:
             logger.info("trafilatura returned no text for %s; trying Exa fallback", url)
             try:
-                exa_content = exa_fetch([url], timeout=timeout, max_chars=max_length)
+                exa_content = exa_fetch([url], max_chars=max_length)
             except Exception as exa_err:
                 logger.warning("Exa fallback failed for %s: %s", url, exa_err)
                 exa_content = None

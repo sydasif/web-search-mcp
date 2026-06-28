@@ -61,7 +61,7 @@ def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
         return []
     safe_xml = re.sub(r"<!DOCTYPE[^>]*>", "", xml_text) if xml_text else xml_text
     try:
-        root = ET.fromstring(safe_xml)
+        root = ET.fromstring(safe_xml)  # noqa: S314
     except ET.ParseError as e:
         logger.debug("feed parse error: %s", e)
         return []

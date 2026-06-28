@@ -190,10 +190,10 @@ def _top_subreddits(posts: list[dict[str, Any]], limit: int = MAX_DERIVED_SUBS) 
 
 
 def _apply_scores(post: dict[str, Any], scored: dict[str, int]) -> None:
-    post["score"] = scored["score"]
-    post["num_comments"] = scored["num_comments"]
-    post.setdefault("engagement", {})["score"] = scored["score"]
-    post["engagement"]["num_comments"] = scored["num_comments"]
+    post["score"] = scored.get("score", 0)
+    post["num_comments"] = scored.get("num_comments", 0)
+    post.setdefault("engagement", {})["score"] = scored.get("score", 0)
+    post["engagement"]["num_comments"] = scored.get("num_comments", 0)
 
 
 def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[dict[str, Any]]:

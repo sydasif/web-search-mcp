@@ -67,7 +67,7 @@ def test_httpx_fails_exa_succeeds(mock_client: MagicMock, mock_exa: MagicMock) -
 
     assert content == EXA_MARKDOWN
     assert used_exa is True
-    mock_exa.assert_called_once_with(["https://example.com"], timeout=30, max_chars=15000)
+    mock_exa.assert_called_once_with(["https://example.com"], max_chars=15000)
 
 
 @patch("web_search_mcp.search.ddg.exa_fetch", return_value=None)
@@ -111,9 +111,6 @@ def test_httpx_timeout_error(mock_client: MagicMock) -> None:
         content, used_exa = _request_with_fallback("https://example.com")
         assert content == EXA_MARKDOWN
         assert used_exa is True
-
-
-
 
 
 # ===========================================================================
@@ -184,7 +181,7 @@ def test_trafilatura_returns_none_exa_succeeds(
 
     assert isinstance(result, PageResponse)
     assert result.content == EXA_MARKDOWN
-    mock_exa.assert_called_once_with(["https://example.com"], timeout=30, max_chars=15000)
+    mock_exa.assert_called_once_with(["https://example.com"], max_chars=15000)
 
 
 @patch("web_search_mcp.search.ddg.fetch_rate_limiter")
@@ -283,7 +280,7 @@ def test_exa_receives_max_chars(
 
     fetch_page("https://example.com", max_length=5000)
 
-    mock_exa.assert_called_once_with(["https://example.com"], timeout=30, max_chars=5000)
+    mock_exa.assert_called_once_with(["https://example.com"], max_chars=5000)
 
 
 # ===========================================================================
@@ -341,9 +338,6 @@ def test_httpx_timeout_caught(
         assert "HTTP request failed" in result.error
 
 
-
-
-
 # ===========================================================================
 # fetch_page — empty content
 # ===========================================================================
@@ -379,9 +373,6 @@ def test_raw_content_empty_string(
 
     assert isinstance(result, ErrorResponse)
     assert "Could not download content" in result.error
-
-
-
 
 
 # ===========================================================================
@@ -654,4 +645,4 @@ def test_exa_timeout_matches_fetch_page_timeout(
 
     fetch_page("https://example.com", timeout=15)
 
-    mock_exa.assert_called_once_with(["https://example.com"], timeout=15, max_chars=15000)
+    mock_exa.assert_called_once_with(["https://example.com"], max_chars=15000)

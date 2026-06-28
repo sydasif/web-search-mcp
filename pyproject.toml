@@ -47,9 +47,12 @@ dev = [
 line-length = 100
 
 [tool.ruff.lint]
-select = ["I"]
-# S101: assert is standard in pytest tests
-ignore = []
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+ignore = ["S603", "S607", "S310", "S314"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["S101"]
+"web_search_mcp/social/reddit/client.py" = ["S310"]
+"web_search_mcp/social/reddit/parsers.py" = ["S314"]
+"web_search_mcp/social/x.py" = ["S310", "S603"]
+"web_search_mcp/social/github.py" = ["S310", "S603", "S607"]

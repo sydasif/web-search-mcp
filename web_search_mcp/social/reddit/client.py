@@ -86,10 +86,15 @@ def request(
     if json_data is not None:
         headers.setdefault("Content-Type", "application/json")
 
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    req = urllib.request.Request(  # noqa: S310
+        url,
+        data=data,
+        headers=headers,
+        method=method,
+    )
 
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:  # noqa: S310
             body = response.read().decode("utf-8")
             if raw:
                 return body

@@ -98,8 +98,11 @@ def reddit_search_tool(
                 lines.append(
                     f"{i}. **[{post.get('title', 'Reddit post')}]({post.get('url', '#')})**",
                 )
+                sub = post.get("subreddit", "unknown")
+                score = post.get("score", 0)
+                comments = post.get("num_comments", 0)
                 lines.append(
-                    f"   r/{post.get('subreddit', 'unknown')} • {post.get('score', 0)} upvotes • {post.get('num_comments', 0)} comments",
+                    f"   r/{sub} • {score} upvotes • {comments} comments",
                 )
                 if post.get("selftext"):
                     lines.append(f"   {post['selftext'][:200]}...")

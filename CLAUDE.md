@@ -31,7 +31,7 @@ The project is a **FastMCP** server that exposes a suite of web search and data 
   - `social/`: Integrates with community platforms (GitHub, Reddit, Hacker News, X).
   - `tools/`: Contains specialized utilities (arXiv, Wikipedia).
 - **Internal Infrastructure (`_` prefixed folders)**:
-  - `_http/`: Centralized HTTP client logic to ensure consistent timeouts, headers, and error handling.
+  - `_http/`: Centralized HTTP client logic to ensure consistent timeouts, headers, error handling, and SSRF protection (blocks private/internal IP addresses).
   - `_models/`: Shared Pydantic models for requests and responses to ensure type safety across the server.
   - `_config/`: Manages settings, environment variables, and global rate limits. See `limits.py` for hard-coded result depth constraints (e.g., `quick`, `default`, `deep`) used by social tools.
   - `_utils/`: Low-level helpers for markdown formatting and result scoring.

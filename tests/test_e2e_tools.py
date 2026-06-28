@@ -42,7 +42,11 @@ def test_search_web() -> None:
     req = SearchRequest(query="Python programming", max_results=2)
     result = ddg_search(req)
     ok = isinstance(result, SearchResponse) and len(result.results) > 0
-    detail = f"results={result.total_results}" if isinstance(result, SearchResponse) else f"type={type(result).__name__}"
+    detail = (
+        f"results={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"type={type(result).__name__}"
+    )
     _check("search_web", ok, detail)
 
 
@@ -51,7 +55,11 @@ def test_search_web_exa() -> None:
 
     result = exa_search(query="Python programming", max_results=2)
     ok = isinstance(result, SearchResponse) and len(result.results) > 0
-    detail = f"results={result.total_results}" if isinstance(result, SearchResponse) else f"type={type(result).__name__}"
+    detail = (
+        f"results={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"type={type(result).__name__}"
+    )
     _check("search_web_exa", ok, detail, warn_if_fail=True)
 
 
@@ -62,7 +70,11 @@ def test_search_web_provider_ddg() -> None:
     req = SearchRequest(query="Python programming", max_results=2, provider="ddg")
     result = ddg_search(req)
     ok = isinstance(result, SearchResponse) and len(result.results) > 0
-    detail = f"results={result.total_results}" if isinstance(result, SearchResponse) else f"type={type(result).__name__}"
+    detail = (
+        f"results={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"type={type(result).__name__}"
+    )
     _check("search_web_ddg_provider", ok, detail)
 
 
@@ -91,7 +103,9 @@ def test_fetch_page() -> None:
 def test_search_reddit() -> None:
     from web_search_mcp.social.reddit import reddit_search_tool
 
-    result = reddit_search_tool(query="Python", max_results=3, depth="quick", response_format="json")
+    result = reddit_search_tool(
+        query="Python", max_results=3, depth="quick", response_format="json"
+    )
     ok = isinstance(result, SearchResponse) and result.total_results >= 0
     n = result.total_results if isinstance(result, SearchResponse) else 0
     ok = isinstance(result, SearchResponse) and len(result.results) > 0

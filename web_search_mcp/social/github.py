@@ -44,7 +44,7 @@ def _resolve_token(token: str | None = None) -> str | None:
         return env_token
     # Fallback: try gh CLI
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S607
             ["gh", "auth", "token"],
             capture_output=True,
             text=True,
@@ -434,7 +434,8 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
     heading = "# Pull Request" if kind == "pr" else "# Issue"
     lines.append(heading)
     lines.append(
-        f"Title: {title} Link: {url} Author: @{author} Date: {created} State: {state_emoji} {state}",
+        f"Title: {title} Link: {url} Author: @{author} "
+        f"Date: {created} State: {state_emoji} {state}",
     )
     lines.append("")
 
@@ -513,7 +514,7 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
 def _gh_available() -> bool:
     """Check if gh CLI is installed."""
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S607
             ["gh", "--version"],
             capture_output=True,
             text=True,
@@ -527,7 +528,7 @@ def _gh_available() -> bool:
 def _gh_authenticated() -> bool:
     """Check if gh CLI is authenticated."""
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S607
             ["gh", "auth", "status"],
             capture_output=True,
             text=True,
@@ -572,7 +573,12 @@ def get_github_issue(url: str) -> str:
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(  # noqa: S603
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
     except FileNotFoundError:
         return "_Error: `gh` CLI not found even though it was available earlier.\n"
     except subprocess.TimeoutExpired:

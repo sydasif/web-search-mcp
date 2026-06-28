@@ -13,7 +13,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 ### 🌐 General Web Search & Retrieval
 
 - **`search_web`**: Fast web search via DuckDuckGo or Exa (SDK). Supports domain-scoping, date filtering, news mode, and geographic region. Default auto-provider tries DDG first, falls back to Exa.
-- **`fetch_page`**: High-fidelity text extraction from URLs with bot-detection bypass and multiple output formats.
+- **`fetch_page`**: High-fidelity text extraction from URLs with bot-detection bypass, SSRF protection (blocks private/internal IPs), and multiple output formats.
 
 ### 💬 Social & Community Intelligence
 

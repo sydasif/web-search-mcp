@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
@@ -166,7 +166,8 @@ def search_web(
         logger.exception("Search failed")
         return format_error(
             "Search failed",
-            f"{e}. Try reducing max_results, switching search_type, or using a more specific query.",
+            f"{e}. Try reducing max_results, switching search_type, "
+            "or using a more specific query.",
         )
 
 
@@ -191,18 +192,34 @@ def fetch_page(
 ) -> PageResponse | ErrorResponse:
     """Extract clean text content from a URL.
 
+    Role: Content retrieval. Use this after search_web to read the full
+    page content of a search result. Also works standalone for known URLs.
+    Workflow: search_web → pick a URL → fetch_page to get the text.
+
     Args:
         url: The URL to fetch and extract content from
-        output_format: Format for extracted content ('csv', 'html', 'json', 'markdown', 'python', 'txt', 'xml', 'xmltei')
+        output_format: Format for extracted content ('csv', 'html', 'json',
+            'markdown', 'python', 'txt', 'xml', 'xmltei')
         include_metadata: Whether to include document metadata (title, author, date, etc.)
         include_tables: Whether to include table content in extraction
         deduplicate: Whether to remove duplicated content
         max_length: Maximum length of content to return (default 15000)
-        timeout: Request timeout in seconds (default 30)
+        timeout: Request timeout in seconds (default 30, httpx path only —
+            Exa fallback uses the SDK's own timeout)
 
     Returns:
         PageResponse: Extracted content and metadata
         ErrorResponse: Error response if applicable
+
+    Examples:
+        - "https://docs.python.org/3/library/asyncio.html"
+        - "https://docs.pydantic.dev/latest/concepts/serialization/" with output_format="markdown"
+
+    Error Handling:
+        - Unsupported URL scheme (ftp, file): Returns error
+        - Private/internal IP address: Returns error (SSRF protection)
+        - HTTP timeout or network error: Returns error with details
+        - No readable text found: Returns error (e.g. image-only pages)
 
     """
     return _fetch_page(
@@ -243,7 +260,7 @@ def search_reddit(
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed.
 
     Role: Discovery. Use this for Reddit-specific discussions, opinions, and
-    community insights.    Alternative: search_web for general web results.
+    community insights. Alternative: search_web for general web results.
 
     Workflow: Three-tier keyless pipeline:
     - Tier 0: Legacy .json search (often 403, tried once)
@@ -269,7 +286,8 @@ def search_reddit(
         - "How to fix memory leak in Python", depth="deep"
 
     Error Handling:
-        - Reddit 403/429: The free keyless path is rate-limited. Try a different query, target specific subreddits, or wait.
+        - Reddit 403/429: The free keyless path is rate-limited. Try a
+          different query, target specific subreddits, or wait.
 
     """
     return _reddit_search_tool(
@@ -303,7 +321,7 @@ def search_hackernews(
     max_results: int = 30,
     depth: Depth = "default",
     response_format: ResponseFormat = "markdown",
-) -> str | list[dict] | ErrorResponse:
+) -> str | list[dict[str, Any]] | ErrorResponse:
     """Search Hacker News via Algolia API — free, no API key needed.
 
     Role: Tech discourse. Use this for developer news, startup discussions,
@@ -316,8 +334,9 @@ def search_hackernews(
         response_format: Output format ('json' or 'markdown')
 
     Returns:
-        list: Hacker News stories with engagement scores and optional comments
         str: Markdown-formatted results (when response_format="markdown")
+        list: Hacker News stories with engagement scores and optional comments
+        ErrorResponse: Error response if applicable
 
     Examples:
         - "What are people saying about the new Claude models"
@@ -432,6 +451,7 @@ def search_wikipedia(
 
     Returns:
         str: Markdown-formatted article content with related links.
+        ErrorResponse: Error response if applicable
 
     Examples:
         - "Python programming language"
@@ -473,7 +493,7 @@ def search_github(
     depth: Depth = "default",
     token: str | None = None,
     response_format: ResponseFormat = "markdown",
-) -> str | list[dict] | ErrorResponse:
+) -> str | list[dict[str, Any]] | ErrorResponse:
     """Search GitHub Issues and PRs via the GitHub Search API.
 
     Role: Code & issues. Use this for bug discussions, feature requests,
@@ -491,8 +511,9 @@ def search_github(
         response_format: Output format ('json' or 'markdown')
 
     Returns:
-        list: GitHub issues/PRs with reactions, labels, and optional comments
         str: Markdown-formatted results (when response_format="markdown")
+        list: GitHub issues/PRs with reactions, labels, and optional comments
+        ErrorResponse: Error response if applicable
 
     Examples:
         - "uv package manager" — find top-voted issues
@@ -588,7 +609,7 @@ def search_x(
     max_results: int = 30,
     depth: Depth = "default",
     response_format: ResponseFormat = "markdown",
-) -> str | list[dict] | ErrorResponse:
+) -> str | list[dict[str, Any]] | ErrorResponse:
     """Search X/Twitter via Bird CLI — requires AUTH_TOKEN and CT0 cookies.
 
     Role: Real-time discourse. Use this for breaking news, community
@@ -606,8 +627,9 @@ def search_x(
         response_format: Output format ('json' or 'markdown')
 
     Returns:
-        list: Tweets with text, url, author_handle, date, and engagement metrics
         str: Markdown-formatted results (when response_format="markdown")
+        list: Tweets with text, url, author_handle, date, and engagement metrics
+        ErrorResponse: Error response if applicable
 
     Examples:
         - "Claude Code" — find recent posts about Claude Code

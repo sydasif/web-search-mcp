@@ -168,15 +168,11 @@ def exa_search(
 # ── Fetch ──────────────────────────────────────────────────────────────────
 
 
-def exa_fetch(urls: list[str], max_chars: int = 15000, timeout: int = 30) -> str | None:
+def exa_fetch(urls: list[str], max_chars: int = 15000) -> str | None:
     """Fetch page content via Exa. Returns markdown text or None.
 
     Handles JS-heavy pages, Cloudflare challenges, and paywalls that
     httpx cannot access.
-
-    Note: timeout is accepted for API compatibility with the previous
-    MCP-based implementation but is not passed to the SDK (which has
-    its own client-level timeout).
     """
     if not urls:
         return None
