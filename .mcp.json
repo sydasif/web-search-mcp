@@ -10,7 +10,8 @@
       "env": {
         "EXA_API_KEY": "${EXA_API_KEY}",
         "AUTH_TOKEN": "${AUTH_TOKEN}",
-        "CT0": "${CT0}"
+        "CT0": "${CT0}",
+        "XQUIK_API_KEY": "${XQUIK_API_KEY}"
       }
     }
   }

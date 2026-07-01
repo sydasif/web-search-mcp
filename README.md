@@ -21,7 +21,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 - **`search_hackernews`**: Access to technical discourse, startup news, and developer opinions via the Algolia API.
 - **`search_github`**: Search for Issues and PRs to track bugs, feature requests, and community sentiment.
 - **`get_github_issue`**: Fetch full conversation threads from GitHub Issues/PRs, sorted by reactions.
-- **`search_x`**: Real-time discourse and breaking news search via the Bird CLI (requires session cookies).
+- **`search_x`**: Real-time discourse and breaking news search via Xquik API or vendored Bird CLI (requires session cookies or API key).
 
 ### 🎓 Academic & Reference
 
@@ -34,7 +34,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 - **[uv](https://github.com/astral-sh/uv)**: Recommended for installation and environment management.
 - **External Tools** (Optional but recommended):
   - **`gh` CLI**: For authenticated GitHub search and issue retrieval.
-  - **Node.js 22+**: Required for the vendored X/Twitter search CLI.
+  - **Node.js 22+**: Required only if using the vendored Bird CLI for X/Twitter (not needed when `XQUIK_API_KEY` is set).
 
 ## ⚙️ Setup
 
@@ -67,7 +67,8 @@ Most tools are keyless. However, some require specific environment variables for
 | Tool            | Required/Optional | Environment Variable       | Note                                                                               |
 | :-------------- | :---------------- | :------------------------- | :--------------------------------------------------------------------------------- |
 | **GitHub**      | Optional          | `GITHUB_TOKEN` or `gh` CLI | Authenticates with the GitHub API for issues/PR search and full thread retrieval.  |
-| **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`        | Session cookies extracted from a logged-in x.com browser session.                  |
+| **X (Twitter)** | Required (one of) | `AUTH_TOKEN`, `CT0`        | Session cookies extracted from a logged-in x.com browser session (Bird CLI path).  |
+| **X (Twitter)** | Optional          | `XQUIK_API_KEY`            | API key for the Xquik backend (bypasses Bird CLI / Node.js requirement).           |
 | **Exa AI**      | Optional          | `EXA_API_KEY`              | Enables Exa as a search provider (via exa_py SDK) and increases fetch rate limits. |
 
 ## 💡 Usage Examples
@@ -101,7 +102,7 @@ web_search_mcp/
 │   ├── github.py      # GitHub Search API + gh CLI issue rendering
 │   ├── hackernews.py  # Algolia HN API + comment enrichment
 │   ├── reddit.py      # RSS + Shreddit keyless pipeline
-│   └── x.py           # Bird CLI (vendored Node.js) for X/Twitter
+│   └── x.py           # X/Twitter search via Xquik API or vendored Bird CLI
 ├── tools/             # Specialized reference utilities
 │   ├── arxiv.py       # arXiv paper search
 │   └── wikipedia.py   # Wikipedia MediaWiki API
@@ -119,7 +120,7 @@ web_search_mcp/
 │   ├── rate_limiter.py # Token-bucket rate limiter
 │   └── scoring.py     # Relevance scoring
 └── vendor/            # Vendored third-party tools
-    └── bird-search/   # Node.js CLI for X/Twitter search
+    └── bird-search/   # Node.js CLI for X/Twitter search (fallback when XQUIK_API_KEY is unset)
 ```
 
 ## 🤝 Contributing

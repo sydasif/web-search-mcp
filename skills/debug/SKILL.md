@@ -24,23 +24,23 @@ Use the best available tool for the evidence needed. Do not block debugging just
 
 #### Tier 1 — Direct Search & Retrieval (start here)
 
-| Tool                    | What It Does                                                | When To Use                                                                                                    |
-| ----------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `search_web`            | DuckDuckGo or Exa web/news search (via `provider` param)   | Broad search for error messages, known bugs, solutions, release notes                                          |
-| `search_web` (domain)   | DuckDuckGo (site:) or Exa (include_domains) scoped to domain | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                         |
-| `fetch_page`        | Clean HTML-to-markdown extraction from any URL              | Reading docs, changelogs, error pages, issue threads cleanly; Exa fallback handles JS/bot-blocked pages    |
-| `search_wikipedia`      | Wikipedia article search via MediaWiki API                  | Fact-checking, background reference, terminology lookups                                                       |
-| `search_arxiv`          | Academic paper search via arXiv API                         | Finding research papers, literature reviews, citations                                                         |
+| Tool                  | What It Does                                                 | When To Use                                                                                             |
+| --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)     | Broad search for error messages, known bugs, solutions, release notes                                   |
+| `search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to domain | Targeted search on official docs (e.g. `docs.python.org`, `react.dev`)                                  |
+| `fetch_page`          | Clean HTML-to-markdown extraction from any URL               | Reading docs, changelogs, error pages, issue threads cleanly; Exa fallback handles JS/bot-blocked pages |
+| `search_wikipedia`    | Wikipedia article search via MediaWiki API                   | Fact-checking, background reference, terminology lookups                                                |
+| `search_arxiv`        | Academic paper search via arXiv API                          | Finding research papers, literature reviews, citations                                                  |
 
 #### Tier 2 — Community & Issue Mining
 
-| Tool                  | What It Does                                                | When To Use                                                                                                   |
-| --------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `search_github`       | GitHub Issues/PR search via GitHub Search API               | Find upstream bug reports, fix PRs, changelog discussions, feature flags, deprecation notices across any repo |
-| `get_github_issue`    | Full GitHub Issue/PR thread with all comments               | Read complete conversation context with sorted comments                                                       |
-| `search_hackernews`   | Hacker News search via Algolia with comment enrichment      | Tech community discussions about bugs, regressions, architectural root causes, known workarounds              |
-| `search_reddit`       | Reddit search via RSS + shreddit enrichment                 | Real-world troubleshooting threads, niche library issues, configuration gotchas                               |
-| `search_x`            | X/Twitter search via Bird CLI                               | Real-time announcements, outage reports, release alerts, short workaround threads                             |
+| Tool                | What It Does                                           | When To Use                                                                                                   |
+| ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `search_github`     | GitHub Issues/PR search via GitHub Search API          | Find upstream bug reports, fix PRs, changelog discussions, feature flags, deprecation notices across any repo |
+| `get_github_issue`  | Full GitHub Issue/PR thread with all comments          | Read complete conversation context with sorted comments                                                       |
+| `search_hackernews` | Hacker News search via Algolia with comment enrichment | Tech community discussions about bugs, regressions, architectural root causes, known workarounds              |
+| `search_reddit`     | Reddit search via RSS + shreddit enrichment            | Real-world troubleshooting threads, niche library issues, configuration gotchas                               |
+| `search_x`          | X/Twitter search via Xquik API or Bird CLI             | Real-time announcements, outage reports, release alerts, short workaround threads                             |
 
 #### Not Used
 
@@ -97,7 +97,7 @@ For library/framework docs, APIs, configuration, version-specific examples, and 
 | ------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
 | "Does this error message have a known cause?"     | `search_web` with the exact error string     | Broadest coverage of blog posts, Stack Overflow, docs, forums |
 | "What does the official docs say about this API?" | `search_web` with `domain="docs.python.org"` | Skips noise from unofficial sources                           |
-| "Read this changelog / issue / PR in full"        | `fetch_page` with the URL                | Clean extraction without JS or paywalls                       |
+| "Read this changelog / issue / PR in full"        | `fetch_page` with the URL                    | Clean extraction without JS or paywalls                       |
 
 #### 4d. Issue & Community Mining — Tier 2
 

@@ -596,7 +596,7 @@ def get_github_issue(url: str) -> str | ErrorResponse:
 @mcp.tool(
     name="search_x",
     annotations={
-        "title": "Search X/Twitter via Bird CLI",
+        "title": "Search X/Twitter",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -610,14 +610,14 @@ def search_x(
     depth: Depth = "default",
     response_format: ResponseFormat = "markdown",
 ) -> str | list[dict[str, Any]] | ErrorResponse:
-    """Search X/Twitter via Bird CLI — requires AUTH_TOKEN and CT0 cookies.
+    """Search X/Twitter via Xquik API or vendored Bird CLI.
 
     Role: Real-time discourse. Use this for breaking news, community
     reactions, and engagement signals from X/Twitter.
 
-    Authentication: Set AUTH_TOKEN and CT0 environment variables. Extract
-    these from your browser cookies after logging in to x.com. These are
-    session cookies that expire periodically.
+    Authentication: Set XQUIK_API_KEY for the Xquik backend. Otherwise
+    set AUTH_TOKEN and CT0 environment variables (session cookies from a
+    logged-in x.com browser session) for the vendored Bird CLI.
 
     Args:
         query: Search query string
@@ -637,8 +637,8 @@ def search_x(
         - "from:sama" — search posts from a specific user
 
     Error Handling:
-        - Missing credentials: Set AUTH_TOKEN and CT0 env vars.
-        - Node.js missing: Install Node.js 22+ for the vendored Bird CLI.
+        - Missing credentials: Set XQUIK_API_KEY, or AUTH_TOKEN and CT0 env vars.
+        - Node.js missing: Install Node.js 22+ for the vendored Bird CLI (not needed when XQUIK_API_KEY is set).
 
     """
     try:

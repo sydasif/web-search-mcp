@@ -48,7 +48,7 @@ web_search_mcp/
 │   ├── github.py      # GitHub Search API + gh CLI issue rendering
 │   ├── hackernews.py  # Algolia HN API + comment enrichment
 │   ├── reddit.py      # RSS + Shreddit keyless pipeline
-│   └── x.py           # Bird CLI (vendored Node.js) for X/Twitter
+│   └── x.py           # X/Twitter search via Xquik API or vendored Bird CLI
 ├── tools/             # Specialized reference utilities
 │   ├── arxiv.py       # arXiv paper search
 │   └── wikipedia.py   # Wikipedia MediaWiki API

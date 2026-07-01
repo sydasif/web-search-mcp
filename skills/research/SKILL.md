@@ -43,24 +43,24 @@ This skill uses the `Web Search` MCP server. Search, dedup, clustering, and stat
 
 ### Tier 1 — Broad Discovery & Reference
 
-| Tool                  | What It Does                                                        | When To Use                                         |
-| --------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
-| `search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)            | First pass: news, background, official sources      |
-| `search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to a domain      | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
-| `fetch_page`      | Clean HTML-to-markdown extraction from URLs    | Read articles, changelogs, specs, papers            |
-| `search_wikipedia`    | Full article text via MediaWiki API                                 | Factual summaries, background research, citations   |
-| `search_arxiv`        | Academic paper search w/ Lucene field prefixes                      | Research papers, literature reviews, citations      |
+| Tool                  | What It Does                                                   | When To Use                                         |
+| --------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
+| `search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)       | First pass: news, background, official sources      |
+| `search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to a domain | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
+| `fetch_page`          | Clean HTML-to-markdown extraction from URLs                    | Read articles, changelogs, specs, papers            |
+| `search_wikipedia`    | Full article text via MediaWiki API                            | Factual summaries, background research, citations   |
+| `search_arxiv`        | Academic paper search w/ Lucene field prefixes                 | Research papers, literature reviews, citations      |
 
 ### Tier 2 — Community & Social Signal
 
-| Tool                  | What It Does                             | When To Use                                                 |
-| --------------------- | ---------------------------------------- | ----------------------------------------------------------- |
-| `search_reddit`       | Reddit via RSS + shreddit enrichment     | Real-user discussions, product feedback, niche opinions     |
-| `search_hackernews`   | HN via Algolia + comment enrichment      | Tech debate, architectural analysis, deep critical takes    |
-| `search_github`       | GitHub Issues/PR search                  | Upstream discussions, feature requests, deprecation notices |
-| `get_github_issue`    | Full GitHub Issue/PR thread with comments | Complete conversation context sorted by reactions            |
-| `search_x`            | X/Twitter via Bird CLI                   | Real-time announcements, expert takes, breaking news        |
-| `compare_technologies`| Side-by-side comparison via GitHub + registry data | Evaluate tech choices with real metrics                     |
+| Tool                   | What It Does                                       | When To Use                                                 |
+| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------- |
+| `search_reddit`        | Reddit via RSS + shreddit enrichment               | Real-user discussions, product feedback, niche opinions     |
+| `search_hackernews`    | HN via Algolia + comment enrichment                | Tech debate, architectural analysis, deep critical takes    |
+| `search_github`        | GitHub Issues/PR search                            | Upstream discussions, feature requests, deprecation notices |
+| `get_github_issue`     | Full GitHub Issue/PR thread with comments          | Complete conversation context sorted by reactions           |
+| `search_x`             | X/Twitter via Xquik API or Bird CLI                | Real-time announcements, expert takes, breaking news        |
+| `compare_technologies` | Side-by-side comparison via GitHub + registry data | Evaluate tech choices with real metrics                     |
 
 ---
 
