@@ -36,6 +36,39 @@ The project is a **FastMCP** server that exposes a suite of web search and data 
   - `_config/`: Manages settings, environment variables, and global rate limits. See `limits.py` for hard-coded result depth constraints (e.g., `quick`, `default`, `deep`) used by social tools.
   - `_utils/`: Low-level helpers for markdown formatting and result scoring.
 
+### Project Layout
+
+```text
+web_search_mcp/
+├── server.py          # Entry point: FastMCP init, @mcp.tool registrations
+├── search/            # Search engine implementations
+│   ├── ddg.py         # DuckDuckGo search + trafilatura page fetch
+│   └── exa.py         # Exa SDK search & content fetch (lazy-init client)
+├── social/            # Community platform integrations
+│   ├── github.py      # GitHub Search API + gh CLI issue rendering
+│   ├── hackernews.py  # Algolia HN API + comment enrichment
+│   ├── reddit.py      # RSS + Shreddit keyless pipeline
+│   └── x.py           # Bird CLI (vendored Node.js) for X/Twitter
+├── tools/             # Specialized reference utilities
+│   ├── arxiv.py       # arXiv paper search
+│   └── wikipedia.py   # Wikipedia MediaWiki API
+├── _config/           # Settings, env vars, rate limits, depth tiers
+│   ├── settings.py    # pydantic-settings (EXA_API_KEY, SEARCH_MCP_ prefix)
+│   └── limits.py      # Per-platform quick/default/deep limits, timeouts
+├── _http/             # Shared HTTP + SSRF protection
+│   └── client.py      # validate_url, http_client, get_json_client
+├── _models/           # Pydantic request/response models
+│   ├── requests.py    # SearchRequest
+│   ├── responses.py   # ErrorResponse, SearchResponse, PageResponse
+│   └── types.py       # Depth, ResponseFormat, SearchType, FetchOutputFormat
+├── _utils/            # Shared helpers
+│   ├── formatting.py  # Markdown formatters, date/epoch utils
+│   ├── rate_limiter.py # Token-bucket rate limiter
+│   └── scoring.py     # Relevance scoring
+└── vendor/            # Vendored third-party tools
+    └── bird-search/   # Node.js CLI for X/Twitter search
+```
+
 ### Tool Implementation Flow
 
 When adding a new tool:

@@ -64,11 +64,11 @@ Add the server to your MCP client configuration (e.g., Claude Desktop):
 
 Most tools are keyless. However, some require specific environment variables for full functionality:
 
-| Tool            | Required/Optional | Environment Variable | Note                                                              |
-| :-------------- | :---------------- | :------------------- | :---------------------------------------------------------------- |
-| **GitHub**      | Optional          | `GITHUB_TOKEN` or `gh` CLI | Authenticates with the GitHub API for issues/PR search and full thread retrieval. |
-| **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`       | Session cookies extracted from a logged-in x.com browser session.               |
-| **Exa AI**      | Optional          | `EXA_API_KEY`             | Enables Exa as a search provider (via exa_py SDK) and increases fetch rate limits. |
+| Tool            | Required/Optional | Environment Variable       | Note                                                                               |
+| :-------------- | :---------------- | :------------------------- | :--------------------------------------------------------------------------------- |
+| **GitHub**      | Optional          | `GITHUB_TOKEN` or `gh` CLI | Authenticates with the GitHub API for issues/PR search and full thread retrieval.  |
+| **X (Twitter)** | Required          | `AUTH_TOKEN`, `CT0`        | Session cookies extracted from a logged-in x.com browser session.                  |
+| **Exa AI**      | Optional          | `EXA_API_KEY`              | Enables Exa as a search provider (via exa_py SDK) and increases fetch rate limits. |
 
 ## 💡 Usage Examples
 
@@ -93,14 +93,33 @@ Most tools are keyless. However, some require specific environment variables for
 
 ```text
 web_search_mcp/
-├── server.py          # Server entry point and tool registrations
-├── search/            # Search engine implementations (DDG, Exa)
-├── social/            # Social platform integrations (GH, HN, Reddit, X)
-├── tools/             # Specialized tools (arXiv, Wiki, Registries)
-├── _config/           # Settings and rate limiting
-├── _http/             # Shared HTTP client logic
-├── _models/           # Pydantic models for requests/responses
-└── _utils/            # Formatting and scoring utilities
+├── server.py          # Entry point: FastMCP init, @mcp.tool registrations
+├── search/            # Search engine implementations
+│   ├── ddg.py         # DuckDuckGo search + trafilatura page fetch
+│   └── exa.py         # Exa SDK search & content fetch (lazy-init client)
+├── social/            # Community platform integrations
+│   ├── github.py      # GitHub Search API + gh CLI issue rendering
+│   ├── hackernews.py  # Algolia HN API + comment enrichment
+│   ├── reddit.py      # RSS + Shreddit keyless pipeline
+│   └── x.py           # Bird CLI (vendored Node.js) for X/Twitter
+├── tools/             # Specialized reference utilities
+│   ├── arxiv.py       # arXiv paper search
+│   └── wikipedia.py   # Wikipedia MediaWiki API
+├── _config/           # Settings, env vars, rate limits, depth tiers
+│   ├── settings.py    # pydantic-settings (EXA_API_KEY, SEARCH_MCP_ prefix)
+│   └── limits.py      # Per-platform quick/default/deep limits, timeouts
+├── _http/             # Shared HTTP + SSRF protection
+│   └── client.py      # validate_url, http_client, get_json_client
+├── _models/           # Pydantic request/response models
+│   ├── requests.py    # SearchRequest
+│   ├── responses.py   # ErrorResponse, SearchResponse, PageResponse
+│   └── types.py       # Depth, ResponseFormat, SearchType, FetchOutputFormat
+├── _utils/            # Shared helpers
+│   ├── formatting.py  # Markdown formatters, date/epoch utils
+│   ├── rate_limiter.py # Token-bucket rate limiter
+│   └── scoring.py     # Relevance scoring
+└── vendor/            # Vendored third-party tools
+    └── bird-search/   # Node.js CLI for X/Twitter search
 ```
 
 ## 🤝 Contributing
