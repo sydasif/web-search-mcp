@@ -6,6 +6,8 @@
 
 A comprehensive Model Context Protocol (MCP) server built with FastMCP that provides LLMs with real-time, high-fidelity access to the web. This server aggregates multiple search engines, social platforms, and developer tools into a single interface, allowing AI agents to perform deep research, track community sentiment, and analyze technical documentation.
 
+> **Design docs → [wiki](https://github.com/sydasif/web-search-mcp/wiki)** — tool selection guide, decision matrix, recommended workflows, tools status & known quirks, plugin setup, and development standards.
+
 ## 🚀 Features
 
 The server provides a diverse suite of tools categorized by their primary use case:
@@ -36,19 +38,38 @@ The server provides a diverse suite of tools categorized by their primary use ca
   - **`gh` CLI**: For authenticated GitHub search and issue retrieval.
   - **Node.js 22+**: Required only if using the vendored Bird CLI for X/Twitter (not needed when `XQUIK_API_KEY` is set).
 
-## ⚙️ Setup
+## ⚙️ Installation
 
-### Installation
+You have three options depending on your use case:
 
-Install the server globally using `uv`:
+### Option A: Quick Run (via uvx)
+
+The fastest way to try it out without cloning the repo. Add this to your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/sydasif/web-search-mcp.git",
+        "web-search-mcp"
+      ]
+    }
+  }
+}
+```
+
+### Option B: Permanent Install
+
+For the fastest startup times with a globally installed tool:
 
 ```bash
 uv tool install git+https://github.com/sydasif/web-search-mcp.git
 ```
 
-### MCP Client Configuration
-
-Add the server to your MCP client configuration (e.g., Claude Desktop):
+Then configure your MCP client:
 
 ```json
 {
@@ -60,16 +81,81 @@ Add the server to your MCP client configuration (e.g., Claude Desktop):
 }
 ```
 
+### Option C: Development Install
+
+If you want to modify the code or contribute:
+
+```bash
+git clone https://github.com/sydasif/web-search-mcp.git
+cd web-search-mcp
+uv sync
+uv run web-search-mcp
+```
+
+### Verify It's Working
+
+Once the server is running, try a simple search:
+
+```
+search_web(query="current weather in Tokyo")
+```
+
 ## 🔐 Configuration & Authentication
 
-Most tools are keyless. However, some require specific environment variables for full functionality:
+Most tools work out of the box with **zero configuration**. The following environment variables are only needed for premium or authenticated features.
 
-| Tool            | Required/Optional | Environment Variable       | Note                                                                               |
-| :-------------- | :---------------- | :------------------------- | :--------------------------------------------------------------------------------- |
-| **GitHub**      | Optional          | `GITHUB_TOKEN` or `gh` CLI | Authenticates with the GitHub API for issues/PR search and full thread retrieval.  |
-| **X (Twitter)** | Required (one of) | `AUTH_TOKEN`, `CT0`        | Session cookies extracted from a logged-in x.com browser session (Bird CLI path).  |
-| **X (Twitter)** | Optional          | `XQUIK_API_KEY`            | API key for the Xquik backend (bypasses Bird CLI / Node.js requirement).           |
-| **Exa AI**      | Optional          | `EXA_API_KEY`              | Enables Exa as a search provider (via exa_py SDK) and increases fetch rate limits. |
+### Environment Variables Reference
+
+| Variable | Required For | How to Get It |
+| :--- | :--- | :--- |
+| `EXA_API_KEY` | Exa AI semantic search (optional) | Sign up at [exa.ai](https://exa.ai) |
+| `GITHUB_TOKEN` | Higher GitHub API rate limits (optional) | Generate a [GitHub PAT](https://github.com/settings/tokens) |
+| `AUTH_TOKEN` | X/Twitter search (required for Bird CLI) | Session cookie from x.com (see below) |
+| `CT0` | X/Twitter search (required for Bird CLI) | Session cookie from x.com (see below) |
+| `XQUIK_API_KEY` | X/Twitter search (alternative to cookies) | Sign up at [xquik.ai](https://xquik.ai) |
+
+### Setting Up GitHub Authentication
+
+You have two options:
+
+1. **Recommended — Use `gh` CLI**: Simply run `gh auth login`. The server will detect your local session automatically.
+2. **Manual Token**: Create a [Personal Access Token](https://github.com/settings/tokens) and export it:
+   ```bash
+   export GITHUB_TOKEN="ghp_your_token_here"
+   ```
+
+### Setting Up X/Twitter Authentication
+
+X/Twitter search requires either session cookies or an API key.
+
+**Option 1 — Session Cookies (Bird CLI):**
+
+1. Log into `x.com` in your browser.
+2. Open DevTools (F12) → **Application** (or Storage) → **Cookies** → `x.com`.
+3. Copy the values for `auth_token` and `ct0`.
+4. Export them in the shell where the MCP server runs:
+   ```bash
+   export AUTH_TOKEN="your_auth_token"
+   export CT0="your_ct0"
+   ```
+   > **Note**: These are session cookies. If the tool starts returning 401s, refresh them by logging out and back in.
+
+**Option 2 — Xquik API Key (Recommended):**
+
+1. Sign up at [xquik.ai](https://xquik.ai) to get an API key.
+2. Export it:
+   ```bash
+   export XQUIK_API_KEY="your_xquik_key"
+   ```
+   This bypasses the Node.js Bird CLI dependency entirely.
+
+### Setting Up Exa AI (Optional)
+
+Exa provides semantic search and JS-heavy page fallback:
+
+```bash
+export EXA_API_KEY="your_exa_key"
+```
 
 ## 💡 Usage Examples
 
@@ -89,6 +175,17 @@ Most tools are keyless. However, some require specific environment variables for
 
 - **Reddit**: `search_reddit(query="Best mechanical keyboards 2024", subreddits=["MechanicalKeyboards"])`
 - **Hacker News**: `search_hackernews(query="MCP server architecture")`
+
+## 🔧 Troubleshooting
+
+| Problem | Likely Cause | Solution |
+| :--- | :--- | :--- |
+| **Auth errors on a tool** | Env var not set in the server's shell | Export the variable in the same shell where the MCP server process runs |
+| **GitHub returns empty results** | Not authenticated | Run `gh auth login` or set `GITHUB_TOKEN` |
+| **`search_x` returns 401** | Expired X session cookies | Re-extract `auth_token` and `ct0` from x.com |
+| **`fetch_page` blocked by Cloudflare** | Bot detection | Try `backend="curl"` parameter |
+| **`search_arxiv` returns 503** | Upstream arXiv maintenance | Wait a few minutes and retry |
+| **Tool says "Query cannot be empty"** | Missing or blank query | Provide a non-empty search query |
 
 ## 🏗️ Project Structure
 

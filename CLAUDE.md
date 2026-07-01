@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Design docs → [wiki](https://github.com/sydasif/web-search-mcp/wiki)** — tool selection guide, design decisions, recommended workflows, tools status, plugin setup, and development standards.
+
 ## Common Commands
 
 ### Development
