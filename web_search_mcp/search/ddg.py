@@ -3,23 +3,24 @@
 Consolidates search and reading functionality with professional resilience.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Literal
 
 import httpx
 import trafilatura
 from ddgs import DDGS
-from tenacity import (
-    RetryError,
-    retry,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from .._config import settings
-from .._http import http_client
-from .._models import ErrorResponse, PageResponse, SearchRequest, SearchResponse, SearchResult
+from .._http import http_client, validate_url
+from .._models import (
+    ErrorResponse,
+    FetchOutputFormat,
+    PageResponse,
+    SearchRequest,
+    SearchResponse,
+    SearchResult,
+)
 from .._utils import RateLimiter, format_error
 from .exa import exa_fetch
 
@@ -30,19 +31,6 @@ search_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_search
 fetch_rate_limiter = RateLimiter(requests_per_minute=settings.rate_limit_fetch)
 
 
-def _should_retry_ddg(exception: BaseException) -> bool:
-    """Retry on rate limits (429) or server errors (5xx)."""
-    if isinstance(exception, httpx.HTTPStatusError):
-        status = exception.response.status_code if exception.response is not None else None
-        return status == 429 or (status is not None and status >= 500)
-    return bool(isinstance(exception, (httpx.TimeoutException, httpx.RequestError)))
-
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception(_should_retry_ddg),
-)
 def _fetch_httpx(url: str, timeout: int) -> str:
     """Fetches a URL using the shared httpx client."""
     response = http_client.get(url, timeout=timeout)
@@ -50,57 +38,24 @@ def _fetch_httpx(url: str, timeout: int) -> str:
     return response.text
 
 
-def _request_with_fallback(url: str, timeout: int = 30) -> tuple[str, bool]:
-    """Fetch a URL. Tries httpx (with retries), falls back to Exa server-side render.
+def _request_with_fallback(url: str, timeout: int = 30, max_chars: int = 15000) -> tuple[str, bool]:
+    """Fetch a URL. Tries httpx once, falls back to Exa server-side render.
 
     Returns (content, used_exa_fallback). When used_exa_fallback is True, content is markdown.
     """
+    validate_url(url)
     try:
         return _fetch_httpx(url, timeout=timeout), False
-    except (httpx.HTTPStatusError, httpx.RequestError, RetryError) as e:
-        cause = e.last_attempt.exception() if isinstance(e, RetryError) and e.last_attempt else e
-        logger.warning("httpx failed for %s (%s); using Exa fallback", url, cause)
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
+        logger.warning("httpx failed for %s (%s); using Exa fallback", url, e)
         try:
-            content = exa_fetch([url], timeout=timeout)
+            content = exa_fetch([url], max_chars=max_chars)
         except Exception as exa_err:
             logger.warning("Exa fallback also failed for %s: %s", url, exa_err)
             raise
         if content:
             return content, True
         raise
-
-
-def _fetch_pdf_text(url: str, timeout: int = 30, max_length: int = 15000) -> str | None:
-    """Download a PDF and extract its text content using pypdf."""
-    import io
-
-    import pypdf
-
-    try:
-        response = http_client.get(url, timeout=timeout, follow_redirects=True)
-        response.raise_for_status()
-
-        pdf_file = io.BytesIO(response.content)
-        reader = pypdf.PdfReader(pdf_file)
-
-        text_parts: list[str] = []
-        total = 0
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
-                total += len(page_text)
-                if total >= max_length:
-                    break
-
-        if not text_parts:
-            return None
-
-        result = "\n\n".join(text_parts)
-        return result[:max_length]
-    except Exception:
-        logger.exception("PDF extraction failed for %s", url)
-        return None
 
 
 def format_search_results_markdown(results: SearchResponse | ErrorResponse) -> str:
@@ -139,7 +94,7 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
     search_rate_limiter.acquire()
 
     kwargs = request.model_dump(
-        exclude={"query", "search_type", "response_format"},
+        exclude={"query", "search_type", "response_format", "provider"},
         exclude_none=True,
     )
     if "time_range" in kwargs:
@@ -162,7 +117,7 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
                 total_results=len(raw_results),
                 results=[SearchResult(**res) for res in raw_results],
                 has_more=has_more,
-                next_page=request.page + 1 if has_more else None,
+                next_page=None,
             )
     except Exception as e:
         logger.exception("DuckDuckGo search failed for query %r", request.query)
@@ -171,36 +126,22 @@ def ddg_search(request: SearchRequest) -> SearchResponse | ErrorResponse:
 
 def fetch_page(
     url: str,
-    output_format: Literal[
-        "csv",
-        "html",
-        "json",
-        "markdown",
-        "python",
-        "txt",
-        "xml",
-        "xmltei",
-    ] = "txt",
+    output_format: FetchOutputFormat = "txt",
     include_metadata: bool = False,
     include_tables: bool = False,
-    include_comments: bool = False,
-    include_images: bool = False,
     deduplicate: bool = True,
     max_length: int = 15000,
     timeout: int = 30,
 ) -> PageResponse | ErrorResponse:
-    """Extracts clean text content from a web page or PDF URL."""
+    """Extract clean text content from a web page URL.
+
+    Timeout applies to the httpx extraction path only. The Exa fallback
+    uses the SDK's own client-level timeout.
+    """
     fetch_rate_limiter.acquire()
 
-    # PDF URLs: extract text directly from the binary PDF
-    if url.lower().endswith(".pdf") or "/pdf/" in url.lower() or "pdf=" in url.lower():
-        pdf_text = _fetch_pdf_text(url, timeout=timeout, max_length=max_length)
-        if pdf_text:
-            return PageResponse(url=url, length=len(pdf_text), content=pdf_text)
-        # Fall through to normal HTML extraction if PDF fails
-
     try:
-        raw_content, used_exa = _request_with_fallback(url, timeout=timeout)
+        raw_content, used_exa = _request_with_fallback(url, timeout=timeout, max_chars=max_length)
 
         if not raw_content:
             return format_error("Could not download content.")
@@ -219,13 +160,25 @@ def fetch_page(
             output_format=output_format,
             with_metadata=include_metadata,
             include_tables=include_tables,
-            include_comments=include_comments,
             include_links=True,
-            include_images=include_images,
             deduplicate=deduplicate,
         )
 
+        # trafilatura failed — try Exa server-side render as second fallback
         if not extracted_data:
+            logger.info("trafilatura returned no text for %s; trying Exa fallback", url)
+            try:
+                exa_content = exa_fetch([url], max_chars=max_length)
+            except Exception as exa_err:
+                logger.warning("Exa fallback failed for %s: %s", url, exa_err)
+                exa_content = None
+            if exa_content:
+                actual_length = len(exa_content)
+                return PageResponse(
+                    url=url,
+                    length=actual_length,
+                    content=exa_content[:max_length],
+                )
             return format_error("No readable text found.")
 
         if include_metadata:
@@ -241,7 +194,7 @@ def fetch_page(
         if not content:
             return format_error("No readable text found.")
 
-        actual_length = len(str(content))
+        actual_length = len(content)
 
         response = PageResponse(
             url=url,
@@ -263,10 +216,9 @@ def fetch_page(
                 response.warning = "Could not extract metadata."
 
         return response
-    except (httpx.HTTPStatusError, httpx.RequestError, RetryError) as e:
-        cause = e.last_attempt.exception() if isinstance(e, RetryError) and e.last_attempt else e
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
         logger.exception("Fetch error")
-        return format_error(f"HTTP request failed: {cause!s}")
+        return format_error(f"HTTP request failed: {e}")
     except Exception as e:
         logger.exception("Reader error")
         return format_error(str(e))

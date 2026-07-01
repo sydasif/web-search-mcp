@@ -1,19 +1,22 @@
 """Keyless Reddit parsing logic: RSS discovery and Shreddit enrichment."""
 
+from __future__ import annotations
+
 import html as _html
 import logging
 import re
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote_plus
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from ..._config import FEED_TIMEOUT
-from ..._utils import score_relevance
+from ..._models.types import Depth
+from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
 from . import client
+from ._utils import extract_attr
 
 logger = logging.getLogger(__name__)
 
@@ -42,29 +45,6 @@ _NEXT_RTJSON = re.compile(r'id="t1_[A-Za-z0-9]+-(?:comment|post)-rtjson-content"
 # ── RSS/Atom Helpers ───────────────────────────────────────────────────────
 
 
-def _iso_to_date(value: str | None) -> str | None:
-    """Parse an ISO-8601 timestamp to YYYY-MM-DD."""
-    if not value:
-        return None
-    try:
-        dt = datetime.fromisoformat(value.strip())
-        return dt.date().isoformat()
-    except (ValueError, TypeError):
-        return None
-
-
-def _iso_to_epoch(value: str | None) -> float | None:
-    if not value:
-        return None
-    try:
-        dt = datetime.fromisoformat(value.strip())
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=UTC)
-        return dt.timestamp()
-    except (ValueError, TypeError):
-        return None
-
-
 def _subreddit_from(category: str, url: str) -> str:
     """Derive subreddit name from the entry category or, failing that, the URL."""
     if category:
@@ -81,7 +61,7 @@ def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
         return []
     safe_xml = re.sub(r"<!DOCTYPE[^>]*>", "", xml_text) if xml_text else xml_text
     try:
-        root = ET.fromstring(safe_xml)
+        root = ET.fromstring(safe_xml)  # noqa: S314
     except ET.ParseError as e:
         logger.debug("feed parse error: %s", e)
         return []
@@ -116,7 +96,7 @@ def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
             selftext = re.sub(r"<[^>]+>", " ", content_el.text)
             selftext = re.sub(r"\s+", " ", selftext).strip()[:500]
 
-        relevance = score_relevance(query, title)
+        relevance = token_overlap_relevance(query, title)
 
         posts.append(
             {
@@ -126,10 +106,10 @@ def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
                 "score": 0,
                 "num_comments": 0,
                 "subreddit": subreddit,
-                "created_utc": _iso_to_epoch(updated),
+                "created_utc": iso_to_epoch(updated),
                 "author": author,
                 "selftext": selftext,
-                "date": _iso_to_date(updated),
+                "date": iso_to_date(updated),
                 "engagement": {
                     "score": 0,
                     "num_comments": 0,
@@ -144,7 +124,7 @@ def _parse_feed(xml_text: str, query: str = "") -> list[dict[str, Any]]:
     return posts
 
 
-def _build_urls(query: str, depth: str, subreddits: list[str] | None) -> list[str]:
+def _build_urls(query: str, depth: Depth, subreddits: list[str] | None) -> list[str]:
     """Build the keyless RSS feed URLs to fan out across."""
     q = quote_plus(query)
     urls: list[str] = [f"https://www.reddit.com/search.rss?q={q}&sort=relevance&t=month"]
@@ -172,7 +152,7 @@ def _fetch_feed(url: str, query: str) -> list[dict[str, Any]]:
 
 def search_rss(
     query: str,
-    depth: str = "default",
+    depth: Depth = "default",
     subreddits: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Discover Reddit posts for a query via keyless RSS feeds."""
@@ -217,11 +197,6 @@ def _svc_url(subreddit: str, post_id: str) -> str:
     return f"https://www.reddit.com/svc/shreddit/comments/r/{subreddit}/t3_{post_id}?sort=top"
 
 
-def _attr(tag: str, name: str) -> str:
-    m = re.search(rf'\b{name}="([^"]*)"', tag)
-    return _html.unescape(m.group(1)) if m else ""
-
-
 def _body_for(html_text: str, thing_id: str) -> str:
     """Extract a comment's text body, anchored on its unique thingId."""
     if not thing_id:
@@ -246,18 +221,18 @@ def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> list[dict[str, 
     comments: list[dict[str, Any]] = []
     for m in _COMMENT_START.finditer(html_text or ""):
         tag = m.group(0)
-        author = _attr(tag, "author") or "[deleted]"
+        author = extract_attr(tag, "author") or "[deleted]"
         if author in ("[deleted]", "[removed]"):
             continue
-        thing_id = _attr(tag, "thingId")
+        thing_id = extract_attr(tag, "thingId")
         body = _body_for(html_text, thing_id)
         if not body or body in ("[deleted]", "[removed]"):
             continue
         try:
-            score = int(_attr(tag, "score") or 0)
+            score = int(extract_attr(tag, "score") or 0)
         except ValueError:
             score = 0
-        permalink = _attr(tag, "permalink")
+        permalink = extract_attr(tag, "permalink")
         comments.append(
             {
                 "score": score,
@@ -265,7 +240,7 @@ def parse_comments(html_text: str, limit: int = MAX_COMMENTS) -> list[dict[str, 
                 "body": body[:300],
                 "excerpt": body[:200],
                 "permalink": permalink,
-                "date": _iso_to_date(_attr(tag, "created")),
+                "date": iso_to_date(extract_attr(tag, "created")),
                 "url": f"https://reddit.com{permalink}" if permalink else "",
             },
         )
@@ -295,10 +270,7 @@ def fetch_comments(
 
     comments = parse_comments(html_text, limit=MAX_COMMENTS)
 
-    insights = []
-    for c in comments[:3]:
-        if c["excerpt"]:
-            insights.append(c["excerpt"])
+    insights = [c["excerpt"] for c in comments[:3] if c["excerpt"]]
 
     return {
         "top_comments": [

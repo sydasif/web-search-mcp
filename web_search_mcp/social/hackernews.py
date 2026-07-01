@@ -4,16 +4,20 @@ Uses hn.algolia.com/api/v1 for story discovery and comment enrichment.
 No API key needed - just HTTP calls via httpx.
 """
 
+from __future__ import annotations
+
 import html as _html
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
+from functools import cache
 from urllib.parse import urlencode
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from .._http import get_json_client
+from .._models.types import Depth
 from .._utils import compute_relevance, format_results_markdown
 
 logger = logging.getLogger(__name__)
@@ -27,19 +31,22 @@ MAX_WORKERS = 5
 TIMEOUT = 30
 
 _HN_PREFIXES = re.compile(r"^(Tell HN|Show HN|Ask HN|Launch HN)\s*:\s*", re.IGNORECASE)
-_WORD_BOUNDARY_RE_CACHE: dict[str, re.Pattern[str]] = {}
 
 
 def _date_to_unix(date_str: str) -> int:
     """Convert YYYY-MM-DD to Unix timestamp (start of day UTC)."""
-    parts = date_str.split("-")
-    dt = datetime(int(parts[0]), int(parts[1]), int(parts[2]), tzinfo=UTC)
+    dt = datetime.fromisoformat(date_str).replace(tzinfo=UTC)
     return int(dt.timestamp())
 
 
 def _unix_to_date(ts: int) -> str:
     """Convert Unix timestamp to YYYY-MM-DD."""
     return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
+
+
+@cache
+def _make_word_boundary_re(word: str) -> re.Pattern[str]:
+    return re.compile(rf"\b{re.escape(word)}\b")
 
 
 def _strip_html(text: str) -> str:
@@ -63,14 +70,7 @@ def _title_matches_query(title: str, query: str) -> bool:
     query_words = [w for w in _flatten_query(query.lower()).split() if w]
     if not query_words:
         return True
-    for word in query_words:
-        pattern = _WORD_BOUNDARY_RE_CACHE.get(word)
-        if pattern is None:
-            pattern = re.compile(rf"\b{re.escape(word)}\b")
-            _WORD_BOUNDARY_RE_CACHE[word] = pattern
-        if pattern.search(stripped):
-            return True
-    return False
+    return any(_make_word_boundary_re(w).search(stripped) for w in query_words)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ def search_hackernews(
     query: str,
     from_date: str | None = None,
     to_date: str | None = None,
-    depth: str = "default",
+    depth: Depth = "default",
 ) -> list[dict]:
     """Search Hacker News via Algolia API.
 
@@ -196,7 +196,7 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict:
     return {"comments": comments, "comment_insights": insights}
 
 
-def enrich_top_stories(items: list[dict], depth: str = "default") -> list[dict]:
+def enrich_top_stories(items: list[dict], depth: Depth = "default") -> list[dict]:
     """Fetch comments for top N stories by points.
 
     Args:

@@ -11,6 +11,8 @@ Authentication:
     searches start failing.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -24,6 +26,7 @@ import httpx
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._http import get_json_client
+from .._models.types import Depth
 from .._utils import format_results_markdown
 
 logger = logging.getLogger(__name__)
@@ -70,19 +73,24 @@ def _build_env() -> dict[str, str]:
     return env
 
 
+def _sanitize_query(query: str) -> str:
+    """Strip control characters from a query string for safe subprocess use."""
+    return "".join(ch for ch in query if ch >= " " or ch in "\t\n\r")
+
+
 def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
     """Run a single bird-search subprocess and return parsed JSON."""
     cmd = [
         "node",
         str(_BIRD_SEARCH_MJS),
-        query,
+        _sanitize_query(query),
         "--count",
         str(count),
         "--json",
     ]
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             cmd,
             capture_output=True,
             text=True,
@@ -209,9 +217,8 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
 
     # Extract URL
     url = tweet.get("permanent_url") or tweet.get("url", "")
-    if not url and tweet.get("id"):
-        if screen_name:
-            url = f"https://x.com/{screen_name}/status/{tweet['id']}"
+    if not url and tweet.get("id") and screen_name:
+        url = f"https://x.com/{screen_name}/status/{tweet['id']}"
     if not url:
         return None
 
@@ -250,8 +257,6 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     }
     # Remove None values
     engagement = {k: v for k, v in engagement.items() if v is not None}
-    if not engagement:
-        engagement = {}
 
     text = str(
         tweet.get("text")
@@ -262,7 +267,7 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     ).strip()[:500]
 
     return cast(
-        TweetItem,
+        "TweetItem",
         {
             "id": f"X{index + 1}",
             "text": text,
@@ -287,7 +292,7 @@ def _safe_int(val: Any) -> int | None:
 def search_x(
     query: str,
     from_date: str | None = None,
-    depth: str = "default",
+    depth: Depth = "default",
 ) -> list[TweetItem]:
     """Search X/Twitter using Xquik when configured, otherwise the vendored Bird CLI.
 
@@ -327,7 +332,11 @@ def search_x(
             return [
                 {
                     "id": "XERR",
-                    "text": "X search requires AUTH_TOKEN and CT0 environment variables. Extract these from your browser cookies after logging into x.com.",
+                    "text": (
+                        "X search requires AUTH_TOKEN and CT0 environment variables."
+                        " Extract these from your browser cookies after logging"
+                        " into x.com."
+                    ),
                     "url": "",
                     "author_handle": "",
                 },
@@ -379,5 +388,5 @@ def format_x_markdown(items: list[TweetItem], query: str) -> str:
         return lines
 
     return format_results_markdown(
-        cast(list[dict[str, Any]], items), query, "X/Twitter", "posts", _item_lines
+        cast("list[dict[str, Any]]", items), query, "X/Twitter", "posts", _item_lines
     )

@@ -1,192 +1,175 @@
-"""Exa AI semantic search via HTTP MCP endpoint.
+"""Exa AI search and content fetch via the exa_py SDK.
 
-Uses the Exa MCP server (https://mcp.exa.ai/mcp) via JSON-RPC 2.0 over
-HTTP POST with SSE responses. No mcporter or npm required — just httpx.
-Optional EXA_API_KEY increases rate limits from free tier (20K req/month).
-
-Three functions:
-- exa_search(): basic semantic web search
-- exa_search_advanced(): filtered search with domains, categories, dates, search type, content options
-- exa_fetch(): fetch URL content as clean markdown
+EXA_API_KEY is required for the SDK to function.
 """
 
-import json
-import logging
+from __future__ import annotations
 
-import httpx
+import logging
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 from .._config import settings
-from .._utils import RateLimiter, format_results_markdown
+from .._models import ErrorResponse, SearchResponse, SearchResult
+from .._models.types import SearchType
+from .._utils import RateLimiter, format_error
+
+if TYPE_CHECKING:
+    from exa_py import Exa
 
 logger = logging.getLogger(__name__)
-
-EXA_MCP_URL = "https://mcp.exa.ai/mcp"
-EXA_ADVANCED_URL = "https://mcp.exa.ai/mcp?tools=web_search_advanced_exa"
-EXA_TIMEOUT = 20
 
 # Rate limit: 10 requests/minute (conservative for free tier 20K/month)
 _exa_rate_limiter = RateLimiter(requests_per_minute=10)
 
+# Lazy SDK client
+_exa_client: Exa | None = None
 
-def _post_jsonrpc(payload: dict, url: str = EXA_MCP_URL, timeout: int = EXA_TIMEOUT) -> dict | None:
-    """Post a JSON-RPC request to Exa MCP. Returns parsed result or None."""
-    headers = {
-        "accept": "application/json, text/event-stream",
-        "content-type": "application/json",
+
+def _get_client() -> Exa:
+    """Lazy-init the Exa SDK client. Raises RuntimeError if unavailable."""
+    global _exa_client
+    if _exa_client is None:
+        try:
+            from exa_py import Exa
+
+            _exa_client = Exa(api_key=settings.exa_api_key)
+        except ImportError:
+            raise RuntimeError("exa_py SDK is not installed. Run: uv add exa-py") from None
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize Exa SDK: {e}") from e
+    return _exa_client
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────
+
+
+def _time_range_to_dates(time_range: str | None) -> tuple[str | None, str | None]:
+    """Convert DDG-style time_range ('d', 'w', 'm', 'y') to ISO date strings.
+
+    Returns (start_published_date, end_published_date).
+    """
+    if time_range is None:
+        return None, None
+
+    now = datetime.now(UTC)
+    mapping = {
+        "d": timedelta(days=1),
+        "w": timedelta(days=7),
+        "m": timedelta(days=30),
+        "y": timedelta(days=365),
     }
-    if settings.exa_api_key:
-        headers["x-api-key"] = settings.exa_api_key
-    try:
-        resp = httpx.post(
-            url,
-            json=payload,
-            headers=headers,
-            timeout=timeout,
-        )
-        resp.raise_for_status()
-    except Exception as e:
-        logger.warning("Exa HTTP request failed: %s", e)
+    delta = mapping.get(time_range)
+    if delta is None:
+        return None, None
+
+    start = (now - delta).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return start, None
+
+
+def _region_to_user_location(region: str | None) -> str | None:
+    """Convert DDG-style region ('us-en', 'uk-en') to two-letter ISO country code."""
+    if region is None:
         return None
-
-    # Parse SSE response (data: prefixed lines) or plain JSON
-    for line in resp.text.split("\n"):
-        if line.startswith("data: "):
-            try:
-                data = json.loads(line[6:])
-            except (json.JSONDecodeError, ValueError):
-                continue
-            if "result" in data:
-                return data["result"]
-            if "error" in data:
-                logger.warning("Exa JSON-RPC error: %s", data["error"])
-                return None
-    try:
-        return resp.json().get("result")
-    except Exception:
-        return None
+    parts = region.split("-")
+    code = parts[0].lower() if parts else ""
+    # Handle non-ISO exceptions (e.g. 'uk' → 'GB')
+    exceptions = {"uk": "gb"}
+    code = exceptions.get(code, code)
+    return code.upper() if code else None
 
 
-def _extract_text(result: dict | None) -> str | None:
-    """Extract text content from Exa MCP result. Returns None on error."""
-    if not result:
-        return None
-    if not isinstance(result, dict):
-        logger.warning("Exa returned non-dict result: %s", type(result).__name__)
-        return None
-    content = result.get("content", [])
-    if not content or not isinstance(content[0], dict):
-        return None
-    text = content[0].get("text", "")
-    if text.startswith("MCP error"):
-        logger.warning("Exa error: %s", text[:200])
-        return None
-    return text
+# ── Search ─────────────────────────────────────────────────────────────────
 
 
-def exa_search(query: str, num_results: int = 5) -> list[dict] | None:
-    """Basic semantic search via Exa.
-
-    Returns list of {title, url, snippet} or None on failure.
-    """
-    if not query or not query.strip():
-        return None
-    num_results = max(1, min(num_results, 20))
-
-    _exa_rate_limiter.acquire()
-
-    result = _post_jsonrpc(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "web_search_exa",
-                "arguments": {"query": query.strip(), "numResults": num_results},
-            },
-        }
-    )
-    text = _extract_text(result)
-    if not text:
-        return None
-
-    results = []
-    blocks = text.split("\n\n")
-    for block in blocks:
-        title = url = snippet = ""
-        for line in block.split("\n"):
-            if line.startswith("Title: "):
-                title = line[7:]
-            elif line.startswith("URL: "):
-                url = line[5:]
-            elif line.startswith("Highlights:"):
-                snippet = line.split("\n", 1)[-1][:300] if "\n" in line else ""
-        if title and url:
-            results.append({"title": title, "url": url, "snippet": snippet})
-    if not results and text:
-        logger.warning("Exa basic search returned text but no results parsed (len=%d)", len(text))
-    return results if results else None
-
-
-def exa_search_advanced(
+def exa_search(
     query: str,
-    num_results: int = 5,
-    include_domains: list[str] | None = None,
-    exclude_domains: list[str] | None = None,
-    category: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
-    search_type: str | None = None,
-    contents: dict | None = None,
-) -> dict | None:
-    """Advanced search with filters. Returns structured JSON dict or None.
+    max_results: int = 5,
+    search_type: SearchType = "text",
+    time_range: str | None = None,
+    domain: str | None = None,
+    region: str | None = None,
+) -> SearchResponse | ErrorResponse:
+    """Search via Exa AI.
 
-    Categories: company, research paper, news, tweet, personal site, linkedin, github.
-    Search types: auto, instant, fast, deep-lite, deep, deep-reasoning.
-    Contents: {"text": True, "highlights": True, "summary": True}
+    Args:
+        query: Search query string.
+        max_results: Max number of results (default 5).
+        search_type: 'text' or 'news'. News maps to Exa category='news'.
+        time_range: Time filter 'd'/'w'/'m'/'y' → start_published_date.
+        domain: Domain to scope results to → include_domains.
+        region: Geographic region (e.g. 'us-en') → user_location.
+
+    Returns:
+        SearchResponse: Structured search results.
+        ErrorResponse: Error response if the search fails.
     """
-    if not query or not query.strip():
-        return None
-
-    _exa_rate_limiter.acquire()
-    num_results = max(1, min(num_results, 20))
-
-    args: dict = {"query": query.strip(), "numResults": num_results}
-    if include_domains:
-        args["includeDomains"] = include_domains
-    if exclude_domains:
-        args["excludeDomains"] = exclude_domains
-    if category:
-        args["category"] = category
-    if start_date:
-        args["startPublishedDate"] = start_date
-    if end_date:
-        args["endPublishedDate"] = end_date
-    if search_type:
-        args["type"] = search_type
-    if contents:
-        args["contents"] = contents
-
-    result = _post_jsonrpc(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {"name": "web_search_advanced_exa", "arguments": args},
-        },
-        url=EXA_ADVANCED_URL,
-    )
-    text = _extract_text(result)
-    if not text:
-        return None
+    if not query:
+        return format_error("Query cannot be empty")
 
     try:
-        return json.loads(text)
-    except (json.JSONDecodeError, TypeError):
-        return {"results": [{"text": text, "title": "Untitled", "url": "#"}]}
+        client = _get_client()
+    except RuntimeError as e:
+        return format_error(str(e))
+
+    _exa_rate_limiter.acquire()
+
+    # Build kwargs from the unified params
+    kwargs: dict = {
+        "query": query,
+        "num_results": max_results,
+        "contents": False,  # metadata only, no page text
+    }
+
+    if domain:
+        kwargs["include_domains"] = [domain]
+
+    start_date, end_date = _time_range_to_dates(time_range)
+    if start_date:
+        kwargs["start_published_date"] = start_date
+    if end_date:
+        kwargs["end_published_date"] = end_date
+
+    if search_type == "news":
+        kwargs["category"] = "news"
+
+    user_loc = _region_to_user_location(region)
+    if user_loc:
+        kwargs["user_location"] = user_loc
+
+    try:
+        response = client.search(**kwargs)
+    except Exception as e:
+        logger.exception("Exa SDK search failed for query %r", query)
+        return format_error(f"Exa search failed: {e}")
+
+    # Convert SDK response to SearchResponse
+    results_list: list[SearchResult] = []
+    for r in getattr(response, "results", []) or []:
+        url = getattr(r, "url", "") or ""
+        results_list.append(
+            SearchResult(
+                title=getattr(r, "title", None),
+                href=url,
+                url=url,
+                body=None,
+            )
+        )
+
+    return SearchResponse(
+        query=query,
+        search_type=search_type,
+        total_results=len(results_list),
+        results=results_list,
+        has_more=False,
+    )
 
 
-def exa_fetch(urls: list[str], max_chars: int = 15000, timeout: int = EXA_TIMEOUT) -> str | None:
-    """Fetch page content via Exa server-side render. Returns markdown or None.
+# ── Fetch ──────────────────────────────────────────────────────────────────
+
+
+def exa_fetch(urls: list[str], max_chars: int = 15000) -> str | None:
+    """Fetch page content via Exa. Returns markdown text or None.
 
     Handles JS-heavy pages, Cloudflare challenges, and paywalls that
     httpx cannot access.
@@ -194,36 +177,31 @@ def exa_fetch(urls: list[str], max_chars: int = 15000, timeout: int = EXA_TIMEOU
     if not urls:
         return None
 
+    try:
+        client = _get_client()
+    except RuntimeError:
+        logger.warning("Exa SDK not available; cannot fetch")
+        return None
+
     _exa_rate_limiter.acquire()
+    try:
+        response = client.get_contents(urls)
+    except Exception as e:
+        logger.warning("Exa SDK get_contents failed for %s: %s", urls, e)
+        return None
 
-    result = _post_jsonrpc(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "web_fetch_exa",
-                "arguments": {"urls": urls, "maxCharacters": max_chars},
-            },
-        },
-        timeout=timeout,
-    )
-    return _extract_text(result)
+    parts: list[str] = []
+    for r in getattr(response, "results", []) or []:
+        url = getattr(r, "url", "")
+        title = getattr(r, "title", "")
+        text = getattr(r, "text", "")
+        if text:
+            parts.append(f"# {title}\n\nSource: {url}\n\n{text}")
+        elif title:
+            parts.append(f"# {title}\n\nSource: {url}")
 
+    if not parts:
+        return None
 
-def format_exa_markdown(items: list[dict], query: str) -> str:
-    """Format Exa results as markdown."""
-
-    def _item_lines(item: dict, i: int) -> list[str]:
-        title = item.get("title", "Untitled")
-        url = item.get("url", "#")
-        lines = [f"{i}. **[{title}]({url})**"]
-        highlights = item.get("highlights", [])
-        snippet = (
-            highlights[0][:200] if highlights else item.get("text", "") or item.get("snippet", "")
-        )
-        if snippet:
-            lines.append(f"   {snippet[:200]}")
-        return lines
-
-    return format_results_markdown(items, query, "Exa", "results", _item_lines)
+    result = "\n\n---\n\n".join(parts)
+    return result[:max_chars]

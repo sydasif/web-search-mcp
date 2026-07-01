@@ -2,6 +2,8 @@
 Consolidates legacy .json search and HTTP utilities.
 """
 
+from __future__ import annotations
+
 import contextlib
 import json
 import socket
@@ -19,7 +21,8 @@ from tenacity import (
 )
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
-from ..._utils import score_relevance
+from ..._models.types import Depth
+from ..._utils import token_overlap_relevance
 
 DEFAULT_TIMEOUT = 30
 USER_AGENT = "web-search-mcp/1.0 (Reddit Search)"
@@ -52,7 +55,7 @@ def _should_retry_http(exception: BaseException) -> bool:
         return exception.status_code == 429 or (
             exception.status_code is not None and exception.status_code >= 500
         )
-    return bool(isinstance(exception, urllib.error.URLError) and _is_dns_failure(exception))
+    return isinstance(exception, urllib.error.URLError) and _is_dns_failure(exception)
 
 
 @retry(
@@ -79,15 +82,19 @@ def request(
             separator = "&" if ("?" in url) else "?"
             url = f"{url}{separator}{urlencode(filtered)}"
 
-    data = None
+    data = json.dumps(json_data).encode("utf-8") if json_data is not None else None
     if json_data is not None:
-        data = json.dumps(json_data).encode("utf-8")
         headers.setdefault("Content-Type", "application/json")
 
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    req = urllib.request.Request(  # noqa: S310
+        url,
+        data=data,
+        headers=headers,
+        method=method,
+    )
 
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:  # noqa: S310
             body = response.read().decode("utf-8")
             if raw:
                 return body
@@ -100,20 +107,20 @@ def request(
         err = HTTPError(f"HTTP {e.code}: {e.reason}", e.code, body)
 
         if e.code == 429 or (e.code and e.code >= 500):
-            raise err
-        raise err
+            raise err from e
+        raise err from e
     except urllib.error.URLError as e:
         if _is_dns_failure(e):
             msg = f"DNS failure: {e.reason}"
-            raise HTTPError(msg)
+            raise HTTPError(msg) from e
         msg = f"URL Error: {e.reason}"
-        raise HTTPError(msg)
+        raise HTTPError(msg) from e
     except json.JSONDecodeError as e:
         msg = f"Invalid JSON response: {e}"
-        raise HTTPError(msg)
+        raise HTTPError(msg) from e
     except (OSError, TimeoutError, ConnectionResetError) as e:
         msg = f"Connection error: {type(e).__name__}: {e}"
-        raise HTTPError(msg)
+        raise HTTPError(msg) from e
 
 
 def get(url: str, headers: dict[str, str] | None = None, **kwargs) -> dict[str, Any]:
@@ -171,7 +178,7 @@ def _parse_json_posts(data: dict[str, Any], query: str = "") -> list[dict[str, A
             created_dt = datetime.fromtimestamp(created_utc, tz=UTC) if created_utc else None
             date_str = created_dt.date().isoformat() if created_dt else None
 
-            relevance = score_relevance(query, title)
+            relevance = token_overlap_relevance(query, title)
 
             posts.append(
                 {
@@ -200,7 +207,7 @@ def _parse_json_posts(data: dict[str, Any], query: str = "") -> list[dict[str, A
     return posts
 
 
-def search_json(topic: str, depth: str = "default") -> list[dict[str, Any]]:
+def search_json(topic: str, depth: Depth = "default") -> list[dict[str, Any]]:
     """One-shot global .json search. Returns [] on any failure (403, timeout, etc.)."""
     depth_limits = _ALL_DEPTH_LIMITS["reddit"]
     limit = depth_limits.get(depth, depth_limits["default"])

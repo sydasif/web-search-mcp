@@ -1,5 +1,7 @@
 """Response models returned by search and fetch operations."""
 
+from __future__ import annotations
+
 from pydantic import BaseModel
 
 from .types import SearchType

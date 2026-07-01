@@ -8,7 +8,6 @@
         "web-search-mcp"
       ],
       "env": {
-        "GROQ_API_KEY": "${GROQ_API_KEY}",
         "EXA_API_KEY": "${EXA_API_KEY}",
         "AUTH_TOKEN": "${AUTH_TOKEN}",
         "CT0": "${CT0}"

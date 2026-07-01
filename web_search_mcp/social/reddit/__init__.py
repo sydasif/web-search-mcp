@@ -1,11 +1,13 @@
 """Reddit search tool for MCP — keyless, free Reddit search."""
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta
-from typing import Literal
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models import ErrorResponse, SearchResponse, SearchResult
+from ..._models.types import Depth, ResponseFormat
 from ..._utils import format_error
 from . import engine
 
@@ -15,7 +17,6 @@ logger = logging.getLogger(__name__)
 def _convert_to_search_results(
     posts: list[dict],
     query: str,
-    search_type: Literal["text", "news"] = "text",
 ) -> SearchResponse:
     """Convert reddit_engine output to SearchResponse format."""
     results = []
@@ -40,7 +41,7 @@ def _convert_to_search_results(
 
     return SearchResponse(
         query=query,
-        search_type=search_type,
+        search_type="text",
         total_results=len(results),
         results=results,
         has_more=False,
@@ -50,12 +51,11 @@ def _convert_to_search_results(
 
 def reddit_search_tool(
     query: str,
-    search_type: Literal["text", "news"] = "text",
     max_results: int = 25,
     time_range: str | None = None,
-    depth: Literal["quick", "default", "deep"] = "default",
+    depth: Depth = "default",
     subreddits: list[str] | None = None,
-    response_format: Literal["json", "markdown"] = "markdown",
+    response_format: ResponseFormat = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed."""
     if not query or not query.strip():
@@ -89,7 +89,7 @@ def reddit_search_tool(
             subreddits=subreddits,
         )
 
-        response = _convert_to_search_results(posts, query, search_type)
+        response = _convert_to_search_results(posts, query)
 
         if response_format == "markdown":
             # Format as markdown
@@ -98,8 +98,11 @@ def reddit_search_tool(
                 lines.append(
                     f"{i}. **[{post.get('title', 'Reddit post')}]({post.get('url', '#')})**",
                 )
+                sub = post.get("subreddit", "unknown")
+                score = post.get("score", 0)
+                comments = post.get("num_comments", 0)
                 lines.append(
-                    f"   r/{post.get('subreddit', 'unknown')} • {post.get('score', 0)} upvotes • {post.get('num_comments', 0)} comments",
+                    f"   r/{sub} • {score} upvotes • {comments} comments",
                 )
                 if post.get("selftext"):
                     lines.append(f"   {post['selftext'][:200]}...")
