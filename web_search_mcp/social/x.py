@@ -137,14 +137,19 @@ def _extract_xquik_items(payload: Any) -> list[Any]:
     if not isinstance(payload, dict):
         return []
 
-    for key in ("tweets", "items", "results", "data"):
+    for key in ("tweets", "items", "results"):
         value = payload.get(key)
         if isinstance(value, list):
             return value
-        if isinstance(value, dict):
-            nested = _extract_xquik_items(value)
-            if nested:
-                return nested
+
+    data = payload.get("data")
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in ("tweets", "items", "results"):
+            value = data.get(key)
+            if isinstance(value, list):
+                return value
     return []
 
 
@@ -211,8 +216,6 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
         tweet.get("author_handle"),
         tweet.get("authorUsername"),
         tweet.get("author_screen_name"),
-        tweet.get("username"),
-        tweet.get("screen_name"),
     )
 
     # Extract URL
