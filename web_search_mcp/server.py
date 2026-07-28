@@ -656,17 +656,7 @@ def search_x(
 _SERVER_START_TIME = time.time()
 
 
-@mcp.tool(
-    name="health_check",
-    annotations={
-        "title": "Health check endpoint",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
-)
-def health_check() -> dict[str, Any]:
+def _health_check() -> dict[str, Any]:
     """Check the health status of the server and its dependencies.
 
     Returns:
@@ -681,6 +671,20 @@ def health_check() -> dict[str, Any]:
             "social": {"status": "healthy"},
         },
     }
+
+
+@mcp.tool(
+    name="health_check",
+    annotations={
+        "title": "Health check endpoint",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+def health_check() -> dict[str, Any]:
+    return _health_check()
 
 
 def main() -> None:
