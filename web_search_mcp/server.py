@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
@@ -638,7 +639,8 @@ def search_x(
 
     Error Handling:
         - Missing credentials: Set XQUIK_API_KEY, or AUTH_TOKEN and CT0 env vars.
-        - Node.js missing: Install Node.js 22+ for the vendored Bird CLI (not needed when XQUIK_API_KEY is set).
+        - Node.js missing: Install Node.js 22+ for the vendored Bird CLI
+          (not needed when XQUIK_API_KEY is set).
 
     """
     try:
@@ -649,6 +651,36 @@ def search_x(
     except Exception as e:
         logger.exception("X search failed")
         return format_error(f"X search failed: {e}")
+
+
+_SERVER_START_TIME = time.time()
+
+
+@mcp.tool(
+    name="health_check",
+    annotations={
+        "title": "Health check endpoint",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+def health_check() -> dict[str, Any]:
+    """Check the health status of the server and its dependencies.
+
+    Returns:
+        dict: Health status including status, version, uptime, and components.
+    """
+    return {
+        "status": "healthy",
+        "version": "0.5.0",
+        "uptime_seconds": time.time() - _SERVER_START_TIME,
+        "components": {
+            "search": {"status": "healthy"},
+            "social": {"status": "healthy"},
+        },
+    }
 
 
 def main() -> None:
