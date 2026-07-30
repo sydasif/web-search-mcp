@@ -30,6 +30,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 | `search_github`     | Search for Issues and PRs to track bugs, feature requests, and community sentiment. Requires `gh` CLI or `GITHUB_TOKEN`. | Bug tracking, feature requests, community sentiment    |
 | `get_github_issue`  | Fetch full conversation threads from GitHub Issues/PRs, sorted by reactions with author/date/reactions metadata.         | Deep-diving into specific issues/PRs                   |
 | `search_x`          | Real-time discourse and breaking news via Xquik API or vendored Bird CLI (requires session cookies or API key).          | Breaking news, community reactions, engagement signals |
+| `search_linkedin`   | Search people, companies, jobs, posts via DuckDuckGo + Jina Reader (r.jina.ai). No API key needed.                       | Professional profiles, company research, job search    |
 
 ### 🎓 Academic & Reference
 
@@ -224,6 +225,12 @@ search_reddit(query="Best mechanical keyboards 2024", subreddits=["MechanicalKey
 
 # Hacker News technical discourse
 search_hackernews(query="MCP server architecture")
+
+# LinkedIn professional search
+search_linkedin(query="site reliability engineer", content_type="people")
+search_linkedin(query="machine learning startup", content_type="companies")
+search_linkedin(query="kubernetes devops", content_type="jobs")
+search_linkedin(query="AI agents", content_type="posts")
 ```
 
 ### Academic Research
@@ -250,6 +257,9 @@ web_search_mcp/
 ├── social/                # Community platform integrations
 │   ├── github.py          # GitHub Search API + gh CLI issue rendering
 │   ├── hackernews.py      # Algolia HN API + comment enrichment
+│   ├── linkedin/          # LinkedIn search via DDG + Jina Reader
+│   │   ├── __init__.py    # LinkedIn search tool registration
+│   │   └── client.py      # DDG search + Jina Reader enrichment
 │   ├── reddit/            # RSS + Shreddit keyless pipeline
 │   │   ├── client.py      # HTTP client with RSS parsing
 │   │   ├── parsers.py     # RSS/HTML parsers

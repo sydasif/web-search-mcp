@@ -27,6 +27,7 @@ from .social.github import (
 from .social.hackernews import enrich_top_stories as _enrich_hn
 from .social.hackernews import format_hackernews_markdown as _format_hn_markdown
 from .social.hackernews import search_hackernews as _search_hn
+from .social.linkedin import linkedin_search_tool as _linkedin_search_tool
 from .social.reddit import reddit_search_tool as _reddit_search_tool
 from .social.x import format_x_markdown as _format_x_markdown
 from .social.x import search_x as _search_x
@@ -297,6 +298,68 @@ def search_reddit(
         time_range=time_range,
         depth=depth,
         subreddits=subreddits,
+        response_format=response_format,
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# LinkedIn tools — search people, companies, jobs, posts via DDG + Jina
+# Best for: professional profiles, company research, job search, thought leadership
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="search_linkedin",
+    annotations={
+        "title": "Search LinkedIn via DuckDuckGo + Jina Reader",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def search_linkedin(
+    query: str,
+    max_results: int = 25,
+    content_type: Literal["all", "people", "companies", "posts", "articles", "jobs"] = "all",
+    depth: Depth = "default",
+    response_format: ResponseFormat = "markdown",
+) -> str | SearchResponse | ErrorResponse:
+    """Search LinkedIn via DuckDuckGo + Jina Reader — free, no API key needed.
+
+    Role: Professional discovery. Use this to find people, companies, jobs,
+    posts, and articles on LinkedIn. Strategy mirrors agent-reach reference:
+    DDG site:linkedin.com search with Jina Reader (r.jina.ai) enrichment.
+
+    Args:
+        query: Search query string
+        max_results: Max results (capped by depth: quick=10, default=25, deep=50)
+        content_type: Filter by LinkedIn content type
+        depth: Search depth — controls result limits and enrichment
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        str: Markdown-formatted LinkedIn results (when response_format="markdown")
+        SearchResponse: Raw structured results (when response_format="json")
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "software engineer machine learning" — find ML engineers
+        - "site:linkedin.com/company/ google cloud" — find company pages
+        - "kubernetes devops" content_type="jobs" — search job postings
+        - "AI agents" content_type="posts" — find thought leadership posts
+
+    Error Handling:
+        - DDG rate limits: Try a different query or wait
+        - Jina fetch failures: Results returned with snippet only
+        - Empty results: Broaden query or try different content_type
+
+    """
+    return _linkedin_search_tool(
+        query=query,
+        max_results=max_results,
+        content_type=content_type,
+        depth=depth,
         response_format=response_format,
     )
 
