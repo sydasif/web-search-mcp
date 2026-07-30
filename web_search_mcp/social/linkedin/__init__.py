@@ -114,51 +114,13 @@ def linkedin_search_tool(
         response = _convert_to_search_results(items, query)
 
         if response_format == "markdown":
-            return _format_linkedin_markdown(items, query)
+            return client.format_linkedin_markdown(items, query)
 
         return response
 
     except Exception as e:
         logger.exception("LinkedIn search failed for query %r", query)
         return format_error("LinkedIn search failed", str(e))
-
-
-def _format_linkedin_markdown(items: list[dict[str, Any]], query: str) -> str:
-    """Format LinkedIn results as markdown."""
-
-    def _item_lines(item: dict[str, Any], i: int) -> list[str]:
-        name = item.get("name", "Unknown")
-        url = item.get("url", "#")
-        headline = item.get("headline", "")
-        snippet = item.get("snippet", "")
-        content_type = item.get("content_type", "other")
-
-        emoji = client._TYPE_EMOJI.get(content_type, client._TYPE_EMOJI["other"])
-
-        lines: list[str] = [
-            f"{i}. {emoji} **[{name}]({url})**",
-        ]
-        if headline:
-            lines.append(f"   {headline}")
-        if snippet:
-            lines.append(f"   {snippet[:200]}{'...' if len(snippet) > 200 else ''}")
-
-        if item.get("location"):
-            lines.append(f"   \U0001f4cd {item['location']}")
-        if item.get("about"):
-            lines.append(f"   {item['about'][:200]}...")
-        if item.get("content_preview"):
-            lines.append(f"   {item['content_preview'][:200]}...")
-
-        return lines
-
-    # Simple markdown formatting
-    lines = [f"# LinkedIn Search Results for '{query}'", f"Found {len(items)} results.", ""]
-    for i, item in enumerate(items, 1):
-        lines.extend(_item_lines(item, i))
-        lines.append("")
-
-    return "\n".join(lines)
 
 
 __all__ = ["linkedin_search_tool", "client"]

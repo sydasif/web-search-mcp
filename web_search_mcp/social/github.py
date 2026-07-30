@@ -415,6 +415,30 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
     lines: list[str] = []
 
     # ── header ──
+    lines.extend(_render_header(data, kind))
+
+    # ── reactions on the issue ──
+    issue_rx = _sum_reactions(data.get("reactionGroups"))
+    rx_bar = _render_reactions_bar(issue_rx)
+    if rx_bar:
+        lines.append(rx_bar)
+        lines.append("")
+
+    # ── body ──
+    body = (data.get("body") or "").strip()
+    if body:
+        lines.append(body)
+        lines.append("")
+
+    # ── comments ──
+    raw_comments = data.get("comments")
+    lines.extend(_render_comments(raw_comments))
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def _render_header(data: dict, kind: str) -> list[str]:
+    """Render the issue/PR header section."""
     title = data.get("title") or "Untitled"
     url = data.get("url") or ""
     author = ""
@@ -432,83 +456,81 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
             state_emoji = "\U0001f6a7"
 
     heading = "# Pull Request" if kind == "pr" else "# Issue"
-    lines.append(heading)
-    lines.append(
-        f"Title: {title} Link: {url} Author: @{author} "
-        f"Date: {created} State: {state_emoji} {state}",
-    )
-    lines.append("")
+    return [
+        heading,
+        (
+            f"Title: {title} Link: {url} Author: @{author} "
+            f"Date: {created} State: {state_emoji} {state}"
+        ),
+        "",
+    ]
 
-    # ── reactions on the issue ──
-    issue_rx = _sum_reactions(data.get("reactionGroups"))
-    rx_bar = _render_reactions_bar(issue_rx)
-    if rx_bar:
-        lines.append(rx_bar)
-        lines.append("")
 
-    # ── body ──
-    body = (data.get("body") or "").strip()
-    if body:
-        lines.append(body)
-        lines.append("")
+def _render_comments(raw_comments: list | None) -> list[str]:
+    """Render comments section."""
+    lines: list[str] = []
 
-    # ── comments ──
-    raw_comments = data.get("comments")
     if not isinstance(raw_comments, list) or not raw_comments:
         lines.append("# Comments")
         lines.append("_No comments._")
         lines.append("")
+        return lines
+
+    # Filter out minimized, sort by total reactions desc
+    active = [c for c in raw_comments if isinstance(c, dict) and not c.get("isMinimized")]
+
+    def _total_rx(c: dict) -> int:
+        return sum(_sum_reactions(c.get("reactionGroups")).values())
+
+    active.sort(key=_total_rx, reverse=True)
+
+    lines.append("# Comments")
+    lines.append("")
+    for idx, c in enumerate(active, start=1):
+        lines.extend(_render_single_comment(c, idx))
+
+    return lines
+
+
+def _render_single_comment(comment: dict, idx: int) -> list[str]:
+    """Render a single comment."""
+    c_author = ""
+    ca = comment.get("author")
+    if isinstance(ca, dict):
+        c_author = str(ca.get("login") or "")
+    c_assoc = (comment.get("authorAssociation") or "").upper()
+    c_date = iso_to_date(comment.get("createdAt")) or ""
+    c_url = comment.get("url") or ""
+    c_body = (comment.get("body") or "").strip()
+    c_rx = _sum_reactions(comment.get("reactionGroups"))
+
+    header = f"## Comment {idx}"
+    if c_assoc == "MEMBER":
+        header += " \U0001f3f7\ufe0f"
+    elif c_assoc == "COLLABORATOR":
+        header += " \U0001f91d"
+    elif c_assoc == "OWNER":
+        header += " \U0001f451"
+
+    meta = []
+    if c_author:
+        meta.append(f"Author: @{c_author}")
+    if c_date:
+        meta.append(f"Date: {c_date}")
+    rx_bar_c = _render_reactions_bar(c_rx)
+    if rx_bar_c:
+        meta.append(f"Reactions: {rx_bar_c}")
+    if c_url:
+        meta.append(f"[permalink]({c_url})")
+
+    lines = [header, " | ".join(meta), ""]
+    if c_body:
+        lines.append(c_body)
     else:
-        # Filter out minimized, sort by total reactions desc
-        active = [c for c in raw_comments if isinstance(c, dict) and not c.get("isMinimized")]
+        lines.append("_No text._")
+    lines.append("")
 
-        def _total_rx(c: dict) -> int:
-            return sum(_sum_reactions(c.get("reactionGroups")).values())
-
-        active.sort(key=_total_rx, reverse=True)
-
-        lines.append("# Comments")
-        lines.append("")
-        for idx, c in enumerate(active, start=1):
-            c_author = ""
-            ca = c.get("author")
-            if isinstance(ca, dict):
-                c_author = str(ca.get("login") or "")
-            c_assoc = (c.get("authorAssociation") or "").upper()
-            c_date = iso_to_date(c.get("createdAt")) or ""
-            c_url = c.get("url") or ""
-            c_body = (c.get("body") or "").strip()
-            c_rx = _sum_reactions(c.get("reactionGroups"))
-
-            header = f"## Comment {idx}"
-            if c_assoc == "MEMBER":
-                header += " \U0001f3f7\ufe0f"
-            elif c_assoc == "COLLABORATOR":
-                header += " \U0001f91d"
-            elif c_assoc == "OWNER":
-                header += " \U0001f451"
-            lines.append(header)
-
-            meta = []
-            if c_author:
-                meta.append(f"Author: @{c_author}")
-            if c_date:
-                meta.append(f"Date: {c_date}")
-            rx_bar_c = _render_reactions_bar(c_rx)
-            if rx_bar_c:
-                meta.append(f"Reactions: {rx_bar_c}")
-            if c_url:
-                meta.append(f"[permalink]({c_url})")
-            lines.append(" | ".join(meta))
-            lines.append("")
-
-            if c_body:
-                lines.append(c_body)
-            else:
-                lines.append("_No text._")
-            lines.append("")
-
-    return "\n".join(lines).strip() + "\n"
+    return lines
 
 
 def _gh_available() -> bool:
@@ -542,25 +564,60 @@ def _gh_authenticated() -> bool:
 def get_github_issue(url: str) -> str:
     """Fetch a GitHub Issue or PR with all comments as structured Markdown."""
 
+    # Parse URL
+    parsed = _parse_github_url(url)
+    if isinstance(parsed, str):
+        return parsed  # Error message
+    owner, repo, number, kind = parsed
+
+    # Validate gh CLI availability
+    if not _gh_available():
+        return _error_gh_not_installed()
+    if not _gh_authenticated():
+        return _error_gh_not_authenticated()
+
+    # Execute gh command
+    cmd = _build_gh_command(owner, repo, number, kind)
+    result = _run_gh_command(cmd, url)
+    if isinstance(result, str):
+        return result  # Error message
+
+    # Parse and render
+    data = _parse_gh_output(result.stdout)
+    if isinstance(data, str):
+        return data  # Error message
+
+    md = render_issue_markdown(data, kind=kind)
+    return truncate_content(md, "GITHUB_ISSUE_MAX_CHARS")
+
+
+def _parse_github_url(url: str) -> tuple[str, str, int, str] | str:
+    """Parse GitHub URL, return tuple or error string."""
     try:
         owner, repo, number, kind = parse_github_url(url)
+        return owner, repo, number, kind
     except ValueError as e:
         return f"_Error: {e}_\n"
 
-    if not _gh_available():
-        return (
-            "_Error: `gh` CLI is not installed._\n\n"
-            "Install it from https://cli.github.com/ or use `github_search` "
-            "with `GITHUB_TOKEN` environment variable instead.\n"
-        )
 
-    if not _gh_authenticated():
-        return (
-            "_Error: `gh` CLI is not authenticated._\n\n"
-            "Run `gh auth login` or set `GITHUB_TOKEN` environment variable.\n"
-        )
+def _error_gh_not_installed() -> str:
+    return (
+        "_Error: `gh` CLI is not installed.\n\n"
+        "Install it from https://cli.github.com/ or use `github_search` "
+        "with `GITHUB_TOKEN` environment variable instead.\n"
+    )
 
-    cmd = [
+
+def _error_gh_not_authenticated() -> str:
+    return (
+        "_Error: `gh` CLI is not authenticated.\n\n"
+        "Run `gh auth login` or set `GITHUB_TOKEN` environment variable.\n"
+    )
+
+
+def _build_gh_command(owner: str, repo: str, number: int, kind: str) -> list[str]:
+    """Build the gh CLI command."""
+    return [
         "gh",
         "issue" if kind == "issue" else "pr",
         "view",
@@ -572,6 +629,9 @@ def get_github_issue(url: str) -> str:
         "title,body,url,state,createdAt,author,reactionGroups,comments",
     ]
 
+
+def _run_gh_command(cmd: list[str], url: str) -> subprocess.CompletedProcess | str:
+    """Run gh command, return CompletedProcess or error string."""
     try:
         result = subprocess.run(  # noqa: S603
             cmd,
@@ -585,19 +645,25 @@ def get_github_issue(url: str) -> str:
         return f"_Error: Request timed out for {url}_\n"
 
     if result.returncode != 0:
-        stderr = (result.stderr or "").strip()
-        if stderr:
-            return f"_Error: `gh` failed: {stderr}_\n"
-        return f"_Error: `gh` returned exit code {result.returncode}_\n"
+        return _handle_gh_error(result)
+    return result
 
+
+def _parse_gh_output(stdout: str) -> dict | str:
+    """Parse gh JSON output, return dict or error string."""
     try:
-        data = json.loads(result.stdout)
+        data = json.loads(stdout)
     except json.JSONDecodeError as e:
         return f"_Error: Failed to parse `gh` output: {e}_\n"
 
     if not isinstance(data, dict):
         return "_Error: `gh` returned unexpected data format._\n"
+    return data
 
-    md = render_issue_markdown(data, kind=kind)
 
-    return truncate_content(md, "GITHUB_ISSUE_MAX_CHARS")
+def _handle_gh_error(result: subprocess.CompletedProcess) -> str:
+    """Handle gh CLI error output."""
+    stderr = (result.stderr or "").strip()
+    if stderr:
+        return f"_Error: `gh` failed: {stderr}_\n"
+    return f"_Error: `gh` returned exit code {result.returncode}_\n"

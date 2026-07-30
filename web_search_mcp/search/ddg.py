@@ -6,6 +6,7 @@ Consolidates search and reading functionality with professional resilience.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import httpx
 import trafilatura
@@ -148,77 +149,115 @@ def fetch_page(
 
         # Exa returns clean markdown — trafilatura would degrade it
         if used_exa:
-            actual_length = len(raw_content)
-            return PageResponse(
-                url=url,
-                length=actual_length,
-                content=raw_content[:max_length],
-            )
+            return _handle_exa_response(url, raw_content, max_length)
 
-        extracted_data = trafilatura.extract(
+        return _handle_trafilatura_response(
+            url,
             raw_content,
-            output_format=output_format,
-            with_metadata=include_metadata,
-            include_tables=include_tables,
-            include_links=True,
-            deduplicate=deduplicate,
+            output_format,
+            include_metadata,
+            include_tables,
+            deduplicate,
+            max_length,
         )
-
-        # trafilatura failed — try Exa server-side render as second fallback
-        if not extracted_data:
-            logger.info("trafilatura returned no text for %s; trying Exa fallback", url)
-            try:
-                exa_content = exa_fetch([url], max_chars=max_length)
-            except Exception as exa_err:
-                logger.warning("Exa fallback failed for %s: %s", url, exa_err)
-                exa_content = None
-            if exa_content:
-                actual_length = len(exa_content)
-                return PageResponse(
-                    url=url,
-                    length=actual_length,
-                    content=exa_content[:max_length],
-                )
-            return format_error("No readable text found.")
-
-        if include_metadata:
-            if isinstance(extracted_data, tuple):
-                content, metadata = extracted_data
-            else:
-                content = extracted_data
-                metadata = None
-        else:
-            content = extracted_data
-            metadata = None
-
-        if not content:
-            return format_error("No readable text found.")
-
-        actual_length = len(content)
-
-        response = PageResponse(
-            url=url,
-            length=actual_length,
-            content=str(content)[:max_length],
-        )
-
-        if include_metadata:
-            if metadata:
-                meta_dict = {
-                    "title": getattr(metadata, "title", None),
-                    "author": getattr(metadata, "author", None),
-                    "date": getattr(metadata, "date", None),
-                    "description": getattr(metadata, "description", None),
-                    "fingerprint": getattr(metadata, "fingerprint", None),
-                }
-                response.metadata = meta_dict
-            else:
-                response.warning = "Could not extract metadata."
-
-        return response
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         logger.exception("Fetch error")
         return format_error(f"HTTP request failed: {e}")
     except Exception as e:
         logger.exception("Reader error")
         return format_error(str(e))
+
+
+def _handle_exa_response(url: str, content: str, max_length: int) -> PageResponse:
+    """Handle response when Exa was used for fetching."""
+    actual_length = len(content)
+    return PageResponse(
+        url=url,
+        length=actual_length,
+        content=content[:max_length],
+    )
+
+
+def _handle_trafilatura_response(
+    url: str,
+    raw_content: str,
+    output_format: FetchOutputFormat,
+    include_metadata: bool,
+    include_tables: bool,
+    deduplicate: bool,
+    max_length: int,
+) -> PageResponse | ErrorResponse:
+    """Handle response using trafilatura extraction."""
+    extracted_data = trafilatura.extract(
+        raw_content,
+        output_format=output_format,
+        with_metadata=include_metadata,
+        include_tables=include_tables,
+        include_links=True,
+        deduplicate=deduplicate,
+    )
+
+    # trafilatura failed — try Exa server-side render as second fallback
+    if not extracted_data:
+        logger.info("trafilatura returned no text for %s; trying Exa fallback", url)
+        try:
+            exa_content = exa_fetch([url], max_chars=max_length)
+        except Exception as exa_err:
+            logger.warning("Exa fallback failed for %s: %s", url, exa_err)
+            exa_content = None
+        if exa_content:
+            actual_length = len(exa_content)
+            return PageResponse(
+                url=url,
+                length=actual_length,
+                content=exa_content[:max_length],
+            )
+        return format_error("No readable text found.")
+
+    return _process_trafilatura_result(url, extracted_data, include_metadata, max_length)
+
+
+def _process_trafilatura_result(
+    url: str,
+    extracted_data: str | tuple[str, Any],
+    include_metadata: bool,
+    max_length: int,
+) -> PageResponse | ErrorResponse:
+    """Process trafilatura extraction result into PageResponse."""
+    content: str | tuple[str, Any] = extracted_data
+    metadata: Any = None
+
+    if include_metadata:
+        if isinstance(extracted_data, tuple):
+            content, metadata = extracted_data
+        else:
+            content = extracted_data
+    else:
+        content = extracted_data
+        metadata = None
+
+    if not content:
+        return format_error("No readable text found.")
+
+    actual_length = len(content)
+
+    response = PageResponse(
+        url=url,
+        length=actual_length,
+        content=str(content)[:max_length],
+    )
+
+    if include_metadata:
+        if metadata:
+            meta_dict = {
+                "title": getattr(metadata, "title", None),
+                "author": getattr(metadata, "author", None),
+                "date": getattr(metadata, "date", None),
+                "description": getattr(metadata, "description", None),
+                "fingerprint": getattr(metadata, "fingerprint", None),
+            }
+            response.metadata = meta_dict
+        else:
+            response.warning = "Could not extract metadata."
+
+    return response
