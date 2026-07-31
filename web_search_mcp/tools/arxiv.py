@@ -28,7 +28,7 @@ _CRITERION_MAP: dict[str, arxiv.SortCriterion] = {
 MAX_RESULTS_CAP = 50
 
 
-def search_arxiv(
+def _search_arxiv(
     query: str,
     max_results: int = 10,
     sort_by: SortCriterion = "relevance",
@@ -132,7 +132,7 @@ def arxiv_search_tool(
     sort_by: SortCriterion = "relevance",
 ) -> str | ErrorResponse:
     """Search arXiv for academic papers — free, no API key needed."""
-    result = search_arxiv(query=query, max_results=max_results, sort_by=sort_by)
+    result = _search_arxiv(query=query, max_results=max_results, sort_by=sort_by)
     if isinstance(result, ErrorResponse):
         return result
 

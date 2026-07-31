@@ -565,10 +565,10 @@ def get_github_issue(url: str) -> str:
     """Fetch a GitHub Issue or PR with all comments as structured Markdown."""
 
     # Parse URL
-    parsed = _parse_github_url(url)
-    if isinstance(parsed, str):
-        return parsed  # Error message
-    owner, repo, number, kind = parsed
+    try:
+        owner, repo, number, kind = parse_github_url(url)
+    except ValueError as e:
+        return f"_Error: {e}_\n"
 
     # Validate gh CLI availability
     if not _gh_available():
@@ -591,13 +591,6 @@ def get_github_issue(url: str) -> str:
     return truncate_content(md, "GITHUB_ISSUE_MAX_CHARS")
 
 
-def _parse_github_url(url: str) -> tuple[str, str, int, str] | str:
-    """Parse GitHub URL, return tuple or error string."""
-    try:
-        owner, repo, number, kind = parse_github_url(url)
-        return owner, repo, number, kind
-    except ValueError as e:
-        return f"_Error: {e}_\n"
 
 
 def _error_gh_not_installed() -> str:

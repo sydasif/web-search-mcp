@@ -68,8 +68,6 @@ _TYPE_EMOJI: dict[str, str] = {
     "other": "\U0001f517",
 }
 
-# Rate limiter for LinkedIn searches
-_linkedin_rate_limiter = None  # lazy init
 DEPTH_LIMITS = _ALL_DEPTH_LIMITS["linkedin"]
 ENRICH_LIMITS = _ALL_ENRICH_LIMITS["linkedin"]
 MAX_WORKERS = 4

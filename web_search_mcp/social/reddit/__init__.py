@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
-from ..._models import ErrorResponse, SearchResponse, SearchResult
+from ..._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from ..._models.types import Depth, ResponseFormat
 from ..._utils import format_error
 from . import engine
@@ -14,14 +14,10 @@ from . import engine
 logger = logging.getLogger(__name__)
 
 
-def _convert_to_search_results(
-    posts: list[dict],
-    query: str,
-) -> SearchResponse:
-    """Convert reddit_engine output to SearchResponse format."""
+def _build_results(posts: list[dict]) -> list[SearchResult]:
+    """Convert reddit_engine posts to SearchResult list."""
     results = []
     for post in posts:
-        # Build body from title + selftext + top comments if available
         body_parts = []
         if post.get("title"):
             body_parts.append(post["title"])
@@ -38,15 +34,7 @@ def _convert_to_search_results(
             body=" ".join(body_parts) if body_parts else None,
         )
         results.append(result)
-
-    return SearchResponse(
-        query=query,
-        search_type="text",
-        total_results=len(results),
-        results=results,
-        has_more=False,
-        next_page=None,
-    )
+    return results
 
 
 def reddit_search_tool(
@@ -89,7 +77,7 @@ def reddit_search_tool(
             subreddits=subreddits,
         )
 
-        response = _convert_to_search_results(posts, query)
+        response = build_search_response(_build_results(posts), query)
 
         if response_format == "markdown":
             # Format as markdown

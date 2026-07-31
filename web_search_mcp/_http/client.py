@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import ipaddress
-import logging
 from urllib.parse import urlparse
 
 import httpx
 
 from .._config import settings
-
-logger = logging.getLogger(__name__)
 
 
 def validate_url(url: str) -> str:

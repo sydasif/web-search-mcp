@@ -234,7 +234,6 @@ def _process_trafilatura_result(
             content = extracted_data
     else:
         content = extracted_data
-        metadata = None
 
     if not content:
         return format_error("No readable text found.")

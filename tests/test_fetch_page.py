@@ -34,7 +34,7 @@ def _error_response(status: int) -> httpx.Response:
     resp = MagicMock(spec=httpx.Response)
     resp.status_code = status
     resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-        message=f"{status}",
+        f"{status}",
         request=MagicMock(),
         response=resp,
     )

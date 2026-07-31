@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..._models import ErrorResponse, SearchResponse, SearchResult
+from ..._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from ..._models.types import Depth, ResponseFormat
 from ..._utils import format_error
 from . import client
@@ -17,11 +17,8 @@ from . import client
 logger = logging.getLogger(__name__)
 
 
-def _convert_to_search_results(
-    items: list[dict[str, Any]],
-    query: str,
-) -> SearchResponse:
-    """Convert linkedin_client output to SearchResponse format."""
+def _build_results(items: list[dict[str, Any]]) -> list[SearchResult]:
+    """Convert linkedin_client items to SearchResult list."""
     results = []
     for item in items:
         name = item.get("name", "LinkedIn result")
@@ -30,7 +27,6 @@ def _convert_to_search_results(
         snippet = item.get("snippet", "")
         content_type = item.get("content_type", "other")
 
-        # Build body from available fields
         body_parts = []
         if headline:
             body_parts.append(headline)
@@ -50,15 +46,7 @@ def _convert_to_search_results(
             body=" ".join(body_parts) if body_parts else None,
         )
         results.append(result)
-
-    return SearchResponse(
-        query=query,
-        search_type="text",
-        total_results=len(results),
-        results=results,
-        has_more=False,
-        next_page=None,
-    )
+    return results
 
 
 def linkedin_search_tool(
@@ -111,7 +99,7 @@ def linkedin_search_tool(
             depth=depth,
         )
 
-        response = _convert_to_search_results(items, query)
+        response = build_search_response(_build_results(items), query)
 
         if response_format == "markdown":
             return client.format_linkedin_markdown(items, query)

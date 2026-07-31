@@ -106,7 +106,6 @@ def test_search_reddit() -> None:
     result = reddit_search_tool(
         query="Python", max_results=3, depth="quick", response_format="json"
     )
-    ok = isinstance(result, SearchResponse) and result.total_results >= 0
     n = result.total_results if isinstance(result, SearchResponse) else 0
     ok = isinstance(result, SearchResponse) and len(result.results) > 0
     _check("search_reddit", ok, f"posts={n}", warn_if_fail=True)
@@ -172,9 +171,9 @@ def test_get_github_issue() -> None:
 
 
 def test_search_arxiv() -> None:
-    from web_search_mcp.tools.arxiv import search_arxiv
+    from web_search_mcp.tools.arxiv import _search_arxiv
 
-    items = search_arxiv("transformer attention", max_results=3)
+    items = _search_arxiv("transformer attention", max_results=3)
     ok = isinstance(items, list) and len(items) > 0
     _check("search_arxiv", ok, f"papers={len(items) if isinstance(items, list) else 'error'}")
 

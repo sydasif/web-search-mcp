@@ -44,3 +44,18 @@ class PageResponse(BaseModel):
     content: str
     metadata: dict[str, str | None] | None = None
     warning: str | None = None
+
+
+def build_search_response(
+    results: list[SearchResult],
+    query: str,
+) -> SearchResponse:
+    """Build a SearchResponse with standard defaults."""
+    return SearchResponse(
+        query=query,
+        search_type="text",
+        total_results=len(results),
+        results=results,
+        has_more=False,
+        next_page=None,
+    )

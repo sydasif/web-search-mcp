@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 import re
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Any
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
@@ -287,7 +286,7 @@ def _enrich(posts: list[dict[str, Any]], depth: Depth) -> list[dict[str, Any]]:
     try:
         with ThreadPoolExecutor(max_workers=min(limit, MAX_ENRICH_WORKERS)) as executor:
             futures = {executor.submit(_enrich_one, post): i for i, post in enumerate(to_enrich)}
-            done, not_done = concurrent.futures.wait(futures, timeout=ENRICH_BUDGET)
+            done, not_done = wait(futures, timeout=ENRICH_BUDGET)
             for future in done:
                 idx = futures[future]
                 try:
@@ -363,7 +362,7 @@ def search_and_enrich(
                 executor.submit(_run_single_pipeline, q, from_date, to_date, depth, subreddits): q
                 for q in queries
             }
-            done, not_done = concurrent.futures.wait(futures, timeout=ENRICH_BUDGET)
+            done, not_done = wait(futures, timeout=ENRICH_BUDGET)
             for future in not_done:
                 q = futures[future]
                 logger.debug("fan-out timed out for %r", q)
