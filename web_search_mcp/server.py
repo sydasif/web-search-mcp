@@ -747,6 +747,11 @@ def _health_check() -> dict[str, Any]:
     },
 )
 def health_check() -> dict[str, Any]:
+    """Check the health status of the server and its dependencies.
+
+    Returns a summary of server status, version, uptime, and the health of
+    its search and social components.
+    """
     return _health_check()
 
 
