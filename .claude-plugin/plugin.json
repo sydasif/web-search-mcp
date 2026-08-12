@@ -1,6 +1,6 @@
 {
   "name": "web-search",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Web search, content extraction, and research tools for Claude Code. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and more — all from your Claude session.",
   "author": {
     "name": "Syed Asif",
