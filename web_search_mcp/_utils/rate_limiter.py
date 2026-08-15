@@ -1,4 +1,5 @@
 """Sliding window rate limiter."""
+
 from __future__ import annotations
 
 import threading
@@ -41,4 +42,3 @@ class RateLimiter:
 
             if wait_time > 0:
                 time.sleep(wait_time)
-

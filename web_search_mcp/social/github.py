@@ -591,8 +591,6 @@ def get_github_issue(url: str) -> str:
     return truncate_content(md, "GITHUB_ISSUE_MAX_CHARS")
 
 
-
-
 def _error_gh_not_installed() -> str:
     return (
         "_Error: `gh` CLI is not installed.\n\n"
