@@ -727,7 +727,7 @@ def _health_check() -> dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "version": "0.6.1",
+        "version": "0.6.2",
         "uptime_seconds": time.time() - _SERVER_START_TIME,
         "components": {
             "search": {"status": "healthy"},
