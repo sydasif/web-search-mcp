@@ -227,13 +227,8 @@ def _process_trafilatura_result(
     content: str | tuple[str, Any] = extracted_data
     metadata: Any = None
 
-    if include_metadata:
-        if isinstance(extracted_data, tuple):
-            content, metadata = extracted_data
-        else:
-            content = extracted_data
-    else:
-        content = extracted_data
+    if include_metadata and isinstance(extracted_data, tuple):
+        content, metadata = extracted_data
 
     if not content:
         return format_error("No readable text found.")

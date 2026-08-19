@@ -9,7 +9,6 @@ Strategy mirrors agent-reach reference:
 from __future__ import annotations
 
 import logging
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
@@ -47,9 +46,6 @@ _SITE_QUERY_TEMPLATES: dict[str, str] = {
 
 # Jina Reader API endpoint (agent-reach fallback approach)
 _JINA_READER_URL = "https://r.jina.ai/"
-
-# Optional: Support local linkedin-scraper-mcp if user has it running
-_LOCAL_LINKEDIN_MCP_URL = os.environ.get("LINKEDIN_MCP_URL", "")
 
 # Regex patterns for parsing Jina Reader markdown output.
 # NOTE: Jina returns real newlines, so these match \n (not the literal
@@ -265,11 +261,7 @@ def enrich_linkedin_results(
     limit = ENRICH_LIMITS.get(depth, ENRICH_LIMITS["default"])
     to_enrich = results[:limit]
 
-    backend = "Jina Reader"
-    if _LOCAL_LINKEDIN_MCP_URL:
-        backend = "Local LinkedIn MCP"
-
-    logger.info("LinkedIn enriching top %d results via %s", len(to_enrich), backend)
+    logger.info("LinkedIn enriching top %d results via Jina Reader", len(to_enrich))
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(_enrich_one, item): i for i, item in enumerate(to_enrich)}

@@ -47,3 +47,30 @@ Pre-existing mypy strict errors (46 diagnostics across 11 files) — these are *
 | `tests/test_fetch_page.py` | Minor syntax fix in mock helper |
 
 All changes are mechanical cleanup with zero behavioral impact. The `build_search_response` consolidation reduces duplication between LinkedIn and Reddit search tools. The rate limiter simplification removes an async variant that was never used (codebase is synchronous for rate limiting).
+
+---
+
+## Code Review Report (2nd pass — 2026-08-19)
+
+### Orientation
+
+- **Task type**: cleanup (YAGNI / dead-code removal)
+- **Files changed**: 2 source files
+- **Baseline**: ruff lint + format clean; 52/52 tests passing before and after
+
+### Checklist Results
+
+- **Correctness**: pass — 52/52 tests pass; behavior preserved
+- **Public contracts**: pass — no signatures or tool registration changed
+- **Tests**: pass — 52/52 passing, none weakened or removed
+- **Dead code and hygiene**: pass — removed speculative/YAGNI code and a redundant branch
+- **Documentation**: updated — this report appended
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `web_search_mcp/social/linkedin/client.py` | Removed `_LOCAL_LINKEDIN_MCP_URL` (read from `LINKEDIN_MCP_URL` env) — it only flipped a `backend` label used in a log line; the "Local LinkedIn MCP" fetch path never executed (dead speculative code, YAGNI). Also dropped the now-unused `os` import and the redundant `backend` variable. |
+| `web_search_mcp/search/ddg.py` | Simplified `_process_trafilatura_result`: the `if include_metadata` / `else` branches both assigned `content = extracted_data` for the non-tuple case, so the `else` was collapsed. No behavior change. |
+
+All changes are mechanical cleanup with zero behavioral impact. The `linkedin/client.py` edit removes the only reference to the undocumented `LINKEDIN_MCP_URL` environment variable, which was never wired to any actual fetch path.
