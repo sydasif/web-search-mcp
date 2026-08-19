@@ -237,23 +237,29 @@ def _fetch_item_comments(
     token: str,
     max_comments: int = 5,
 ) -> list[dict]:
-    """Fetch comments for a GitHub issue/PR."""
+    """Fetch comments for a GitHub issue/PR, sorted by reaction count.
+
+    The List issue comments endpoint only accepts ``sort=created``/``updated``
+    (not ``reactions`` — that value returns 422), so we fetch a larger page and
+    rank client-side by the per-comment reaction total.
+    """
     path = issue_url.replace("https://github.com/", "")
     path = path.replace("/pull/", "/issues/")
-    api_url = f"{REPO_API}/{path}/comments?per_page={max_comments}&sort=reactions&direction=desc"
+    fetch_count = min(max(100, max_comments), 100)
+    api_url = f"{REPO_API}/{path}/comments?per_page={fetch_count}&sort=created&direction=desc"
 
     data = _fetch_json(api_url, token=token, timeout=15)
     if not data or not isinstance(data, list):
         return []
 
-    comments = []
-    for c in data[:max_comments]:
+    enriched = []
+    for c in data:
         body = c.get("body") or ""
         excerpt = body[:300] + "..." if len(body) > 300 else body
         reactions = c.get("reactions", {})
         reaction_count = reactions.get("total_count", 0) if isinstance(reactions, dict) else 0
         author = c.get("user", {}).get("login", "") if isinstance(c.get("user"), dict) else ""
-        comments.append(
+        enriched.append(
             {
                 "score": reaction_count,
                 "excerpt": excerpt,
@@ -261,7 +267,8 @@ def _fetch_item_comments(
             },
         )
 
-    return comments
+    enriched.sort(key=lambda c: c.get("score", 0), reverse=True)
+    return enriched[:max_comments]
 
 
 def enrich_with_comments(

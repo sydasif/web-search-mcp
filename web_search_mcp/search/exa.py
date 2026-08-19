@@ -64,7 +64,8 @@ def _time_range_to_dates(time_range: str | None) -> tuple[str | None, str | None
         return None, None
 
     start = (now - delta).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    return start, None
+    end = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return start, end
 
 
 def _region_to_user_location(region: str | None) -> str | None:

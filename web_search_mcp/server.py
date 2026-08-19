@@ -384,6 +384,8 @@ def search_hackernews(
     query: str,
     max_results: int = 30,
     depth: Depth = "default",
+    from_date: str | None = None,
+    to_date: str | None = None,
     response_format: ResponseFormat = "markdown",
 ) -> str | list[dict[str, Any]] | ErrorResponse:
     """Search Hacker News via Algolia API — free, no API key needed.
@@ -395,6 +397,9 @@ def search_hackernews(
         query: Search query string
         max_results: Max results (capped by depth: quick=15, default=30, deep=60)
         depth: Search depth — controls result limits and comment enrichment
+        from_date: Optional start date (YYYY-MM-DD) to filter stories by
+            creation time. Requires to_date to take effect.
+        to_date: Optional end date (YYYY-MM-DD). Requires from_date to take effect.
         response_format: Output format ('json' or 'markdown')
 
     Returns:
@@ -415,7 +420,7 @@ def search_hackernews(
         return format_error("Query cannot be empty")
 
     try:
-        items = _search_hn(query, depth=depth)[:max_results]
+        items = _search_hn(query, depth=depth, from_date=from_date, to_date=to_date)[:max_results]
         items = _enrich_hn(items, depth=depth)
         if response_format == "markdown":
             return _format_hn_markdown(items, query)
@@ -727,7 +732,7 @@ def _health_check() -> dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "version": "0.6.2",
+        "version": "0.6.3",
         "uptime_seconds": time.time() - _SERVER_START_TIME,
         "components": {
             "search": {"status": "healthy"},

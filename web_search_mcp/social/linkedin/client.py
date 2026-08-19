@@ -51,12 +51,14 @@ _JINA_READER_URL = "https://r.jina.ai/"
 # Optional: Support local linkedin-scraper-mcp if user has it running
 _LOCAL_LINKEDIN_MCP_URL = os.environ.get("LINKEDIN_MCP_URL", "")
 
-# Regex patterns for parsing Jina Reader markdown output
-_NAME_RE = re.compile(r"(?:^Title:\s*|^#\s+)(.+?)(?:\s*\||\\n|$)")
-_HEADLINE_RE = re.compile(r"(?:Headline|Title):\s*(.+?)(?:\\n|$)", re.IGNORECASE)
-_LOCATION_RE = re.compile(r"(?:Location):\s*(.+?)(?:\\n|$)", re.IGNORECASE)
-_ABOUT_RE = re.compile(r"(?:About|Summary):\s*(.+?)(?:\\n\\n|\\Z)", re.IGNORECASE | re.DOTALL)
-_COMPANY_RE = re.compile(r"(?:Company|Industry):\s*(.+?)(?:\\n|$)", re.IGNORECASE)
+# Regex patterns for parsing Jina Reader markdown output.
+# NOTE: Jina returns real newlines, so these match \n (not the literal
+# two-character sequence \\n that a raw string would otherwise produce).
+_NAME_RE = re.compile(r"(?:^Title:\s*|^#\s+)(.+?)(?:\s*\||\n|$)")
+_HEADLINE_RE = re.compile(r"(?:Headline|Title):\s*(.+?)(?:\n|$)", re.IGNORECASE)
+_LOCATION_RE = re.compile(r"(?:Location):\s*(.+?)(?:\n|$)", re.IGNORECASE)
+_ABOUT_RE = re.compile(r"(?:About|Summary):\s*(.+?)(?:\n\n|\Z)", re.IGNORECASE | re.DOTALL)
+_COMPANY_RE = re.compile(r"(?:Company|Industry):\s*(.+?)(?:\n|$)", re.IGNORECASE)
 
 # Type emojis
 _TYPE_EMOJI: dict[str, str] = {
@@ -223,7 +225,7 @@ def _parse_linkedin_page(content: str, url: str) -> dict[str, Any]:
     if content_type in ("posts", "articles"):
         lines = [
             line.strip()
-            for line in content.split("\\n")
+            for line in content.split("\n")
             if line.strip() and not line.startswith("#") and not line.startswith("Title:")
         ]
         if lines:
