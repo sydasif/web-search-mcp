@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "web-search": {
+    "Web-Research": {
       "command": "uvx",
       "args": [
         "--from",
