@@ -715,7 +715,7 @@ def search_x(
         items = _search_x(query=query, from_date=from_date, depth=depth)[:max_results]
         if response_format == "markdown":
             return _format_x_markdown(items, query)
-        return cast("list[dict]", items)
+        return cast("list[dict[str, Any]]", items)
     except Exception as e:
         logger.exception("X search failed")
         return format_error(f"X search failed: {e}")
@@ -732,7 +732,7 @@ def _health_check() -> dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "version": "0.6.4",
+        "version": "0.6.5",
         "uptime_seconds": time.time() - _SERVER_START_TIME,
         "components": {
             "search": {"status": "healthy"},
