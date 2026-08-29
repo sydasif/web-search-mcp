@@ -12,6 +12,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from functools import cache
+from typing import Any
 from urllib.parse import urlencode
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
@@ -83,7 +84,7 @@ def search_hackernews(
     from_date: str | None = None,
     to_date: str | None = None,
     depth: Depth = "default",
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Search Hacker News via Algolia API.
 
     Args:
@@ -165,7 +166,7 @@ def search_hackernews(
 # ─────────────────────────────────────────────────────────────
 
 
-def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict:
+def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict[str, Any]:
     """Fetch top-level comments for a story from Algolia items endpoint."""
     url = f"{ALGOLIA_ITEM_URL}/{object_id}"
     try:
@@ -196,7 +197,9 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict:
     return {"comments": comments, "comment_insights": insights}
 
 
-def enrich_top_stories(items: list[dict], depth: Depth = "default") -> list[dict]:
+def enrich_top_stories(
+    items: list[dict[str, Any]], depth: Depth = "default"
+) -> list[dict[str, Any]]:
     """Fetch comments for top N stories by points.
 
     Args:
@@ -234,10 +237,10 @@ def enrich_top_stories(items: list[dict], depth: Depth = "default") -> list[dict
     return items
 
 
-def format_hackernews_markdown(items: list[dict], query: str) -> str:
+def format_hackernews_markdown(items: list[dict[str, Any]], query: str) -> str:
     """Format HN results as markdown."""
 
-    def _item_lines(item: dict, i: int) -> list[str]:
+    def _item_lines(item: dict[str, Any], i: int) -> list[str]:
         points = item.get("engagement", {}).get("points", 0)
         comments = item.get("engagement", {}).get("comments", 0)
         hn_url = item.get("hn_url", item.get("url", "#"))

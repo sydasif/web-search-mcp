@@ -169,7 +169,7 @@ def search_rss(
             except Exception as e:
                 logger.debug("feed future failed: %s", e)
 
-    seen: set = set()
+    seen: set[str] = set()
     unique: list[dict[str, Any]] = []
     for post in all_posts:
         if post["url"] not in seen:
@@ -185,7 +185,7 @@ def search_rss(
 # ── Shreddit Helpers ───────────────────────────────────────────────────────
 
 
-def extract_post_ref(url: str) -> tuple | None:
+def extract_post_ref(url: str) -> tuple[str, str] | None:
     """Return (subreddit, post_id) from a Reddit thread URL, or None."""
     m = re.search(r"/r/([^/]+)/comments/([A-Za-z0-9]+)", url or "")
     if not m:

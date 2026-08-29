@@ -206,12 +206,7 @@ def _handle_trafilatura_response(
             logger.warning("Exa fallback failed for %s: %s", url, exa_err)
             exa_content = None
         if exa_content:
-            actual_length = len(exa_content)
-            return PageResponse(
-                url=url,
-                length=actual_length,
-                content=exa_content[:max_length],
-            )
+            return _handle_exa_response(url, exa_content, max_length)
         return format_error("No readable text found.")
 
     return _process_trafilatura_result(url, extracted_data, include_metadata, max_length)

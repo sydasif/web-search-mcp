@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import Any
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
@@ -14,7 +15,7 @@ from . import engine
 logger = logging.getLogger(__name__)
 
 
-def _build_results(posts: list[dict]) -> list[SearchResult]:
+def _build_results(posts: list[dict[str, Any]]) -> list[SearchResult]:
     """Convert reddit_engine posts to SearchResult list."""
     results = []
     for post in posts:

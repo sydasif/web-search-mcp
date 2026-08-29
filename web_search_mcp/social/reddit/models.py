@@ -2,12 +2,7 @@
 
 Uses the SVC partial endpoint (``/svc/shreddit/community-more-posts/``) which
 serves fully server-rendered ``<shreddit-post>`` HTML elements with real score,
-comment count, and subreddit data. Unlike new Reddit's public HTML pages (which
-are JS-rendered shells ~8 KB), the SVC endpoint returns rich server HTML with
-real upvote scores.
-
-This is the source repo's approach (mvanhorn/last30days-skill) and provides more
-data (876 KB vs 365 KB) than old.reddit.com's <div class="thing"> structure.
+comment count, and subreddit data.
 """
 
 from __future__ import annotations
@@ -149,12 +144,9 @@ def fetch_listings(
 ) -> list[dict[str, Any]]:
     """Fetch scored listing cards from the SVC endpoint for multiple subreddits.
 
-    Uses the shreddit ``/svc/shreddit/community-more-posts/`` endpoint (the same
-    approach as mvanhorn/last30days-skill) which returns server-rendered
-    ``<shreddit-post>`` elements with real upvote scores and comment counts.
-
-    Unlike www.reddit.com's public HTML (JS shells ~8 KB), this endpoint
-    returns rich server HTML (~876 KB) with all engagement data.
+    Uses the shreddit ``/svc/shreddit/community-more-posts/`` endpoint which
+    returns server-rendered ``<shreddit-post>`` elements with real upvote scores
+    and comment counts.
     """
     sorts = LISTING_SORTS.get(depth, LISTING_SORTS["default"])
 
@@ -175,7 +167,7 @@ def fetch_listings(
                 logger.debug("SVC listing future failed for r/%s/%s: %s", sub, sort, e)
 
     # Dedupe by post_id in metadata
-    seen: set = set()
+    seen: set[str] = set()
     unique: list[dict[str, Any]] = []
     for post in all_posts:
         pid = post.get("metadata", {}).get("post_id", "")

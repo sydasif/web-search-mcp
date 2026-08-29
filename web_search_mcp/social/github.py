@@ -13,6 +13,7 @@ import os
 import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 import httpx
@@ -61,7 +62,7 @@ def _fetch_json(
     url: str,
     token: str | None = None,
     timeout: int = 15,
-) -> dict | list | None:
+) -> dict[str, Any] | list[Any] | None:
     """Fetch JSON from GitHub API. Returns None on failure."""
     headers = {
         "User-Agent": settings.user_agent,
@@ -105,7 +106,7 @@ def search_github(
     topic: str,
     depth: Depth = "default",
     token: str | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Search GitHub Issues and PRs via the GitHub Search API.
 
     Args:
@@ -150,12 +151,12 @@ def search_github(
 
 
 def _parse_items(
-    raw_items: list[dict],
+    raw_items: list[dict[str, Any]],
     topic: str,
     count: int,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Normalize raw GitHub API items into standard item dicts."""
-    items: list[dict] = []
+    items: list[dict[str, Any]] = []
     for i, item in enumerate(raw_items[:count]):
         html_url = item.get("html_url", "")
         repo = _parse_repo_from_url(html_url)
@@ -202,10 +203,10 @@ def _parse_items(
     return items
 
 
-def format_github_markdown(items: list[dict], query: str) -> str:
+def format_github_markdown(items: list[dict[str, Any]], query: str) -> str:
     """Format GitHub results as markdown."""
 
-    def _item_lines(item: dict, i: int) -> list[str]:
+    def _item_lines(item: dict[str, Any], i: int) -> list[str]:
         emoji = "\U0001f500" if item.get("is_pr") else "\U0001f41b"
         repo = item.get("repository", "")
         reactions = item.get("engagement", {}).get("reactions", 0)
@@ -236,7 +237,7 @@ def _fetch_item_comments(
     issue_url: str,
     token: str,
     max_comments: int = 5,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Fetch comments for a GitHub issue/PR, sorted by reaction count.
 
     The List issue comments endpoint only accepts ``sort=created``/``updated``
@@ -252,7 +253,7 @@ def _fetch_item_comments(
     if not data or not isinstance(data, list):
         return []
 
-    enriched = []
+    enriched: list[dict[str, Any]] = []
     for c in data:
         body = c.get("body") or ""
         excerpt = body[:300] + "..." if len(body) > 300 else body
@@ -272,10 +273,10 @@ def _fetch_item_comments(
 
 
 def enrich_with_comments(
-    items: list[dict],
+    items: list[dict[str, Any]],
     depth: Depth = "default",
     token: str | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Fetch top comments for top-K items by reactions.
 
     Args:
@@ -374,7 +375,7 @@ _REACTION_EMOJI: dict[str, str] = {
 }
 
 
-def _sum_reactions(reaction_groups: list[dict] | None) -> dict[str, int]:
+def _sum_reactions(reaction_groups: list[dict[str, Any]] | None) -> dict[str, int]:
     """Sum reaction counts from reactionGroups array."""
     counts: dict[str, int] = {}
     if not reaction_groups:
@@ -416,7 +417,7 @@ def _render_reactions_bar(counts: dict[str, int]) -> str:
     return " | ".join(parts)
 
 
-def render_issue_markdown(data: dict, kind: str = "issue") -> str:
+def render_issue_markdown(data: dict[str, Any], kind: str = "issue") -> str:
     """Render a gh issue view --json response as structured Markdown."""
 
     lines: list[str] = []
@@ -444,7 +445,7 @@ def render_issue_markdown(data: dict, kind: str = "issue") -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-def _render_header(data: dict, kind: str) -> list[str]:
+def _render_header(data: dict[str, Any], kind: str) -> list[str]:
     """Render the issue/PR header section."""
     title = data.get("title") or "Untitled"
     url = data.get("url") or ""
@@ -473,7 +474,7 @@ def _render_header(data: dict, kind: str) -> list[str]:
     ]
 
 
-def _render_comments(raw_comments: list | None) -> list[str]:
+def _render_comments(raw_comments: list[Any] | None) -> list[str]:
     """Render comments section."""
     lines: list[str] = []
 
@@ -486,7 +487,7 @@ def _render_comments(raw_comments: list | None) -> list[str]:
     # Filter out minimized, sort by total reactions desc
     active = [c for c in raw_comments if isinstance(c, dict) and not c.get("isMinimized")]
 
-    def _total_rx(c: dict) -> int:
+    def _total_rx(c: dict[str, Any]) -> int:
         return sum(_sum_reactions(c.get("reactionGroups")).values())
 
     active.sort(key=_total_rx, reverse=True)
@@ -499,7 +500,7 @@ def _render_comments(raw_comments: list | None) -> list[str]:
     return lines
 
 
-def _render_single_comment(comment: dict, idx: int) -> list[str]:
+def _render_single_comment(comment: dict[str, Any], idx: int) -> list[str]:
     """Render a single comment."""
     c_author = ""
     ca = comment.get("author")
@@ -647,7 +648,7 @@ def _run_gh_command(cmd: list[str], url: str) -> subprocess.CompletedProcess | s
     return result
 
 
-def _parse_gh_output(stdout: str) -> dict | str:
+def _parse_gh_output(stdout: str) -> dict[str, Any] | str:
     """Parse gh JSON output, return dict or error string."""
     try:
         data = json.loads(stdout)

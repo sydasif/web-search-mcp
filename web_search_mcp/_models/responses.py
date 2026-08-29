@@ -49,11 +49,12 @@ class PageResponse(BaseModel):
 def build_search_response(
     results: list[SearchResult],
     query: str,
+    search_type: SearchType = "text",
 ) -> SearchResponse:
     """Build a SearchResponse with standard defaults."""
     return SearchResponse(
         query=query,
-        search_type="text",
+        search_type=search_type,
         total_results=len(results),
         results=results,
         has_more=False,

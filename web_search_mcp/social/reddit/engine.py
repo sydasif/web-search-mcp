@@ -103,7 +103,7 @@ _NOISE_WORDS = frozenset(
 )
 
 
-# ── Query expansion (ported from last30days-skill reddit.py) ─────────────
+# ── Query expansion ───────────────────────────────────────────────────────
 
 
 def _extract_core_subject(topic: str) -> str:
@@ -163,7 +163,7 @@ def expand_queries(topic: str, depth: Depth) -> list[str]:
         queries.append(f"{core} issues OR problems OR bug OR broken")
 
     # Dedupe while preserving order
-    seen: set = set()
+    seen: set[str] = set()
     unique: list[str] = []
     for q in queries:
         key = q.lower().strip()
@@ -241,7 +241,7 @@ def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[di
             score_map[pid] = {"score": p["score"], "num_comments": p["num_comments"]}
 
     merged: list[dict[str, Any]] = []
-    seen: set = set()
+    seen: set[str] = set()
     for p in listing_posts:
         if p["url"] not in seen:
             seen.add(p["url"])
@@ -324,7 +324,7 @@ def _run_single_pipeline(
 
 def _merge_dedupe(post_batches: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Merge multiple post batches, deduping by URL (first occurrence wins)."""
-    seen: set = set()
+    seen: set[str] = set()
     merged: list[dict[str, Any]] = []
     dropped = 0
     for batch in post_batches:

@@ -7,7 +7,7 @@ keyword, author, or category. Free, no API key required.
 from __future__ import annotations
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 import arxiv  # type: ignore[import-untyped]
 
@@ -32,7 +32,7 @@ def _search_arxiv(
     query: str,
     max_results: int = 10,
     sort_by: SortCriterion = "relevance",
-) -> list[dict] | ErrorResponse:
+) -> list[dict[str, Any]] | ErrorResponse:
     """Search arXiv for academic papers.
 
     Args:
@@ -71,7 +71,7 @@ def _search_arxiv(
 
         results = list(client.results(search))
 
-        papers: list[dict] = []
+        papers: list[dict[str, Any]] = []
         for r in results:
             papers.append(
                 {
@@ -99,10 +99,10 @@ def _search_arxiv(
         )
 
 
-def _format_arxiv_markdown(papers: list[dict], query: str) -> str:
+def _format_arxiv_markdown(papers: list[dict[str, Any]], query: str) -> str:
     """Format arXiv results as markdown."""
 
-    def _item_lines(paper: dict, i: int) -> list[str]:
+    def _item_lines(paper: dict[str, Any], i: int) -> list[str]:
         authors = paper.get("authors", [])
         author_str = ", ".join(authors[:3])
         if len(authors) > 3:

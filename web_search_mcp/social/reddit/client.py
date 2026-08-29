@@ -1,6 +1,4 @@
-"""HTTP client for keyless Reddit search with professional resilience.
-Consolidates legacy .json search and HTTP utilities.
-"""
+"""HTTP client for keyless Reddit search."""
 
 from __future__ import annotations
 
@@ -153,7 +151,7 @@ def get_text(
         return None
 
 
-# ── Legacy .json search logic (formerly reddit_public.py) ──────────────────
+# ── Fallback .json search logic ────────────────────────────────────────────
 
 
 def _parse_json_posts(data: dict[str, Any], query: str = "") -> list[dict[str, Any]]:

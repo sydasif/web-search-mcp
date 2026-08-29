@@ -7,6 +7,7 @@ section-marked plain text extraction. No API key required.
 from __future__ import annotations
 
 import logging
+from typing import Any
 from urllib.parse import quote, urlencode
 
 from .._http import get_json_client
@@ -19,7 +20,7 @@ TIMEOUT = 15
 MAX_RESULTS_CAP = 20
 
 
-def _search_wikipedia(query: str, max_results: int = 5) -> list[dict]:
+def _search_wikipedia(query: str, max_results: int = 5) -> list[dict[str, Any]]:
     """Search Wikipedia for articles matching the query."""
     capped = min(max_results, MAX_RESULTS_CAP)
     params: dict[str, str] = {
@@ -45,7 +46,7 @@ def _search_wikipedia(query: str, max_results: int = 5) -> list[dict]:
     hits = data.get("query", {}).get("search", [])
     logger.info("Wikipedia found %d results", len(hits))
 
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     for hit in hits:
         title = hit.get("title", "")
         pageid = hit.get("pageid")

@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .._config import settings
-from .._models import ErrorResponse, SearchResponse, SearchResult
+from .._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from .._models.types import SearchType
 from .._utils import RateLimiter, format_error
 
@@ -116,7 +116,7 @@ def exa_search(
     _exa_rate_limiter.acquire()
 
     # Build kwargs from the unified params
-    kwargs: dict = {
+    kwargs: dict[str, Any] = {
         "query": query,
         "num_results": max_results,
         "contents": False,  # metadata only, no page text
@@ -157,13 +157,7 @@ def exa_search(
             )
         )
 
-    return SearchResponse(
-        query=query,
-        search_type=search_type,
-        total_results=len(results_list),
-        results=results_list,
-        has_more=False,
-    )
+    return build_search_response(results_list, query, search_type=search_type)
 
 
 # ── Fetch ──────────────────────────────────────────────────────────────────

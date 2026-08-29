@@ -1,9 +1,8 @@
 """LinkedIn search client — DuckDuckGo search + Jina Reader enrichment.
 
-Strategy mirrors agent-reach reference:
-1. Search DDG with site:linkedin.com query
-2. Enrich results via Jina Reader (r.jina.ai) for clean markdown content
-3. Parse LinkedIn page types: people, companies, posts, jobs, articles
+1. Search DDG with site:linkedin.com query.
+2. Enrich results via Jina Reader (r.jina.ai) for clean markdown content.
+3. Parse LinkedIn page types: people, companies, posts, jobs, articles.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ from ddgs import DDGS
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from ..._models.types import Depth
-from ..._utils import compute_relevance, token_overlap_relevance
+from ..._utils import compute_relevance, format_results_markdown, token_overlap_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -345,9 +344,4 @@ def format_linkedin_markdown(items: list[dict[str, Any]], query: str) -> str:
 
         return lines
 
-    lines = [f"# LinkedIn Search Results for '{query}'", f"Found {len(items)} results.", ""]
-    for i, item in enumerate(items, 1):
-        lines.extend(_item_lines(item, i))
-        lines.append("")
-
-    return "\n".join(lines)
+    return format_results_markdown(items, query, "LinkedIn Search", "results", _item_lines)
