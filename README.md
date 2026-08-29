@@ -69,7 +69,7 @@ Fastest way to try it out without cloning the repo. Add to your MCP client confi
 ```json
 {
   "mcpServers": {
-    "web-search": {
+    "Web-Research": {
       "command": "uvx",
       "args": [
         "--from",
@@ -94,7 +94,7 @@ Then configure your MCP client:
 ```json
 {
   "mcpServers": {
-    "web-search": {
+    "Web-Research": {
       "command": "web-search-mcp"
     }
   }
