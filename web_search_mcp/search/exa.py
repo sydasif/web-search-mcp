@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from exa_py import Exa
 
 from .._config import settings
 from .._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
