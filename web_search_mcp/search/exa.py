@@ -7,15 +7,12 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from .._config import settings
 from .._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from .._models.types import SearchType
 from .._utils import RateLimiter, format_error
-
-if TYPE_CHECKING:
-    from exa_py import Exa
 
 logger = logging.getLogger(__name__)
 
