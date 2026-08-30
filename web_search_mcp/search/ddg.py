@@ -204,7 +204,7 @@ def _handle_trafilatura_response(
             exa_content = exa_fetch([url], max_chars=max_length)
         except Exception as exa_err:
             logger.warning("Exa fallback failed for %s: %s", url, exa_err)
-            return format_error("No readable text found.")
+            exa_content = None
         if exa_content:
             return _handle_exa_response(url, exa_content, max_length)
         # Exa also failed — single exit point for this error
