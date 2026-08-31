@@ -7,7 +7,6 @@ import json
 import socket
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote_plus, urlencode
 
@@ -20,7 +19,7 @@ from tenacity import (
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models.types import Depth
-from ..._utils import token_overlap_relevance
+from ..._utils import iso_utc_to_date, token_overlap_relevance
 
 DEFAULT_TIMEOUT = 30
 USER_AGENT = "web-search-mcp/1.0 (Reddit Search)"
@@ -173,8 +172,7 @@ def _parse_json_posts(data: dict[str, Any], query: str = "") -> list[dict[str, A
             author = d.get("author", "[deleted]")
             selftext = d.get("selftext", "")[:500]
 
-            created_dt = datetime.fromtimestamp(created_utc, tz=UTC) if created_utc else None
-            date_str = created_dt.date().isoformat() if created_dt else None
+            date_str = iso_utc_to_date(created_utc)
 
             relevance = token_overlap_relevance(query, title)
 

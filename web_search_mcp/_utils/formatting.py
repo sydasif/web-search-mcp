@@ -99,3 +99,41 @@ def iso_to_epoch(value: str | None) -> float | None:
         return dt.timestamp()
     except (ValueError, TypeError):
         return None
+
+
+def date_to_unix(date_str: str) -> int:
+    """Convert YYYY-MM-DD to a Unix timestamp (start of day, UTC)."""
+    dt = datetime.fromisoformat(date_str).replace(tzinfo=UTC)
+    return int(dt.timestamp())
+
+
+def unix_to_date(ts: int) -> str:
+    """Convert a Unix timestamp to YYYY-MM-DD (UTC)."""
+    return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
+
+
+def iso_utc_to_date(created_utc: float) -> str | None:
+    """Convert a UTC epoch (e.g. Reddit created_utc) to YYYY-MM-DD, or None."""
+    if not created_utc:
+        return None
+    return datetime.fromtimestamp(created_utc, tz=UTC).date().isoformat()
+
+
+def identify_url_dupes(
+    items: list[dict[str, Any]], key: str = "url"
+) -> list[dict[str, Any]]:
+    """Return items with duplicates (by *key*) removed, first occurrence wins."""
+    seen: set[Any] = set()
+    unique: list[dict[str, Any]] = []
+    for item in items:
+        value = item.get(key, "")
+        if value and value not in seen:
+            seen.add(value)
+            unique.append(item)
+    return unique
+
+
+def assign_ids(items: list[dict[str, Any]], prefix: str) -> None:
+    """In-place assign sequential ids ``{prefix}{i+1}`` to each item."""
+    for i, item in enumerate(items):
+        item["id"] = f"{prefix}{i + 1}"

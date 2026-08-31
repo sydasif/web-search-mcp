@@ -10,7 +10,6 @@ import html as _html
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import UTC, datetime
 from functools import cache
 from typing import Any
 from urllib.parse import urlencode
@@ -19,7 +18,7 @@ from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._config import ENRICH_LIMITS as _ALL_ENRICH_LIMITS
 from .._http import get_json_client
 from .._models.types import Depth
-from .._utils import compute_relevance, format_results_markdown
+from .._utils import compute_relevance, date_to_unix, format_results_markdown, unix_to_date
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +33,7 @@ TIMEOUT = 30
 _HN_PREFIXES = re.compile(r"^(Tell HN|Show HN|Ask HN|Launch HN)\s*:\s*", re.IGNORECASE)
 
 
-def _date_to_unix(date_str: str) -> int:
-    """Convert YYYY-MM-DD to Unix timestamp (start of day UTC)."""
-    dt = datetime.fromisoformat(date_str).replace(tzinfo=UTC)
-    return int(dt.timestamp())
 
-
-def _unix_to_date(ts: int) -> str:
-    """Convert Unix timestamp to YYYY-MM-DD."""
-    return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
 
 
 @cache
@@ -107,8 +98,8 @@ def search_hackernews(
         "hitsPerPage": str(count),
     }
     if from_date and to_date:
-        from_ts = _date_to_unix(from_date)
-        to_ts = _date_to_unix(to_date) + 86400
+        from_ts = date_to_unix(from_date)
+        to_ts = date_to_unix(to_date) + 86400
         params["numericFilters"] = f"created_at_i>{from_ts},created_at_i<{to_ts},points>2"
 
     tokens = core.split()
@@ -135,7 +126,7 @@ def search_hackernews(
         points = hit.get("points") or 0
         num_comments = hit.get("num_comments") or 0
         created_at_i = hit.get("created_at_i")
-        date_str = _unix_to_date(created_at_i) if created_at_i else None
+        date_str = unix_to_date(created_at_i) if created_at_i else None
         article_url = hit.get("url") or ""
         hn_url = f"https://news.ycombinator.com/item?id={object_id}"
         title = hit.get("title", "")

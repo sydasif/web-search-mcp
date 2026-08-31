@@ -16,7 +16,7 @@ from ..._config import FEED_TIMEOUT
 from ..._models.types import Depth
 from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
 from . import client
-from ._utils import extract_attr
+from ._utils import assign_ids, dedupe_by, extract_attr
 
 logger = logging.getLogger(__name__)
 
@@ -168,17 +168,8 @@ def search_rss(
                 all_posts.extend(future.result(timeout=FEED_TIMEOUT + 5))
             except Exception as e:
                 logger.debug("feed future failed: %s", e)
-
-    seen: set[str] = set()
-    unique: list[dict[str, Any]] = []
-    for post in all_posts:
-        if post["url"] not in seen:
-            seen.add(post["url"])
-            unique.append(post)
-
-    for i, post in enumerate(unique):
-        post["id"] = f"R{i + 1}"
-
+    unique = dedupe_by(all_posts)
+    assign_ids(unique, "R")
     return unique[:limit]
 
 

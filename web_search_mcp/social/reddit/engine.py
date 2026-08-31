@@ -11,6 +11,7 @@ from typing import Any
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models.types import Depth
 from . import client, models, parsers
+from ._utils import assign_ids, dedupe_by
 
 logger = logging.getLogger(__name__)
 
@@ -321,24 +322,9 @@ def _run_single_pipeline(
         logger.debug("pipeline failed for query %r: %s", query, e)
         return []
 
-
 def _merge_dedupe(post_batches: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Merge multiple post batches, deduping by URL (first occurrence wins)."""
-    seen: set[str] = set()
-    merged: list[dict[str, Any]] = []
-    dropped = 0
-    for batch in post_batches:
-        for post in batch:
-            url = post.get("url", "")
-            if url:
-                if url not in seen:
-                    seen.add(url)
-                    merged.append(post)
-            else:
-                dropped += 1
-    if dropped:
-        logger.debug("merge_dedupe: dropped %d posts with missing or empty URL", dropped)
-    return merged
+    return dedupe_by([p for batch in post_batches for p in batch])
 
 
 def search_and_enrich(
@@ -389,8 +375,7 @@ def search_and_enrich(
 
     posts = _enrich(posts, depth)
 
-    for i, post in enumerate(posts):
-        post["id"] = f"R{i + 1}"
+    assign_ids(posts, "R")
 
     depth_limits = _ALL_DEPTH_LIMITS["reddit"]
     return posts[: depth_limits.get(depth, depth_limits["default"])]

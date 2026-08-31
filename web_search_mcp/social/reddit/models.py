@@ -15,8 +15,8 @@ from typing import Any
 from ..._models.types import Depth
 from ..._utils import iso_to_date, iso_to_epoch, token_overlap_relevance
 from . import client
-from ._utils import extract_attr
-from .parsers import LISTING_SORTS
+from ._utils import assign_ids, dedupe_by, extract_attr
+from .parsers import LISTING_SORTS, extract_post_ref
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,9 @@ _SHREDDIT_POST = re.compile(r"<shreddit-post(?=[\s>])[^>]*>")
 
 
 def _post_id(url: str) -> str:
-    """Extract post ID from Reddit URL."""
-    m = re.search(r"/comments/([A-Za-z0-9]+)", url or "")
-    return m.group(1) if m else ""
+    """Extract post ID from a Reddit URL, or empty string if absent."""
+    ref = extract_post_ref(url)
+    return ref[1] if ref else ""
 
 
 def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
@@ -166,16 +166,6 @@ def fetch_listings(
             except Exception as e:
                 logger.debug("SVC listing future failed for r/%s/%s: %s", sub, sort, e)
 
-    # Dedupe by post_id in metadata
-    seen: set[str] = set()
-    unique: list[dict[str, Any]] = []
-    for post in all_posts:
-        pid = post.get("metadata", {}).get("post_id", "")
-        if pid and pid not in seen:
-            seen.add(pid)
-            unique.append(post)
-
-    for i, post in enumerate(unique):
-        post["id"] = f"L{i + 1}"
-
+    unique = dedupe_by(all_posts, key="post_id")
+    assign_ids(unique, "L")
     return unique
