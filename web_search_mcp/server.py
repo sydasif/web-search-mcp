@@ -726,45 +726,6 @@ def search_x(
         return format_error(f"X search failed: {e}")
 
 
-_SERVER_START_TIME = time.time()
-
-
-def _health_check() -> dict[str, Any]:
-    """Check the health status of the server and its dependencies.
-
-    Returns:
-        dict: Health status including status, version, uptime, and components.
-    """
-    return {
-        "status": "healthy",
-        "version": "0.6.5",
-        "uptime_seconds": time.time() - _SERVER_START_TIME,
-        "components": {
-            "search": {"status": "healthy"},
-            "social": {"status": "healthy"},
-        },
-    }
-
-
-@mcp.tool(
-    name="health_check",
-    annotations={
-        "title": "Health check endpoint",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
-)
-def health_check() -> dict[str, Any]:
-    """Check the health status of the server and its dependencies.
-
-    Returns a summary of server status, version, uptime, and the health of
-    its search and social components.
-    """
-    return _health_check()
-
-
 def main() -> None:
     mcp.run(transport="stdio")
 
