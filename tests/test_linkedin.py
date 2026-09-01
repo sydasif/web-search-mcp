@@ -102,15 +102,6 @@ def test_parse_search_result_job_pattern() -> None:
     )
 
 
-def test_parse_linkedin_page_company_info_extraction() -> None:
-    content = """Title: Acme Corp
-
-Company: Technology and services
-
-Industry: Software Development
-"""
-    result = client._parse_linkedin_page(content, "https://www.linkedin.com/company/acme")
-    assert result.get("company_info") == "Technology and services"
 
 
 def test_parse_linkedin_page_posts_content_preview_branch() -> None:

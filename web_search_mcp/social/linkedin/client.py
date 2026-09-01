@@ -53,7 +53,6 @@ _NAME_RE = re.compile(r"(?:^Title:\s*|^#\s+)(.+?)(?:\s*\||\n|$)")
 _HEADLINE_RE = re.compile(r"(?:Headline|Title):\s*(.+?)(?:\n|$)", re.IGNORECASE)
 _LOCATION_RE = re.compile(r"(?:Location):\s*(.+?)(?:\n|$)", re.IGNORECASE)
 _ABOUT_RE = re.compile(r"(?:About|Summary):\s*(.+?)(?:\n\n|\Z)", re.IGNORECASE | re.DOTALL)
-_COMPANY_RE = re.compile(r"(?:Company|Industry):\s*(.+?)(?:\n|$)", re.IGNORECASE)
 
 # Type emojis
 _TYPE_EMOJI: dict[str, str] = {
@@ -213,9 +212,6 @@ def _parse_linkedin_page(content: str, url: str) -> dict[str, Any]:
     if about_match:
         result["about"] = about_match.group(1).strip()[:1000]
 
-    company_match = _COMPANY_RE.search(content)
-    if company_match:
-        result["company_info"] = company_match.group(1).strip()
 
     if content_type in ("posts", "articles"):
         lines = [

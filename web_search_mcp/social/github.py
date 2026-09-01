@@ -596,37 +596,3 @@ def _error_gh_not_authenticated() -> str:
     return "_Error: `gh` is not authenticated. Run `gh auth login`_"
 
 
-def _build_gh_command(owner: str, repo: str, number: int, kind: str) -> list[str]:
-    """Build the gh CLI command."""
-    return [
-        "gh",
-        "issue" if kind == "issue" else "pr",
-        "view",
-        str(number),
-        "--repo",
-        f"{owner}/{repo}",
-        "--json",
-    ]
-
-
-def _run_gh_command(cmd: list[str], url: str) -> subprocess.CompletedProcess | str:
-    """Run gh command, return CompletedProcess or error string."""
-    try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-    except subprocess.TimeoutExpired:
-        return "_Error: `gh` command timed out_"
-    except FileNotFoundError:
-        return _error_gh_not_installed()
-
-
-def _parse_gh_output(stdout: str) -> dict[str, Any] | str:
-    """Parse gh JSON output, return dict or error string."""
-    try:
-        return json.loads(stdout)
-    except json.JSONDecodeError as e:
-        return f"_Error: failed to parse gh output: {e}_"
-
-
-def _handle_gh_error(result: subprocess.CompletedProcess) -> str:
-    """Handle gh CLI error output."""
-    return f"_Error: `gh` returned exit code {result.returncode}_\n"
