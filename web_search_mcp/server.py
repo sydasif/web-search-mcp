@@ -39,31 +39,11 @@ from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
-LOG_FORMAT = "%(levelname)-8s %(name)s %(message)s"
-
-
-_configured = False
-
-
-def configure_logging(level: int = logging.DEBUG) -> None:
-    """Configure the web-search-mcp logger with a stderr handler.
-
-    Called automatically on first import. Call again with a different level
-    (e.g. ``logging.WARNING``) to quiet diagnostics.
-    """
-    global _configured
-    if _configured:
-        return
-    _configured = True
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    _logger = logging.getLogger("web-search-mcp")
-    _logger.addHandler(handler)
-    _logger.setLevel(level)
-
-
-configure_logging()
-logger = logging.getLogger(__name__)
+_handler = logging.StreamHandler()
+_handler.setFormatter(logging.Formatter("%(levelname)-8s %(name)s %(message)s"))
+_logger = logging.getLogger("web-search-mcp")
+_logger.addHandler(_handler)
+_logger.setLevel(logging.DEBUG)
 
 mcp = FastMCP("Web Search Tools")
 
@@ -162,14 +142,14 @@ def search_web(
             if isinstance(result, ErrorResponse) or (
                 isinstance(result, SearchResponse) and result.total_results == 0
             ):
-                logger.info("DDG returned no results for %r; falling back to Exa", query)
+                _logger.info("DDG returned no results for %r; falling back to Exa", query)
                 result = _run_exa()
 
         if response_format == "markdown":
             return format_search_results_markdown(result)
         return result
     except Exception as e:
-        logger.exception("Search failed")
+        _logger.exception("Search failed")
         return format_error(
             "Search failed",
             f"{e}. Try reducing max_results, switching search_type, "
@@ -430,7 +410,7 @@ def search_hackernews(
             return _format_hn_markdown(items, query)
         return items
     except Exception as e:
-        logger.exception("Hacker News search failed")
+        _logger.exception("Hacker News search failed")
         return format_error(f"Hacker News search failed: {e}")
 
 
@@ -540,7 +520,7 @@ def search_wikipedia(
     try:
         return _wikipedia_search_tool(query, max_results=max_results)
     except Exception as e:
-        logger.exception("Wikipedia search failed")
+        _logger.exception("Wikipedia search failed")
         return format_error(f"Wikipedia search failed: {e}")
 
 
@@ -609,7 +589,7 @@ def search_github(
             return _format_gh_markdown(items, query)
         return items
     except Exception as e:
-        logger.exception("GitHub search failed")
+        _logger.exception("GitHub search failed")
         return format_error(f"GitHub search failed: {e}")
 
 
@@ -656,7 +636,7 @@ def get_github_issue(url: str) -> str | ErrorResponse:
     try:
         return _get_github_issue(url)
     except Exception as e:
-        logger.exception("get_github_issue failed")
+        _logger.exception("get_github_issue failed")
         return format_error(f"Failed to fetch issue: {e}")
 
 
@@ -721,7 +701,7 @@ def search_x(
             return _format_x_markdown(items, query)
         return cast("list[dict[str, Any]]", items)
     except Exception as e:
-        logger.exception("X search failed")
+        _logger.exception("X search failed")
         return format_error(f"X search failed: {e}")
 
 

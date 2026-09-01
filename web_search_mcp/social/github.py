@@ -1,14 +1,11 @@
 """GitHub Issues/PRs search via the public GitHub Search API."""
 from __future__ import annotations
 
-from typing import Any
-
 import json
 import logging
 import os
 import re
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from urllib.parse import urlencode, urlparse
 

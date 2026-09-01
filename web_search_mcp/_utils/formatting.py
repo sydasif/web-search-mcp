@@ -118,22 +118,3 @@ def iso_utc_to_date(created_utc: float) -> str | None:
         return None
     return datetime.fromtimestamp(created_utc, tz=UTC).date().isoformat()
 
-
-def identify_url_dupes(
-    items: list[dict[str, Any]], key: str = "url"
-) -> list[dict[str, Any]]:
-    """Return items with duplicates (by *key*) removed, first occurrence wins."""
-    seen: set[Any] = set()
-    unique: list[dict[str, Any]] = []
-    for item in items:
-        value = item.get(key, "")
-        if value and value not in seen:
-            seen.add(value)
-            unique.append(item)
-    return unique
-
-
-def assign_ids(items: list[dict[str, Any]], prefix: str) -> None:
-    """In-place assign sequential ids ``{prefix}{i+1}`` to each item."""
-    for i, item in enumerate(items):
-        item["id"] = f"{prefix}{i + 1}"

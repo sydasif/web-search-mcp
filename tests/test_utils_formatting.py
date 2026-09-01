@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 from web_search_mcp._utils.formatting import (
-    assign_ids,
     date_to_unix,
     format_results_markdown,
-    identify_url_dupes,
     iso_to_date,
     iso_to_epoch,
     iso_utc_to_date,
@@ -117,54 +115,6 @@ class TestDateHelpers:
     def test_iso_utc_to_date_none_falsy(self) -> None:
         assert iso_utc_to_date(0) is None
         assert iso_utc_to_date(None) is None
-
-
-class TestIdentifyUrlDupes:
-    """Test deduplication by key, keeping first occurrence."""
-
-    def test_deduplication_keeps_first(self) -> None:
-        items = [
-            {"url": "https://a.com", "title": "A"},
-            {"url": "https://b.com", "title": "B"},
-            {"url": "https://a.com", "title": "A-dup"},
-        ]
-        result = identify_url_dupes(items)
-        assert len(result) == 2
-        assert result[0]["title"] == "A"
-        assert result[1]["title"] == "B"
-
-    def test_skips_empty_keys(self) -> None:
-        items = [
-            {"url": "", "title": "empty"},
-            {"url": "https://x.com", "title": "x"},
-            {"url": "", "title": "empty2"},
-        ]
-        result = identify_url_dupes(items)
-        assert len(result) == 1
-        assert result[0]["title"] == "x"
-
-    def test_custom_key(self) -> None:
-        items = [
-            {"slug": "a", "title": "A"},
-            {"slug": "b", "title": "B"},
-            {"slug": "a", "title": "A2"},
-        ]
-        result = identify_url_dupes(items, key="slug")
-        assert len(result) == 2
-
-
-class TestAssignIds:
-    """Test sequential ID assignment."""
-
-    def test_assigns_sequential_ids(self) -> None:
-        items = [{"title": "A"}, {"title": "B"}, {"title": "C"}]
-        assign_ids(items, "RES")
-        assert items[0]["id"] == "RES1"
-        assert items[1]["id"] == "RES2"
-        assert items[2]["id"] == "RES3"
-
-    def test_empty_list_noop(self) -> None:
-        assign_ids([], "X")
 
 
 class TestTokenOverlapRelevance:
