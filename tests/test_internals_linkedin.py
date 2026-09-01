@@ -1,113 +1,64 @@
-"""Offline unit tests for LinkedIn search client internals."""
-
+"""Extend existing LinkedIn intern tests: _build_results integration."""
 from __future__ import annotations
 
-from web_search_mcp.social.linkedin import client
+from web_search_mcp._models import SearchResult
+from web_search_mcp.social.linkedin import _build_results
 
 
-def test_build_ddg_query_site_scoping() -> None:
-    assert client._build_ddg_query("data engineer", "all") == "site:linkedin.com data engineer"
-    assert client._build_ddg_query("ceo", "people") == "site:linkedin.com/in/ ceo"
-    assert client._build_ddg_query("openai", "companies") == "site:linkedin.com/company/ openai"
-    assert client._build_ddg_query("ml", "posts") == "site:linkedin.com/posts/ ml"
-    assert client._build_ddg_query("dev", "unknown") == "site:linkedin.com dev"
-
-
-def test_categorize_url_detects_types() -> None:
-    assert client.categorize_url("https://www.linkedin.com/in/jane-doe") == "people"
-    assert client.categorize_url("https://www.linkedin.com/company/acme") == "companies"
-    assert client.categorize_url("https://www.linkedin.com/posts/x") == "posts"
-    assert client.categorize_url("https://www.linkedin.com/pulse/article") == "articles"
-    assert client.categorize_url("https://www.linkedin.com/jobs/123") == "jobs"
-    assert client.categorize_url("https://example.com/page") == "other"
-
-
-def test_parse_search_result_structures_item() -> None:
-    item = client._parse_search_result(
-        title="Jane Doe - Staff Engineer at Acme",
-        url="https://www.linkedin.com/in/jane-doe",
-        body="python kubernetes distributed systems",
-        query="python",
-        index=0,
-    )
-    assert item["name"] == "Jane Doe"
-    assert item["headline"] == "Staff Engineer at Acme"
-    assert item["content_type"] == "people"
-    assert item["url"] == "https://www.linkedin.com/in/jane-doe"
-    assert 0.0 <= item["relevance"] <= 1.0
-
-
-def test_parse_search_result_strips_linkedin_suffix() -> None:
-    item = client._parse_search_result(
-        title="Acme | LinkedIn",
-        url="https://www.linkedin.com/company/acme",
-        body="",
-        query="acme",
-        index=2,
-    )
-    assert item["name"] == "Acme"
-    assert item["id"] == "LI3"
-
-
-def test_parse_search_result_categorizes_by_path_pattern() -> None:
-    # categorize_url matches the "/in/" path pattern regardless of host
-    item = client._parse_search_result(
-        title="Spam - LinkedIn",
-        url="https://notlinkedin.com/in/x",
-        body="",
-        query="x",
-        index=0,
-    )
-    assert item["content_type"] == "people"
-
-
-def test_parse_linkedin_page_extracts_fields() -> None:
-    content = (
-        "# Jane Doe\n"
-        "Headline: Staff Engineer\n"
-        "Location: San Francisco, CA\n"
-        "About: Builder of reliability tooling.\n"
-        "\nMore text that is not a field.\n"
-    )
-    meta = client._parse_linkedin_page(content, "https://www.linkedin.com/in/jane-doe")
-    assert meta["name"] == "Jane Doe"
-    assert meta["headline"] == "Staff Engineer"
-    assert meta["location"] == "San Francisco, CA"
-    assert "reliability" in (meta.get("about") or "")
-    assert meta["content_type"] == "people"
-
-
-def test_parse_linkedin_page_empty_on_blank() -> None:
-    assert client._parse_linkedin_page("", "https://www.linkedin.com/in/x") == {}
-
-
-def test_parse_linkedin_page_preview_for_posts() -> None:
-    content = "Some longer post body text that describes the update in detail."
-    meta = client._parse_linkedin_page(content, "https://www.linkedin.com/posts/x")
-    assert meta["content_type"] == "posts"
-    assert "content_preview" in meta
-
-
-def test_filter_by_type_returns_all_when_all() -> None:
-    results = [
-        {"url": "https://www.linkedin.com/in/a"},
-        {"url": "https://www.linkedin.com/company/b"},
+def test_build_results_converts_items_to_search_result() -> None:
+    items = [
+        {
+            "name": "Jane Doe",
+            "url": "https://linkedin.com/in/jane",
+            "headline": "ML Engineer",
+            "snippet": "Building AI systems",
+            "content_type": "people",
+            "location": "SF",
+            "about": "10 years in ML",
+            "content_preview": "Post about transformers",
+        }
     ]
-    assert client.filter_by_type(results, "all") == results
+    results = _build_results(items)
+    assert len(results) == 1
+    r = results[0]
+    assert isinstance(r, SearchResult)
+    assert r.title == "[People] Jane Doe"
+    assert r.href == "https://linkedin.com/in/jane"
+    body = r.body or ""
+    assert "ML Engineer" in body
+    assert "Building AI systems" in body
+    assert "Location: SF" in body
+    assert "About: 10 years in ML" in body
+    assert "Preview: Post about transformers" in body
 
 
-def test_filter_by_type_scopes_to_pattern() -> None:
-    results = [
-        {"url": "https://www.linkedin.com/in/a"},
-        {"url": "https://www.linkedin.com/company/b"},
+def test_build_results_minimal_item() -> None:
+    items = [{"name": "Someone"}]
+    results = _build_results(items)
+    assert len(results) == 1
+    assert results[0].title == "[Other] Someone"
+    assert results[0].body is None  # no body parts available
+
+
+def test_build_results_empty_list() -> None:
+    assert _build_results([]) == []
+
+
+def test_build_results_truncates_about_and_preview_to_200() -> None:
+    long_text = "x" * 300
+    items = [
+        {
+            "name": "N",
+            "url": "u",
+            "about": long_text,
+            "content_preview": long_text,
+        }
     ]
-    filtered = client.filter_by_type(results, "companies")
-    assert len(filtered) == 1
-    assert filtered[0]["url"].endswith("/company/b")
-
-
-def test_depth_limits_have_three_tiers() -> None:
-    assert set(client.DEPTH_LIMITS.keys()) == {"quick", "default", "deep"}
-    assert (
-        client.DEPTH_LIMITS["deep"] > client.DEPTH_LIMITS["default"] > client.DEPTH_LIMITS["quick"]
-    )
+    results = _build_results(items)
+    assert "About: " in (results[0].body or "")
+    body = results[0].body or ""
+    assert "Preview: " in body
+    about_value = body.split("About: ")[1].split(" Preview: ")[0] if "Preview: " in body else body.split("About: ")[1]
+    preview_value = body.split("Preview: ")[1] if "Preview: " in body else ""
+    assert len(about_value) <= 200
+    assert len(preview_value) <= 200

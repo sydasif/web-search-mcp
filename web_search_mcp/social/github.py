@@ -1,11 +1,7 @@
-"""GitHub Issues/PRs search via the public GitHub Search API.
-
-Uses api.github.com/search/issues for issue/PR discovery and
-per-item comment enrichment. Auth via GITHUB_TOKEN env var or
-`gh auth token` subprocess fallback.
-"""
-
+"""GitHub Issues/PRs search via the public GitHub Search API."""
 from __future__ import annotations
+
+from typing import Any
 
 import json
 import logging
@@ -130,7 +126,6 @@ def search_github(
         return []
 
     logger.info("GitHub searching for '%s' (count=%d)", topic, count)
-
     q = f"{topic} in:title"
     params: dict[str, str] = {
         "q": q,
@@ -298,30 +293,12 @@ def enrich_with_comments(
 
     limit = ENRICH_LIMITS.get(depth, ENRICH_LIMITS["default"])
     by_reactions = sorted(
-        range(len(items)),
-        key=lambda i: items[i].get("engagement", {}).get("reactions", 0),
-        reverse=True,
+        items, key=lambda x: x.get("engagement", {}).get("reactions", 0), reverse=True
     )
-    to_enrich = by_reactions[:limit]
+    top_k = by_reactions[:limit]
 
-    logger.info("GitHub enriching top %d items with comments", len(to_enrich))
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {
-            executor.submit(_fetch_item_comments, items[idx]["url"], resolved_token): idx
-            for idx in to_enrich
-        }
-        for future in as_completed(futures):
-            idx = futures[future]
-            try:
-                comments = future.result(timeout=15)
-                items[idx]["top_comments"] = comments
-            except Exception as e:
-                logger.warning(
-                    "GitHub comment enrichment failed for %s: %s",
-                    items[idx].get("url"),
-                    e,
-                )
+    for item in top_k:
+        item["top_comments"] = _fetch_item_comments(item["url"], token=resolved_token)
 
     return items
 
@@ -391,7 +368,10 @@ def _sum_reactions(reaction_groups: list[dict[str, Any]] | None) -> dict[str, in
             except (TypeError, ValueError):
                 count = 0
             if count > 0:
-                counts[content] = count
+                if content in counts:
+                    counts[content] += count
+                else:
+                    counts[content] = count
     return counts
 
 
@@ -544,74 +524,78 @@ def _render_single_comment(comment: dict[str, Any], idx: int) -> list[str]:
 def _gh_available() -> bool:
     """Check if gh CLI is installed."""
     try:
-        result = subprocess.run(  # noqa: S607
+        subprocess.run(  # noqa: S607
             ["gh", "--version"],
             capture_output=True,
-            text=True,
-            timeout=5,
+            timeout=2,
         )
-        return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
 
 def _gh_authenticated() -> bool:
     """Check if gh CLI is authenticated."""
+    if not _gh_available():
+        return False
     try:
         result = subprocess.run(  # noqa: S607
             ["gh", "auth", "status"],
             capture_output=True,
-            text=True,
-            timeout=5,
+            timeout=2,
         )
         return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
 
 def get_github_issue(url: str) -> str:
     """Fetch a GitHub Issue or PR with all comments as structured Markdown."""
-
-    # Parse URL
-    try:
-        owner, repo, number, kind = parse_github_url(url)
-    except ValueError as e:
-        return f"_Error: {e}_\n"
-
-    # Validate gh CLI availability
+    parsed = parse_github_url(url)
     if not _gh_available():
         return _error_gh_not_installed()
     if not _gh_authenticated():
         return _error_gh_not_authenticated()
 
-    # Execute gh command
-    cmd = _build_gh_command(owner, repo, number, kind)
-    result = _run_gh_command(cmd, url)
-    if isinstance(result, str):
-        return result  # Error message
+    kind = "pr" if parsed[3] == "pr" else "issue"
+    owner, repo, number, _ = parsed
 
-    # Parse and render
-    data = _parse_gh_output(result.stdout)
-    if isinstance(data, str):
-        return data  # Error message
+    try:
+        result = subprocess.run(  # noqa: S607
+            [
+                "gh",
+                "issue" if kind == "issue" else "pr",
+                "view",
+                str(number),
+                "--repo",
+                f"{owner}/{repo}",
+                "--json",
+                "title,body,url,state,createdAt,author,reactionGroups",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if result.returncode != 0:
+            return f"_Error: `gh issue view` failed: {result.stderr}_"
+        data = json.loads(result.stdout)
+    except (json.JSONDecodeError, subprocess.TimeoutExpired) as e:
+        return f"_Error: failed to parse gh output: {e}_"
 
-    md = render_issue_markdown(data, kind=kind)
+    # Fetch comments with reactions using resolved token
+    token = _resolve_token(None) or ""
+    data["comments"] = _fetch_item_comments(url, token=token, max_comments=100)
+
+    md = render_issue_markdown(data, kind)
     return truncate_content(md, "GITHUB_ISSUE_MAX_CHARS")
 
 
 def _error_gh_not_installed() -> str:
-    return (
-        "_Error: `gh` CLI is not installed.\n\n"
-        "Install it from https://cli.github.com/ or use `github_search` "
-        "with `GITHUB_TOKEN` environment variable instead.\n"
-    )
+    return "_Error: `gh` is not installed. Install it from https://cli.github.com_"
 
 
 def _error_gh_not_authenticated() -> str:
-    return (
-        "_Error: `gh` CLI is not authenticated.\n\n"
-        "Run `gh auth login` or set `GITHUB_TOKEN` environment variable.\n"
-    )
+    return "_Error: `gh` is not authenticated. Run `gh auth login`_"
 
 
 def _build_gh_command(owner: str, repo: str, number: int, kind: str) -> list[str]:
@@ -623,46 +607,28 @@ def _build_gh_command(owner: str, repo: str, number: int, kind: str) -> list[str
         str(number),
         "--repo",
         f"{owner}/{repo}",
-        "--comments",
         "--json",
-        "title,body,url,state,createdAt,author,reactionGroups,comments",
     ]
 
 
 def _run_gh_command(cmd: list[str], url: str) -> subprocess.CompletedProcess | str:
     """Run gh command, return CompletedProcess or error string."""
     try:
-        result = subprocess.run(  # noqa: S603
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-    except FileNotFoundError:
-        return "_Error: `gh` CLI not found even though it was available earlier.\n"
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     except subprocess.TimeoutExpired:
-        return f"_Error: Request timed out for {url}_\n"
-
-    if result.returncode != 0:
-        return _handle_gh_error(result)
-    return result
+        return "_Error: `gh` command timed out_"
+    except FileNotFoundError:
+        return _error_gh_not_installed()
 
 
 def _parse_gh_output(stdout: str) -> dict[str, Any] | str:
     """Parse gh JSON output, return dict or error string."""
     try:
-        data = json.loads(stdout)
+        return json.loads(stdout)
     except json.JSONDecodeError as e:
-        return f"_Error: Failed to parse `gh` output: {e}_\n"
-
-    if not isinstance(data, dict):
-        return "_Error: `gh` returned unexpected data format._\n"
-    return data
+        return f"_Error: failed to parse gh output: {e}_"
 
 
 def _handle_gh_error(result: subprocess.CompletedProcess) -> str:
     """Handle gh CLI error output."""
-    stderr = (result.stderr or "").strip()
-    if stderr:
-        return f"_Error: `gh` failed: {stderr}_\n"
     return f"_Error: `gh` returned exit code {result.returncode}_\n"

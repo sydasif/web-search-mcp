@@ -60,3 +60,78 @@ def test_parse_linkedin_page_posts_preview_splits_on_real_newlines() -> None:
     assert "\n" in content  # sanity: source uses real newlines
     assert "launched a new model today." in preview
     assert "It is fast and small." in preview
+
+
+# ── Client function tests ───────────────────────────────────────────────────
+
+
+def test_build_ddg_query_known_content_types() -> None:
+    assert client._build_ddg_query("data engineer", "people") == "site:linkedin.com/in/ data engineer"
+    assert client._build_ddg_query("acme", "companies") == "site:linkedin.com/company/ acme"
+    assert client._build_ddg_query("python", "posts") == "site:linkedin.com/posts/ python"
+    assert client._build_ddg_query("ml", "articles") == "site:linkedin.com/pulse/ ml"
+    assert client._build_ddg_query("jobs", "jobs") == "site:linkedin.com/jobs/ jobs"
+
+
+def test_parse_search_result_company_pattern() -> None:
+    item = client._parse_search_result(
+        title="Acme Corp - LinkedIn",
+        url="https://www.linkedin.com/company/acme",
+        body="Acme Corp is a tech company.",
+        query="acme",
+        index=0,
+    )
+    assert item["name"] == "Acme Corp"
+    assert item["content_type"] == "companies"
+
+
+def test_parse_search_result_job_pattern() -> None:
+    item = client._parse_search_result(
+        title="Software Engineer at Google - LinkedIn",
+        url="https://www.linkedin.com/jobs/software-engineer-google",
+        body="Join Google as a software engineer.",
+        query="software engineer",
+        index=1,
+    )
+    assert item["content_type"] == "jobs"
+    assert "Software Engineer at Google" in item["name"] or item["name"] == "Software Engineer at Google"
+
+
+def test_parse_linkedin_page_company_info_extraction() -> None:
+    content = """Title: Acme Corp
+
+Company: Technology and services
+
+Industry: Software Development
+"""
+    result = client._parse_linkedin_page(content, "https://www.linkedin.com/company/acme")
+    assert result.get("company_info") == "Technology and services"
+
+
+def test_parse_linkedin_page_posts_content_preview_branch() -> None:
+    url = "https://www.linkedin.com/posts/janedoe_abc123"
+    content = (
+        "Title: Great post\n\n"
+        "We just launched our new product.\n"
+        "It is amazing and fast.\n"
+        "Read more on our blog."
+    )
+    result = client._parse_linkedin_page(content, url)
+    assert result.get("content_type") == "posts"
+    assert "content_preview" in result
+    preview = result["content_preview"]
+    assert "launched our new product" in preview
+    assert "It is amazing and fast." in preview
+
+
+def test_parse_linkedin_page_articles_content_preview_branch() -> None:
+    url = "https://www.linkedin.com/pulse/hello-world"
+    content = (
+        "Title: An Article\n\n"
+        "This is a great article about ML.\n"
+        "It covers everything you need to know."
+    )
+    result = client._parse_linkedin_page(content, url)
+    assert result.get("content_type") == "articles"
+    assert "content_preview" in result
+    assert "great article about ML" in result["content_preview"]

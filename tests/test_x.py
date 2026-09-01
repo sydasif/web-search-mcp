@@ -124,3 +124,83 @@ def test_run_xquik_search_handles_request_error(monkeypatch: Any) -> None:
     result = x._run_xquik_search("mcp", 10, 30)
 
     assert result == {"error": "network unavailable", "items": []}
+
+
+# ── Extract/parse internals ──────────────────────────────────────────────────
+
+
+def test_extract_xquik_items_unknown_envelope_returns_empty() -> None:
+    assert x._extract_xquik_items({"unknown": "envelope"}) == []
+
+
+def test_extract_xquik_items_non_dict_payload_returns_empty() -> None:
+    assert x._extract_xquik_items("not a dict") == []
+    assert x._extract_xquik_items(42) == []
+    assert x._extract_xquik_items(None) == []
+
+
+def test_extract_xquik_items_data_non_dict_returns_empty() -> None:
+    assert x._extract_xquik_items({"data": "scalar"}) == []
+
+
+def test_dict_or_empty_coerces_non_dict() -> None:
+    assert x._dict_or_empty("str") == {}
+    assert x._dict_or_empty(123) == {}
+    assert x._dict_or_empty(None) == {}
+    assert x._dict_or_empty({"a": 1}) == {"a": 1}
+
+
+def test_first_string_all_empty_returns_empty() -> None:
+    assert x._first_string("", "   ", None, "") == ""
+
+
+def test_first_string_picks_first_nonempty() -> None:
+    assert x._first_string("", "  ", "hello", "world") == "hello"
+
+
+def test_safe_int_non_convertible_returns_none() -> None:
+    assert x._safe_int("abc") is None
+    assert x._safe_int("12.5") is None
+    assert x._safe_int(None) is None
+    assert x._safe_int(7) == 7
+    assert x._safe_int("42") == 42
+
+
+def test_parse_item_non_dict_tweet_returns_none() -> None:
+    assert x._parse_item("not a dict", 0, "q") is None
+    assert x._parse_item(None, 0, "q") is None
+    assert x._parse_item([], 0, "q") is None
+
+
+def test_parse_item_missing_url_returns_none() -> None:
+    tweet: dict = {"id": "1", "text": "hello"}
+    assert x._parse_item(tweet, 0, "q") is None
+
+
+def test_parse_item_invalid_date_returns_none_date() -> None:
+    tweet: dict = {
+        "id": "1",
+        "text": "hello",
+        "url": "https://x.com/u/status/1",
+        "created_at": "not-a-date",
+    }
+    item = x._parse_item(tweet, 0, "q")
+    assert item is not None
+    assert item["date"] is None
+
+
+def test_parse_item_valid_shape() -> None:
+    tweet: dict = {
+        "id": "99",
+        "text": "hello world",
+        "url": "https://x.com/u/status/99",
+        "created_at": "Mon Jan 01 10:00:00 +0000 2024",
+        "likeCount": 5,
+        "author": {"username": "alice"},
+    }
+    item = x._parse_item(tweet, 0, "q")
+    assert item is not None
+    assert item["id"] == "X1"
+    assert item["author_handle"] == "alice"
+    assert item["date"] == "2024-01-01"
+    assert item["engagement"]["likes"] == 5
