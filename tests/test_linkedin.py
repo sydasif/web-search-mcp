@@ -66,7 +66,9 @@ def test_parse_linkedin_page_posts_preview_splits_on_real_newlines() -> None:
 
 
 def test_build_ddg_query_known_content_types() -> None:
-    assert client._build_ddg_query("data engineer", "people") == "site:linkedin.com/in/ data engineer"
+    assert (
+        client._build_ddg_query("data engineer", "people") == "site:linkedin.com/in/ data engineer"
+    )
     assert client._build_ddg_query("acme", "companies") == "site:linkedin.com/company/ acme"
     assert client._build_ddg_query("python", "posts") == "site:linkedin.com/posts/ python"
     assert client._build_ddg_query("ml", "articles") == "site:linkedin.com/pulse/ ml"
@@ -94,7 +96,10 @@ def test_parse_search_result_job_pattern() -> None:
         index=1,
     )
     assert item["content_type"] == "jobs"
-    assert "Software Engineer at Google" in item["name"] or item["name"] == "Software Engineer at Google"
+    assert (
+        "Software Engineer at Google" in item["name"]
+        or item["name"] == "Software Engineer at Google"
+    )
 
 
 def test_parse_linkedin_page_company_info_extraction() -> None:

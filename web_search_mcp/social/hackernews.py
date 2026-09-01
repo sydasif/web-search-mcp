@@ -33,9 +33,6 @@ TIMEOUT = 30
 _HN_PREFIXES = re.compile(r"^(Tell HN|Show HN|Ask HN|Launch HN)\s*:\s*", re.IGNORECASE)
 
 
-
-
-
 @cache
 def _make_word_boundary_re(word: str) -> re.Pattern[str]:
     return re.compile(rf"\b{re.escape(word)}\b")

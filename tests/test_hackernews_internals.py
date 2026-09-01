@@ -1,4 +1,5 @@
 """Offline unit tests for Hacker News helper functions."""
+
 from __future__ import annotations
 
 from web_search_mcp.social.hackernews import (

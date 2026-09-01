@@ -1,4 +1,5 @@
 """Offline unit tests for the sliding-window rate limiter."""
+
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -46,9 +47,11 @@ class TestRateLimiterAcquire:
         rl = RateLimiter(requests_per_minute=2, window_seconds=60.0)
         rl.acquire()
         rl.acquire()
+
         # Side effect to stop infinite loop on mocked time
         def stop_loop(*args: object) -> None:
             rl.requests.clear()
+
         mock_sleep.side_effect = stop_loop
         rl.acquire()
         mock_sleep.assert_called_once()
@@ -57,6 +60,7 @@ class TestRateLimiterAcquire:
         rl = RateLimiter(requests_per_minute=1, window_seconds=0.01)
         rl.acquire()
         import time
+
         time.sleep(0.02)
         with patch("web_search_mcp._utils.rate_limiter.time.sleep") as mock_sleep:
             rl.acquire()

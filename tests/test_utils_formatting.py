@@ -1,4 +1,5 @@
 """Offline unit tests for formatting utilities."""
+
 from __future__ import annotations
 
 from web_search_mcp._utils.formatting import (

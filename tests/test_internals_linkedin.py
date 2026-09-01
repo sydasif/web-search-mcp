@@ -1,4 +1,5 @@
 """Extend existing LinkedIn intern tests: _build_results integration."""
+
 from __future__ import annotations
 
 from web_search_mcp._models import SearchResult
@@ -58,7 +59,11 @@ def test_build_results_truncates_about_and_preview_to_200() -> None:
     assert "About: " in (results[0].body or "")
     body = results[0].body or ""
     assert "Preview: " in body
-    about_value = body.split("About: ")[1].split(" Preview: ")[0] if "Preview: " in body else body.split("About: ")[1]
+    about_value = (
+        body.split("About: ")[1].split(" Preview: ")[0]
+        if "Preview: " in body
+        else body.split("About: ")[1]
+    )
     preview_value = body.split("Preview: ")[1] if "Preview: " in body else ""
     assert len(about_value) <= 200
     assert len(preview_value) <= 200

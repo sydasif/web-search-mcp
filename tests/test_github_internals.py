@@ -1,4 +1,5 @@
 """Offline unit tests for GitHub issue/PR rendering internals."""
+
 from __future__ import annotations
 
 from web_search_mcp.social.github import (
@@ -29,16 +30,19 @@ class TestParseGithubUrl:
 
     def test_unsupported_host_raises(self) -> None:
         from pytest import raises
+
         with raises(ValueError, match="Unsupported GitHub host"):
             parse_github_url("https://gitlab.com/owner/repo/issues/1")
 
     def test_missing_host_raises(self) -> None:
         from pytest import raises
+
         with raises(ValueError, match="missing"):
             parse_github_url("https:///issues/1")
 
     def test_non_matching_path_raises(self) -> None:
         from pytest import raises
+
         with raises(ValueError, match="not a recognized"):
             parse_github_url("https://github.com/owner/repo/wiki")
 
@@ -122,7 +126,9 @@ class TestRenderHeader:
 
     def test_author_from_dict(self) -> None:
         data = {
-            "title": "T", "url": "u", "state": "open",
+            "title": "T",
+            "url": "u",
+            "state": "open",
             "author": {"login": "alice"},
         }
         lines = _render_header(data, "issue")
@@ -164,13 +170,21 @@ class TestRenderComments:
 
     def test_comments_sorted_by_reaction_count_desc(self) -> None:
         comments = [
-            {"body": "few", "reactionGroups": [{"content": "THUMBS_UP", "users": {"totalCount": 1}}],
-             "isMinimized": False, "author": {"login": "x"}},
-            {"body": "many", "reactionGroups": [
-                {"content": "THUMBS_UP", "users": {"totalCount": 3}},
-                {"content": "HEART", "users": {"totalCount": 2}},
-            ],
-             "isMinimized": False, "author": {"login": "y"}},
+            {
+                "body": "few",
+                "reactionGroups": [{"content": "THUMBS_UP", "users": {"totalCount": 1}}],
+                "isMinimized": False,
+                "author": {"login": "x"},
+            },
+            {
+                "body": "many",
+                "reactionGroups": [
+                    {"content": "THUMBS_UP", "users": {"totalCount": 3}},
+                    {"content": "HEART", "users": {"totalCount": 2}},
+                ],
+                "isMinimized": False,
+                "author": {"login": "y"},
+            },
         ]
         lines = _render_comments(comments)
         full = "\n".join(lines)
@@ -182,50 +196,65 @@ class TestRenderSingleComment:
     """Test individual comment rendering."""
 
     def test_member_badge(self) -> None:
-        lines = _render_single_comment({
-            "author": {"login": "alice"},
-            "authorAssociation": "MEMBER",
-            "createdAt": "2024-01-01T00:00:00Z",
-            "url": "https://gh.io/c/1",
-            "body": "Hello",
-        }, 1)
+        lines = _render_single_comment(
+            {
+                "author": {"login": "alice"},
+                "authorAssociation": "MEMBER",
+                "createdAt": "2024-01-01T00:00:00Z",
+                "url": "https://gh.io/c/1",
+                "body": "Hello",
+            },
+            1,
+        )
         assert any(line.startswith("## Comment 1") for line in lines)
         assert any("🏷" in line for line in lines)  # MEMBER badge
 
     def test_collaborator_badge(self) -> None:
-        lines = _render_single_comment({
-            "author": {"login": "bob"},
-            "authorAssociation": "COLLABORATOR",
-            "body": "Test",
-        }, 2)
+        lines = _render_single_comment(
+            {
+                "author": {"login": "bob"},
+                "authorAssociation": "COLLABORATOR",
+                "body": "Test",
+            },
+            2,
+        )
         text = "\n".join(lines)
         assert "## Comment 2" in text
         assert "🤝" in text  # COLLABORATOR badge
 
     def test_owner_badge(self) -> None:
-        lines = _render_single_comment({
-            "author": {"login": "owner"},
-            "authorAssociation": "OWNER",
-            "body": "Test",
-        }, 3)
+        lines = _render_single_comment(
+            {
+                "author": {"login": "owner"},
+                "authorAssociation": "OWNER",
+                "body": "Test",
+            },
+            3,
+        )
         text = "\n".join(lines)
         assert "## Comment 3" in text
         assert "👑" in text  # OWNER badge
 
     def test_no_body_shows_placeholder(self) -> None:
-        lines = _render_single_comment({
-            "author": {"login": "x"},
-            "body": "",
-        }, 1)
+        lines = _render_single_comment(
+            {
+                "author": {"login": "x"},
+                "body": "",
+            },
+            1,
+        )
         text = "\n".join(lines)
         assert "_No text._" in text
 
     def test_empty_reaction_bar_excluded_from_meta(self) -> None:
-        lines = _render_single_comment({
-            "author": {"login": "x"},
-            "body": "hello",
-            "reactionGroups": [],
-        }, 1)
+        lines = _render_single_comment(
+            {
+                "author": {"login": "x"},
+                "body": "hello",
+                "reactionGroups": [],
+            },
+            1,
+        )
         text = "\n".join(lines)
         assert "Reactions:" not in text
 

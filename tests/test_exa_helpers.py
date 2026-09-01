@@ -1,4 +1,5 @@
 """Offline unit tests for Exa search helpers."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -19,12 +20,15 @@ class TestTimeRangeToDates:
         assert _time_range_to_dates("") == (None, None)
         assert _time_range_to_dates("X") == (None, None)
 
-    @pytest.mark.parametrize("code,expected_days", [
-        ("d", 1),
-        ("w", 7),
-        ("m", 30),
-        ("y", 365),
-    ])
+    @pytest.mark.parametrize(
+        "code,expected_days",
+        [
+            ("d", 1),
+            ("w", 7),
+            ("m", 30),
+            ("y", 365),
+        ],
+    )
     def test_valid_ranges_return_iso_dates(self, code: str, expected_days: int) -> None:
         start, end = _time_range_to_dates(code)
         assert start is not None

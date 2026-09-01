@@ -1,4 +1,5 @@
 """GitHub Issues/PRs search via the public GitHub Search API."""
+
 from __future__ import annotations
 
 import json

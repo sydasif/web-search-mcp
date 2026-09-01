@@ -192,8 +192,14 @@ export EXA_API_KEY="your_exa_key"
 ### Web Research
 
 ```python
-# Broad search
+# Broad search (auto: DDG first, falls back to Exa on error or zero results)
 search_web(query="Latest NVIDIA H200 benchmarks")
+
+# Force DDG explicitly
+search_web(query="uv package manager", provider="ddg")
+
+# Force Exa explicitly
+search_web(query="uv package manager", provider="exa")
 
 # Targeted documentation search
 search_web(query="useEffect cleanup", domain="react.dev")
@@ -295,6 +301,12 @@ When adding a new tool:
 1. **Implement logic** in the appropriate module (`search/`, `social/`, or `tools/`)
 2. **Define models** in `_models/` (request/response types)
 3. **Register in `server.py`** using `@mcp.tool` decorator with a clear docstring (serves as the tool's description for the LLM)
+
+---
+
+## 📐 Design Decisions
+
+- [**search-backend-split**](docs/design-decisions/search-backend-split.md) — Why `search_web` unifies DuckDuckGo and Exa behind a single `provider` parameter instead of exposing two separate tools.
 
 ---
 

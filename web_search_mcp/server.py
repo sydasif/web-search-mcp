@@ -3,6 +3,7 @@
 Provides comprehensive web search functionality through the Model Context Protocol.
 Supports DuckDuckGo, Exa, arXiv, Wikipedia, GitHub, Reddit, LinkedIn, X/Twitter,
 and Hacker News search via FastMCP framework."""
+
 from __future__ import annotations
 
 import logging

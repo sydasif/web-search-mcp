@@ -322,6 +322,7 @@ def _run_single_pipeline(
         logger.debug("pipeline failed for query %r: %s", query, e)
         return []
 
+
 def _merge_dedupe(post_batches: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Merge multiple post batches, deduping by URL (first occurrence wins)."""
     return dedupe_by([p for batch in post_batches for p in batch])

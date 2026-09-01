@@ -117,4 +117,3 @@ def iso_utc_to_date(created_utc: float) -> str | None:
     if not created_utc:
         return None
     return datetime.fromtimestamp(created_utc, tz=UTC).date().isoformat()
-
