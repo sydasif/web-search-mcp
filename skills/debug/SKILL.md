@@ -41,6 +41,7 @@ Use the best available tool for the evidence needed. Do not block debugging just
 | `search_hackernews` | Hacker News search via Algolia with comment enrichment | Tech community discussions about bugs, regressions, architectural root causes, known workarounds              |
 | `search_reddit`     | Reddit search via RSS + shreddit enrichment            | Real-world troubleshooting threads, niche library issues, configuration gotchas                               |
 | `search_x`          | X/Twitter search via Xquik API or Bird CLI             | Real-time announcements, outage reports, release alerts, short workaround threads                             |
+| `search_linkedin`   | Search LinkedIn via DuckDuckGo + Jina Reader           | Professional discovery: find people, companies, jobs, posts, and articles on LinkedIn                         |
 
 #### Not Used
 

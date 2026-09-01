@@ -43,8 +43,8 @@ This skill uses the `web-search` MCP server. Search, dedup, clustering, and stat
 
 ### Tier 1 — Broad Discovery & Reference
 
-| Tool                  | What It Does                                                   | When To Use                                         |
-| --------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
+| Tool                                                    | What It Does                                                   | When To Use                                         |
+| ------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
 | `mcp__plugin_web-search_web-search_search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)       | First pass: news, background, official sources      |
 | `mcp__plugin_web-search_web-search_search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to a domain | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
 | `mcp__plugin_web-search_web-search_fetch_page`          | Clean HTML-to-markdown extraction from URLs                    | Read articles, changelogs, specs, papers            |
@@ -53,12 +53,13 @@ This skill uses the `web-search` MCP server. Search, dedup, clustering, and stat
 
 ### Tier 2 — Community & Social Signal
 
-| Tool                   | What It Does                                       | When To Use                                                 |
-| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------- |
-| `mcp__plugin_web-search_web-search_search_reddit`        | Reddit via RSS + shreddit enrichment               | Real-user discussions, product feedback, niche opinions     |
-| `mcp__plugin_web-search_web-search_search_hackernews`    | HN via Algolia + comment enrichment                | Tech debate, architectural analysis, deep critical takes    |
-| `mcp__plugin_web-search_web-search_get_github_issue`     | Full GitHub Issue/PR thread with comments          | Complete conversation context sorted by reactions           |
-| `mcp__plugin_web-search_web-search_search_x`             | X/Twitter via Xquik API or Bird CLI                | Real-time announcements, expert takes, breaking news        |
+| Tool                                                  | What It Does                              | When To Use                                                           |
+| ----------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------- |
+| `mcp__plugin_web-search_web-search_search_reddit`     | Reddit via RSS + shreddit enrichment      | Real-user discussions, product feedback, niche opinions               |
+| `mcp__plugin_web-search_web-search_search_hackernews` | HN via Algolia + comment enrichment       | Tech debate, architectural analysis, deep critical takes              |
+| `mcp__plugin_web-search_web-search_get_github_issue`  | Full GitHub Issue/PR thread with comments | Complete conversation context sorted by reactions                     |
+| `mcp__plugin_web-search_web-search_search_x`          | X/Twitter via Xquik API or Bird CLI       | Real-time announcements, expert takes, breaking news                  |
+| `mcp__plugin_web-search_web-search_search_linkedin`   | LinkedIn via DuckDuckGo + Jina Reader     | Professional discovery: find people, companies, jobs, posts, articles |
 
 ---
 
