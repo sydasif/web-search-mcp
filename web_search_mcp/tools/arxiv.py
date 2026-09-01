@@ -131,7 +131,7 @@ def arxiv_search_tool(
     max_results: int = 10,
     sort_by: SortCriterion = "relevance",
 ) -> str | ErrorResponse:
-    """Search arXiv for academic papers — free, no API key needed..
+    """Search arXiv for academic papers — free, no API key needed."""
     result = _search_arxiv(query=query, max_results=max_results, sort_by=sort_by)
     if isinstance(result, ErrorResponse):
         return result

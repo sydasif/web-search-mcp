@@ -98,7 +98,7 @@ def _fetch_page_extract(title: str) -> str | None:
 
 
 def wikipedia_search_tool(query: str, max_results: int = 5) -> str:
-    """Search Wikipedia and return the top article + related results..
+    """Search Wikipedia and return the top article + related results."""
     query = query.strip()
     if not query:
         return "_Error: Empty query._\n"
