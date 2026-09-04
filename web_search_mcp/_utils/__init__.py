@@ -11,6 +11,7 @@ from .formatting import (
     iso_utc_to_date,
     truncate_content,
     unix_to_date,
+    validate_query,
 )
 from .rate_limiter import RateLimiter
 from .scoring import compute_relevance, token_overlap_relevance
@@ -27,4 +28,5 @@ __all__ = [
     "token_overlap_relevance",
     "truncate_content",
     "unix_to_date",
+    "validate_query",
 ]

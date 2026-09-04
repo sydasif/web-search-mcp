@@ -59,8 +59,7 @@ def _time_range_to_dates(time_range: str | None) -> tuple[str | None, str | None
         "m": timedelta(days=30),
         "y": timedelta(days=365),
     }
-    delta = mapping.get(time_range)
-    if delta is None:
+    if (delta := mapping.get(time_range)) is None:
         return None, None
 
     start = (now - delta).strftime("%Y-%m-%dT%H:%M:%S.000Z")

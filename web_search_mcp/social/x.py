@@ -58,7 +58,7 @@ def is_available() -> bool:
 
 def is_authenticated() -> bool:
     """Check if X credentials are available in environment."""
-    return bool(os.environ.get("AUTH_TOKEN")) and bool(os.environ.get("CT0"))
+    return bool(os.environ.get("AUTH_TOKEN") and os.environ.get("CT0"))
 
 
 def _xquik_api_key() -> str:

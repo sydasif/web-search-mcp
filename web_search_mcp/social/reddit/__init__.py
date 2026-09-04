@@ -9,7 +9,7 @@ from typing import Any
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from ..._models.types import Depth, ResponseFormat
-from ..._utils import format_error
+from ..._utils import format_error, format_results_markdown, validate_query
 from . import engine
 
 logger = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ def reddit_search_tool(
     response_format: ResponseFormat = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
     """Search Reddit via keyless RSS + shreddit enrichment — free, no API key needed."""
-    if not query or not query.strip():
-        return format_error("Query cannot be empty")
+    if error := validate_query(query):
+        return error
 
     # Map time_range to from_date / to_date
     today = datetime.now().date()
@@ -81,29 +81,31 @@ def reddit_search_tool(
         response = build_search_response(_build_results(posts), query)
 
         if response_format == "markdown":
-            # Format as markdown
-            lines = [f"# Reddit Search Results for '{query}'", f"Found {len(posts)} posts.", ""]
-            for i, post in enumerate(posts, 1):
-                lines.append(
-                    f"{i}. **[{post.get('title', 'Reddit post')}]({post.get('url', '#')})**",
-                )
-                sub = post.get("subreddit", "unknown")
-                score = post.get("score", 0)
-                comments = post.get("num_comments", 0)
-                lines.append(
-                    f"   r/{sub} • {score} upvotes • {comments} comments",
-                )
-                if post.get("selftext"):
-                    lines.append(f"   {post['selftext'][:200]}...")
-                if post.get("top_comments"):
-                    lines.append(
-                        f"   Top comment: {post['top_comments'][0].get('excerpt', '')[:150]}...",
-                    )
-                lines.append("")
-            return "\n".join(lines)
+            return _format_reddit_markdown(posts, query)
 
         return response
 
     except Exception as e:
         logger.exception("Reddit search failed for query %r", query)
         return format_error("Reddit search failed", str(e))
+
+
+def _format_reddit_markdown(posts: list[dict[str, Any]], query: str) -> str:
+    """Format Reddit results as markdown."""
+
+    def _item_lines(post: dict[str, Any], i: int) -> list[str]:
+        lines = [
+            f"{i}. **[{post.get('title', 'Reddit post')}]({post.get('url', '#')})**",
+            f"   r/{post.get('subreddit', 'unknown')} "
+            f"• {post.get('score', 0)} upvotes "
+            f"• {post.get('num_comments', 0)} comments",
+        ]
+        if post.get("selftext"):
+            lines.append(f"   {post['selftext'][:200]}...")
+        if post.get("top_comments"):
+            lines.append(
+                f"   Top comment: {post['top_comments'][0].get('excerpt', '')[:150]}...",
+            )
+        return lines
+
+    return format_results_markdown(posts, query, "Reddit", "posts", _item_lines)

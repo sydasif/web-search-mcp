@@ -12,8 +12,8 @@ from typing import Any, Literal, cast
 from fastmcp import FastMCP
 
 from ._models import ErrorResponse, FetchOutputFormat, PageResponse, SearchRequest, SearchResponse
-from ._models.types import Depth, ResponseFormat
-from ._utils import format_error
+from ._models.types import Depth, ResponseFormat, SortCriterion
+from ._utils import format_error, validate_query
 from .search.ddg import ddg_search, format_search_results_markdown
 from .search.ddg import fetch_page as _fetch_page
 from .search.exa import exa_search as _exa_search
@@ -36,7 +36,6 @@ from .social.linkedin import linkedin_search_tool as _linkedin_search_tool
 from .social.reddit import reddit_search_tool as _reddit_search_tool
 from .social.x import format_x_markdown as _format_x_markdown
 from .social.x import search_x as _search_x
-from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
@@ -401,8 +400,8 @@ def search_hackernews(
         - Empty results: Try a more general query or broaden the search terms.
 
     """
-    if not query or not query.strip():
-        return format_error("Query cannot be empty")
+    if error := validate_query(query):
+        return error
 
     try:
         items = _search_hn(query, depth=depth, from_date=from_date, to_date=to_date)[:max_results]
@@ -580,8 +579,8 @@ def search_github(
         - Empty results: Try a broader query or different keywords.
 
     """
-    if not query or not query.strip():
-        return format_error("Query cannot be empty")
+    if error := validate_query(query):
+        return error
 
     try:
         items = _search_gh(query, depth=depth, token=token)[:max_results]

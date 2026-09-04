@@ -212,7 +212,6 @@ def _parse_linkedin_page(content: str, url: str) -> dict[str, Any]:
     if about_match:
         result["about"] = about_match.group(1).strip()[:1000]
 
-
     if content_type in ("posts", "articles"):
         lines = [
             line.strip()

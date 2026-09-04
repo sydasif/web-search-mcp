@@ -11,7 +11,7 @@ from typing import Any
 
 from ..._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from ..._models.types import Depth, ResponseFormat
-from ..._utils import format_error
+from ..._utils import format_error, validate_query
 from . import client
 
 logger = logging.getLogger(__name__)
@@ -88,8 +88,8 @@ def linkedin_search_tool(
         - Network/Jina errors: Logged, partial results returned
 
     """
-    if not query or not query.strip():
-        return format_error("Query cannot be empty")
+    if error := validate_query(query):
+        return error
 
     try:
         items = client.search_linkedin(

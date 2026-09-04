@@ -7,17 +7,14 @@ keyword, author, or category. Free, no API key required.
 from __future__ import annotations
 
 import logging
-from typing import Any, Literal
+from typing import Any
 
 import arxiv  # type: ignore[import-untyped]
 
-from .._models import ErrorResponse
+from .._models import ErrorResponse, SortCriterion
 from .._utils import format_results_markdown
 
 logger = logging.getLogger(__name__)
-
-# Categories for sorting results
-SortCriterion = Literal["relevance", "submitted_date", "updated_date"]
 
 _CRITERION_MAP: dict[str, arxiv.SortCriterion] = {
     "relevance": arxiv.SortCriterion.Relevance,

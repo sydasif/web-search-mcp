@@ -298,7 +298,7 @@ def _enrich(posts: list[dict[str, Any]], depth: Depth) -> list[dict[str, Any]]:
                 idx = futures[future]
                 result_map[idx] = to_enrich[idx]
                 future.cancel()
-        enriched = [result_map[i] for i in range(len(to_enrich))]
+        enriched = [result_map[i] for i, _ in enumerate(to_enrich)]
     except Exception:
         enriched = to_enrich
 
