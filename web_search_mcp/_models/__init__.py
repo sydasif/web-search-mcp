@@ -8,7 +8,7 @@ from .responses import (
     SearchResult,
     build_search_response,
 )
-from .types import FetchOutputFormat
+from .types import Depth, FetchOutputFormat, ResponseFormat, SearchType, SortCriterion
 
 __all__ = [
     "ErrorResponse",
@@ -16,6 +16,11 @@ __all__ = [
     "PageResponse",
     "SearchRequest",
     "SearchResponse",
-    "build_search_response",
     "SearchResult",
+    "Depth",
+    "FetchOutputFormat",
+    "ResponseFormat",
+    "SearchType",
+    "SortCriterion",
+    "build_search_response",
 ]

@@ -350,7 +350,7 @@ _REACTION_EMOJI: dict[str, str] = {
 }
 
 
-def _sum_reactions(reaction_groups: list[dict[str, Any]] | None) -> dict[str, int]:
+def _sum_reactions(reaction_groups: list[Any] | None) -> dict[str, int]:
     """Sum reaction counts from reactionGroups array."""
     counts: dict[str, int] = {}
     if not reaction_groups:
@@ -567,8 +567,7 @@ def get_github_issue(url: str) -> str:
                 str(number),
                 "--repo",
                 f"{owner}/{repo}",
-                "--json",
-                "title,body,url,state,createdAt,author,reactionGroups",
+                "--json=title,body,url,state,createdAt,author,reactionGroups",
             ],
             capture_output=True,
             text=True,
@@ -594,5 +593,3 @@ def _error_gh_not_installed() -> str:
 
 def _error_gh_not_authenticated() -> str:
     return "_Error: `gh` is not authenticated. Run `gh auth login`_"
-
-

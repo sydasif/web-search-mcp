@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -43,7 +43,7 @@ class TestRateLimiterAcquire:
             rl.acquire()
 
     @patch("web_search_mcp._utils.rate_limiter.time.sleep")
-    def test_acquire_blocks_when_limit_reached(self, mock_sleep: object) -> None:
+    def test_acquire_blocks_when_limit_reached(self, mock_sleep: Mock) -> None:
         rl = RateLimiter(requests_per_minute=2, window_seconds=60.0)
         rl.acquire()
         rl.acquire()

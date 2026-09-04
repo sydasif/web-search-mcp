@@ -27,6 +27,13 @@ def format_error(message: str, details: str | None = None) -> ErrorResponse:
     )
 
 
+def validate_query(query: str) -> ErrorResponse | None:
+    """Validate query is non-empty. Returns ErrorResponse if invalid, None otherwise."""
+    if not query or not query.strip():
+        return format_error("Query cannot be empty")
+    return None
+
+
 def truncate_content(text: str, env_var: str, default: int = 30000) -> str:
     """Truncate text to a length specified by an environment variable.
 
@@ -112,7 +119,7 @@ def unix_to_date(ts: int) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
 
 
-def iso_utc_to_date(created_utc: float) -> str | None:
+def iso_utc_to_date(created_utc: float | None) -> str | None:
     """Convert a UTC epoch (e.g. Reddit created_utc) to YYYY-MM-DD, or None."""
     if not created_utc:
         return None

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from _pytest.monkeypatch import MonkeyPatch
+
 from web_search_mcp._utils.formatting import (
     date_to_unix,
     format_results_markdown,
@@ -17,26 +19,26 @@ from web_search_mcp._utils.scoring import token_overlap_relevance
 class TestTruncateContent:
     """Test truncate_content with environment variable control."""
 
-    def test_truncates_when_longer_than_limit(self, monkeypatch: object) -> None:
+    def test_truncates_when_longer_than_limit(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setenv("TEST_TRUNCATE_LIMIT", "5")
         text = "hello world"
         result = truncate_content(text, "TEST_TRUNCATE_LIMIT")
         assert result == "hello\n\n_Truncated._\n"
 
-    def test_fallback_to_default_when_unparsable(self, monkeypatch: object) -> None:
+    def test_fallback_to_default_when_unparsable(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setenv("TEST_TRUNCATE_BAD", "not-a-number")
         text = "x" * 30001
         result = truncate_content(text, "TEST_TRUNCATE_BAD")
         assert "_Truncated._" in result
         assert len(result) <= 30000 + len("\n\n_Truncated._\n")
 
-    def test_no_change_when_under_limit(self, monkeypatch: object) -> None:
+    def test_no_change_when_under_limit(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setenv("TEST_TRUNCATE_SPACIOUS", "10000")
         text = "short"
         result = truncate_content(text, "TEST_TRUNCATE_SPACIOUS")
         assert result == "short"
 
-    def test_no_change_when_max_chars_zero(self, monkeypatch: object) -> None:
+    def test_no_change_when_max_chars_zero(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setenv("TEST_TRUNCATE_ZERO", "0")
         text = "anything"
         result = truncate_content(text, "TEST_TRUNCATE_ZERO")
@@ -47,7 +49,7 @@ class TestTruncateContent:
         result = truncate_content(text, "NONEXISTENT_VAR_12345", default=3)
         assert result == "hel\n\n_Truncated._\n"
 
-    def test_no_truncation_exact_match(self, monkeypatch: object) -> None:
+    def test_no_truncation_exact_match(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setenv("TEST_TRUNCATE_EXACT", "5")
         text = "hello"
         result = truncate_content(text, "TEST_TRUNCATE_EXACT")
