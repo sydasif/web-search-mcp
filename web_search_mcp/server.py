@@ -38,6 +38,9 @@ from .social.x import format_x_markdown as _format_x_markdown
 from .social.x import search_x as _search_x
 from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
+from .tools.digg import digg_search_tool as _digg_search_tool
+from .tools.polymarket import polymarket_search_tool as _polymarket_search_tool
+from .tools.techmeme import techmeme_search_tool as _techmeme_search_tool
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
 _handler = logging.StreamHandler()
@@ -704,6 +707,190 @@ def search_x(
     except Exception as e:
         _logger.exception("X search failed")
         return format_error(f"X search failed: {e}")
+
+
+# ─────────────────────────────────────────────────────────────
+# Digg AI 1000 tools — free, curated AI discourse clusters
+# Best for: AI trends, curated high-signal X posts
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="search_digg",
+    annotations={
+        "title": "Search Digg AI 1000 clusters",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def search_digg(
+    query: str,
+    max_results: int = 20,
+    time_range: str | None = None,
+    depth: Depth = "default",
+    response_format: ResponseFormat = "markdown",
+) -> str | SearchResponse | ErrorResponse:
+    """Search Digg AI 1000 — curated AI discourse clusters from ~1000 high-signal X accounts.
+
+    Free, no API key needed. Requires digg-pp-cli on PATH (install via:
+    npx -y @mvanhorn/printing-press-library install digg --cli-only)
+
+    Returns:
+        str: Markdown-formatted clusters (when response_format="markdown")
+        SearchResponse: Structured results (when response_format="json")
+        ErrorResponse: Error response if applicable
+
+    Args:
+        query: Search query string
+        max_results: Max results (capped by depth: quick=8, default=20, deep=40)
+        time_range: Time filter ('d', 'w', 'm', 'y') — mapped to date range
+        depth: Search depth — controls result limits and post enrichment
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        str: Markdown-formatted clusters with TLDRs and top X posts
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "AI agents" — find curated clusters about AI agents
+        - "Claude Code" — find clusters mentioning Claude Code
+        - "transformer architecture" depth="deep"
+
+    Error Handling:
+        - digg-pp-cli not on PATH: Returns error with install instructions
+        - Empty results: Try a broader query
+
+    """
+    return _digg_search_tool(
+        query=query,
+        max_results=max_results,
+        time_range=time_range,
+        depth=depth,
+        response_format=response_format,
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# Techmeme tools — free, editorial tech news
+# Best for: tech industry news, major announcements, curated headlines
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="search_techmeme",
+    annotations={
+        "title": "Search Techmeme tech news",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def search_techmeme(
+    query: str,
+    max_results: int = 16,
+    time_range: str | None = None,
+    depth: Depth = "default",
+    response_format: ResponseFormat = "markdown",
+) -> str | SearchResponse | ErrorResponse:
+    """Search Techmeme — editorial tech news from live archive (2005+).
+
+    Free, no API key needed. Requires techmeme-pp-cli on PATH (install via:
+    npx -y @mvanhorn/printing-press-library install techmeme --cli-only)
+
+    Returns:
+        str: Markdown-formatted headlines (when response_format="markdown")
+        SearchResponse: Structured results (when response_format="json")
+        ErrorResponse: Error response if applicable
+
+    Args:
+        query: Search query string
+        max_results: Max results (capped by depth: quick=8, default=16, deep=30)
+        time_range: Time filter ('d', 'w', 'm', 'y') — mapped to date range
+        depth: Search depth — controls result limits
+        response_format: Output format ('json' or 'markdown')
+
+    Returns:
+        str: Markdown-formatted tech headlines with sources
+        ErrorResponse: Error response if applicable
+
+    Examples:
+        - "Apple WWDC" — find Techmeme coverage of Apple events
+        - "AI funding" — find funding news in AI space
+        - "open source security" depth="deep"
+
+    Error Handling:
+        - techmeme-pp-cli not on PATH: Returns error with install instructions
+        - Empty results: Try a broader query
+
+    """
+    return _techmeme_search_tool(
+        query=query,
+        max_results=max_results,
+        time_range=time_range,
+        depth=depth,
+        response_format=response_format,
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# Polymarket tools — free, prediction markets
+# Best for: forecasting, sentiment, real-money odds on events
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="search_polymarket",
+    annotations={
+        "title": "Search Polymarket prediction markets",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def search_polymarket(
+    query: str,
+    max_results: int = 15,
+    time_range: str | None = None,
+    depth: Depth = "default",
+    response_format: ResponseFormat = "markdown",
+) -> str | SearchResponse | ErrorResponse:
+    """Search Polymarket — prediction markets with real-money odds.
+
+    Free, no API key needed. Uses public Gamma API (15K req/10s).
+
+    Returns:
+        str: Markdown-formatted markets (when response_format="markdown")
+        SearchResponse: Structured results (when response_format="json")
+        ErrorResponse: Error response if applicable
+
+    Args:
+        query: Search query string
+        max_results: Max results (capped by depth: quick=5, default=15, deep=25)
+        time_range: Time filter ('d', 'w', 'm', 'y') — mapped to date range
+        depth: Search depth — controls query expansion and result limits
+        response_format: Output format ('json' or 'markdown')
+
+    Examples:
+        - "US election 2024" — find election markets with odds
+        - "Fed rate cut" — find Fed policy markets
+        - "AI breakthrough" depth="deep" — expanded query search
+
+    Error Handling:
+        - Empty results: Try a broader query
+        - Network error: Returns error with details
+
+    """
+    return _polymarket_search_tool(
+        query=query,
+        max_results=max_results,
+        time_range=time_range,
+        depth=depth,
+        response_format=response_format,
+    )
 
 
 def main() -> None:

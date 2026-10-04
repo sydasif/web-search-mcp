@@ -24,14 +24,17 @@ The server provides a diverse suite of tools categorized by their primary use ca
 
 ### 💬 Social & Community Intelligence
 
-| Tool                | Description                                                                                                              | Best For                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| `search_reddit`     | Keyless search for community discussions, opinions, and real-world user experiences via RSS + Shreddit enrichment.       | Product reviews, community sentiment, troubleshooting  |
-| `search_hackernews` | Technical discourse, startup news, and developer opinions via the Algolia HN API.                                        | Tech news, startup discussions, developer opinions     |
-| `search_github`     | Search for Issues and PRs to track bugs, feature requests, and community sentiment. Requires `gh` CLI or `GITHUB_TOKEN`. | Bug tracking, feature requests, community sentiment    |
-| `get_github_issue`  | Fetch full conversation threads from GitHub Issues/PRs, sorted by reactions with author/date/reactions metadata.         | Deep-diving into specific issues/PRs                   |
-| `search_x`          | Real-time discourse and breaking news via Xquik API or vendored Bird CLI (requires session cookies or API key).          | Breaking news, community reactions, engagement signals |
-| `search_linkedin`   | Search people, companies, jobs, posts via DuckDuckGo + Jina Reader (r.jina.ai). No API key needed.                       | Professional profiles, company research, job search    |
+| Tool                | Description                                                                                                                                      | Best For                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `search_reddit`     | Keyless search for community discussions, opinions, and real-world user experiences via RSS + Shreddit enrichment + Arctic-Shift score backfill. | Product reviews, community sentiment, troubleshooting  |
+| `search_hackernews` | Technical discourse, startup news, and developer opinions via the Algolia HN API.                                                                | Tech news, startup discussions, developer opinions     |
+| `search_github`     | Search for Issues and PRs to track bugs, feature requests, and community sentiment. Requires `gh` CLI or `GITHUB_TOKEN`.                         | Bug tracking, feature requests, community sentiment    |
+| `get_github_issue`  | Fetch full conversation threads from GitHub Issues/PRs, sorted by reactions with author/date/reactions metadata.                                 | Deep-diving into specific issues/PRs                   |
+| `search_x`          | Real-time discourse and breaking news via Xquik API or vendored Bird CLI (requires session cookies or API key).                                  | Breaking news, community reactions, engagement signals |
+| `search_linkedin`   | Search people, companies, jobs, posts via DuckDuckGo + Jina Reader (r.jina.ai). No API key needed.                                               | Professional profiles, company research, job search    |
+| `search_digg`       | Curated AI discourse clusters from ~1000 high-signal X accounts via digg-pp-cli. TLDRs + top X posts per cluster.                                | AI trends, curated high-signal discourse               |
+| `search_techmeme`   | Editorial tech news from live archive (2005+) via techmeme-pp-cli. Headlines with source attribution.                                            | Tech industry news, major announcements                |
+| `search_polymarket` | Prediction markets with real-money odds via public Gamma API. Multi-query expansion + acronym credit.                                            | Forecasting, sentiment, real-money odds on events      |
 
 ### 🎓 Academic & Reference
 
@@ -51,10 +54,13 @@ The server provides a diverse suite of tools categorized by their primary use ca
 
 ### Optional External Tools
 
-| Tool         | Required For                                                             | Installation                                                               |
-| ------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| **`gh` CLI** | Authenticated GitHub search & issue retrieval (higher rate limits)       | `brew install gh` / [github.com/cli/cli](https://github.com/cli/cli)       |
-| **Node.js**  | Vendored Bird CLI for X/Twitter search (not needed with `XQUIK_API_KEY`) | 22+ recommended; `brew install node@22` / [nodejs.org](https://nodejs.org) |
+| Tool                  | Required For                                                             | Installation                                                               |
+| --------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **`gh` CLI**          | Authenticated GitHub search & issue retrieval (higher rate limits)       | `brew install gh` / [github.com/cli/cli](https://github.com/cli/cli)       |
+| **Node.js**           | Vendored Bird CLI for X/Twitter search (not needed with `XQUIK_API_KEY`) | 22+ recommended; `brew install node@22` / [nodejs.org](https://nodejs.org) |
+| **`digg-pp-cli`**     | Digg AI 1000 curated clusters (free, no auth)                            | `npx -y @mvanhorn/printing-press-library install digg --cli-only`          |
+| **`techmeme-pp-cli`** | Techmeme tech news archive search (free, no auth)                        | `npx -y @mvanhorn/printing-press-library install techmeme --cli-only`      |
+| **`pdftotext`**       | Local corpus PDF extraction (optional, for future `--corpus` flag)       | `brew install poppler` / `apt install poppler-utils`                       |
 
 ---
 
@@ -128,13 +134,19 @@ Most tools work **out of the box with zero configuration**. The following enviro
 
 ### Environment Variables Reference
 
-| Variable        | Required For                                            | How to Get It                                               |
-| :-------------- | :------------------------------------------------------ | :---------------------------------------------------------- |
-| `EXA_API_KEY`   | Exa AI semantic search (optional fallback)              | Sign up at [exa.ai](https://exa.ai)                         |
-| `GITHUB_TOKEN`  | Higher GitHub API rate limits (optional)                | Generate a [GitHub PAT](https://github.com/settings/tokens) |
-| `AUTH_TOKEN`    | X/Twitter search via Bird CLI (required)                | Session cookie from x.com (see below)                       |
-| `CT0`           | X/Twitter search via Bird CLI (required)                | Session cookie from x.com (see below)                       |
-| `XQUIK_API_KEY` | X/Twitter search via Xquik API (alternative to cookies) | Sign up at [xquik.ai](https://xquik.ai)                     |
+| Variable                      | Required For                                                          | How to Get It                                               |
+| :---------------------------- | :-------------------------------------------------------------------- | :---------------------------------------------------------- |
+| `EXA_API_KEY`                 | Exa AI semantic search (optional fallback)                            | Sign up at [exa.ai](https://exa.ai)                         |
+| `GITHUB_TOKEN`                | Higher GitHub API rate limits (optional)                              | Generate a [GitHub PAT](https://github.com/settings/tokens) |
+| `AUTH_TOKEN`                  | X/Twitter search via Bird CLI (required)                              | Session cookie from x.com (see below)                       |
+| `CT0`                         | X/Twitter search via Bird CLI (required)                              | Session cookie from x.com (see below)                       |
+| `XQUIK_API_KEY`               | X/Twitter search via Xquik API (alternative to cookies)               | Sign up at [xquik.ai](https://xquik.ai)                     |
+| `SEARCH_MCP_SEARXNG_URL`      | Optional SearXNG instance for keyless web search fallback             | Your SearXNG instance URL                                   |
+| `SEARCH_MCP_CORPUS_DIRS`      | Local document directories for private search (colon-separated paths) | Paths to your `.md`/`.txt`/`.pdf` directories               |
+| `SEARCH_MCP_DEFAULT_SOURCES`  | Fixed default source set (comma-separated, e.g. `reddit,x,github`)    | Source names from available sources                         |
+| `SEARCH_MCP_INCLUDE_SOURCES`  | Opt-in additive sources (e.g. `perplexity,linkedin`)                  | Source names                                                |
+| `SEARCH_MCP_EXCLUDE_SOURCES`  | Hard-exclude sources (e.g. `x,reddit`)                                | Source names                                                |
+| `SEARCH_MCP_VERIFY_FRESHNESS` | Enable default fact-checking for Polymarket odds, GitHub stars, etc.  | `true` or `false`                                           |
 
 ### Setting Up GitHub Authentication
 
@@ -251,6 +263,23 @@ search_arxiv(query="transformer attention", sort_by="submitted_date")
 search_wikipedia(query="Quantum computing")
 ```
 
+### AI Trends & Forecasting
+
+```python
+# Digg AI 1000 - curated clusters from high-signal X accounts
+search_digg(query="AI agents")
+search_digg(query="Claude Code", depth="deep")
+
+# Techmeme - editorial tech news
+search_techmeme(query="Apple WWDC")
+search_techmeme(query="AI funding", depth="deep")
+
+# Polymarket - prediction markets with real-money odds
+search_polymarket(query="US election 2024")
+search_polymarket(query="Fed rate cut")
+search_polymarket(query="AI breakthrough", depth="deep")  # expanded query search
+```
+
 ---
 
 ## 🏗️ Project Structure
@@ -274,7 +303,10 @@ web_search_mcp/
 │   └── x.py               # X/Twitter search via Xquik API or vendored Bird CLI
 ├── tools/                 # Specialized reference utilities
 │   ├── arxiv.py           # arXiv paper search (Lucene field prefixes)
-│   └── wikipedia.py       # Wikipedia MediaWiki API
+│   ├── wikipedia.py       # Wikipedia MediaWiki API
+│   ├── digg.py            # Digg AI 1000 clusters via digg-pp-cli
+│   ├── techmeme.py        # Techmeme tech news via techmeme-pp-cli
+│   └── polymarket.py      # Polymarket prediction markets via Gamma API
 ├── _config/               # Settings, env vars, rate limits, depth tiers
 │   ├── settings.py        # pydantic-settings (EXA_API_KEY, SEARCH_MCP_ prefix)
 │   └── limits.py          # Per-platform quick/default/deep limits, timeouts

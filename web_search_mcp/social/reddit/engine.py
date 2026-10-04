@@ -10,7 +10,7 @@ from typing import Any
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models.types import Depth
-from . import client, models, parsers
+from . import arctic_shift, client, models, parsers
 from ._utils import assign_ids, dedupe_by
 
 logger = logging.getLogger(__name__)
@@ -255,6 +255,28 @@ def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[di
             _apply_scores(p, score_map[pid])
         seen.add(p["url"])
         merged.append(p)
+
+    # Arctic-shift backfill: fill scores for RSS-only posts that never appeared in a listing
+    need = [
+        pid
+        for p in merged
+        if not (p.get("engagement", {}).get("score"))
+        for pid in [models._post_id(p["url"])]
+        if pid
+    ]
+    if need:
+        scores = arctic_shift.fetch_scores(need)
+        filled = 0
+        for p in merged:
+            if p.get("engagement", {}).get("score"):
+                continue
+            pid = models._post_id(p["url"])
+            if pid in scores:
+                _apply_scores(p, scores[pid])
+                filled += 1
+        if filled:
+            logger.debug(f"arctic-shift backfilled {filled} post scores")
+
     return merged
 
 

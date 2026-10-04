@@ -22,5 +22,13 @@ class Settings(BaseSettings):
     rate_limit_fetch: int = 20
     exa_api_key: str = Field(default="", alias="EXA_API_KEY")
 
+    # Optional sources configuration
+    searxng_url: str = Field(default="", alias="SEARCH_MCP_SEARXNG_URL")
+    corpus_dirs: str = Field(default="", alias="SEARCH_MCP_CORPUS_DIRS")
+    default_sources: str = Field(default="", alias="SEARCH_MCP_DEFAULT_SOURCES")
+    include_sources: str = Field(default="", alias="SEARCH_MCP_INCLUDE_SOURCES")
+    exclude_sources: str = Field(default="", alias="SEARCH_MCP_EXCLUDE_SOURCES")
+    verify_freshness: bool = Field(default=False, alias="SEARCH_MCP_VERIFY_FRESHNESS")
+
 
 settings = Settings()

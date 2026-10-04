@@ -6,6 +6,10 @@ DEPTH_LIMITS: dict[str, dict[str, int]] = {
     "reddit": {"quick": 10, "default": 25, "deep": 50},
     "x": {"quick": 12, "default": 30, "deep": 60},
     "linkedin": {"quick": 10, "default": 25, "deep": 50},
+    "arxiv": {"quick": 5, "default": 10, "deep": 20},
+    "digg": {"quick": 8, "default": 20, "deep": 40},
+    "techmeme": {"quick": 8, "default": 16, "deep": 30},
+    "polymarket": {"quick": 1, "default": 3, "deep": 4},
 }
 
 ENRICH_LIMITS: dict[str, dict[str, int]] = {
@@ -13,6 +17,7 @@ ENRICH_LIMITS: dict[str, dict[str, int]] = {
     "hackernews": {"quick": 3, "default": 5, "deep": 10},
     "reddit": {"quick": 3, "default": 5, "deep": 8},
     "linkedin": {"quick": 3, "default": 5, "deep": 8},
+    "digg": {"quick": 0, "default": 3, "deep": 5},
 }
 
 FEED_TIMEOUT = 15
