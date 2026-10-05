@@ -1,8 +1,9 @@
-"""Web Search MCP Server.
+"""OmniSearch Server.
 
 Provides comprehensive web search functionality through the Model Context Protocol.
 Supports DuckDuckGo, Exa, arXiv, Wikipedia, GitHub, Reddit, LinkedIn, X/Twitter,
-and Hacker News search via FastMCP framework."""
+Hacker News, Digg, Techmeme, and Polymarket search via the FastMCP framework.
+"""
 
 from __future__ import annotations
 
@@ -49,7 +50,7 @@ _logger = logging.getLogger("web-search-mcp")
 _logger.addHandler(_handler)
 _logger.setLevel(logging.DEBUG)
 
-mcp = FastMCP("Web Search Tools")
+mcp = FastMCP("OmniSearch")
 
 # ─────────────────────────────────────────────────────────────
 # DuckDuckGo tools — fast, free, raw data

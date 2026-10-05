@@ -1,6 +1,6 @@
-"""Test module for web-search-mcp.
+"""Test module for OmniSearch.
 
-Contains integration and internals tests for the web search MCP server."""
+Contains integration and internals tests for the OmniSearch server."""
 
 from __future__ import annotations
 

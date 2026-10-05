@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "Web-Research": {
+    "OmniSearch": {
       "command": "uvx",
       "args": [
         "--from",
         "git+https://github.com/sydasif/web-search-mcp.git",
-        "web-search-mcp"
+        "omnisearch"
       ],
       "env": {
         "EXA_API_KEY": "${EXA_API_KEY}",

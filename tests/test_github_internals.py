@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from web_search_mcp.social.github import (
     _render_comments,
     _render_header,
@@ -66,7 +68,7 @@ class TestSumReactions:
         assert result == {"THUMBS_UP": 4, "HEART": 2}
 
     def test_skips_non_dict_entries(self) -> None:
-        groups = [{"content": "LAUGH", "users": {"totalCount": 5}}, "not a dict"]
+        groups: list[Any] = [{"content": "LAUGH", "users": {"totalCount": 5}}, "not a dict"]
         result = _sum_reactions(groups)
         assert result == {"LAUGH": 5}
 

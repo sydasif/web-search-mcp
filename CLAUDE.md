@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Development
 
 - **Install dependencies**: `uv sync`
-- **Run server**: `uv run web-search-mcp` (or `uv run python -m web_search_mcp.server`)
+- **Run server**: `uv run omnisearch` (or `uv run python -m web_search_mcp.server`)
 - **Lint**: `uv run ruff check .`
 - **Format**: `uv run ruff format .`
 - **Type check**: `uv run mypy .`

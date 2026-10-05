@@ -19,11 +19,11 @@ Good research answers not just _what_ happened, but _who_ is saying it, _how_ co
 
 ## Important: What the MCP Handles vs What You Do
 
-This skill uses the `web-search` MCP server. Search, dedup, clustering, and stats computation, here **you do all that synthesis work manually** as you read tool results.
+This skill uses the `OmniSearch` MCP server. Search, dedup, clustering, and stats computation, here **you do all that synthesis work manually** as you read tool results.
 
 **The MCP gives you:**
 
-- Search and retrieval across 10 tools covering web, social, academic, and developer platforms
+- Search and retrieval across 13 tools covering web, social, academic, developer, and niche free-source platforms
 - Clean extracted content from URLs
 - Rich engagement data (upvotes, comments, views) from community platforms
 
@@ -39,27 +39,31 @@ This skill uses the `web-search` MCP server. Search, dedup, clustering, and stat
 
 ---
 
-## Tool Reference — 10 Web Search Tools
+## OmniSearch — Tool Reference (13 tools)
 
 ### Tier 1 — Broad Discovery & Reference
 
 | Tool                                                    | What It Does                                                   | When To Use                                         |
 | ------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
-| `mcp__plugin_web-search_web-search_search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)       | First pass: news, background, official sources      |
-| `mcp__plugin_web-search_web-search_search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to a domain | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
-| `mcp__plugin_web-search_web-search_fetch_page`          | Clean HTML-to-markdown extraction from URLs                    | Read articles, changelogs, specs, papers            |
-| `mcp__plugin_web-search_web-search_search_wikipedia`    | Full article text via MediaWiki API                            | Factual summaries, background research, citations   |
-| `mcp__plugin_web-search_web-search_search_arxiv`        | Academic paper search w/ Lucene field prefixes                 | Research papers, literature reviews, citations      |
+| `search_web`          | DuckDuckGo or Exa web/news search (via `provider` param)       | First pass: news, background, official sources      |
+| `search_web` (domain) | DuckDuckGo (site:) or Exa (include_domains) scoped to a domain | Targeted docs: `docs.python.org`, `react.dev`, RFCs |
+| `fetch_page`          | Clean HTML-to-markdown extraction from URLs                    | Read articles, changelogs, specs, papers            |
+| `search_wikipedia`    | Full article text via MediaWiki API                            | Factual summaries, background research, citations   |
+| `search_arxiv`        | Academic paper search w/ Lucene field prefixes                 | Research papers, literature reviews, citations      |
 
 ### Tier 2 — Community & Social Signal
 
 | Tool                                                  | What It Does                              | When To Use                                                           |
 | ----------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------- |
-| `mcp__plugin_web-search_web-search_search_reddit`     | Reddit via RSS + shreddit enrichment      | Real-user discussions, product feedback, niche opinions               |
-| `mcp__plugin_web-search_web-search_search_hackernews` | HN via Algolia + comment enrichment       | Tech debate, architectural analysis, deep critical takes              |
-| `mcp__plugin_web-search_web-search_get_github_issue`  | Full GitHub Issue/PR thread with comments | Complete conversation context sorted by reactions                     |
-| `mcp__plugin_web-search_web-search_search_x`          | X/Twitter via Xquik API or Bird CLI       | Real-time announcements, expert takes, breaking news                  |
-| `mcp__plugin_web-search_web-search_search_linkedin`   | LinkedIn via DuckDuckGo + Jina Reader     | Professional discovery: find people, companies, jobs, posts, articles |
+| `search_reddit`     | Reddit via RSS + shreddit enrichment      | Real-user discussions, product feedback, niche opinions               |
+| `search_hackernews` | HN via Algolia + comment enrichment       | Tech debate, architectural analysis, deep critical takes              |
+| `search_github`     | GitHub Issues/PR search via GitHub Search API | Upstream bug reports, roadmaps, breaking changes, community wishlists  |
+| `get_github_issue`  | Full GitHub Issue/PR thread with comments | Complete conversation context sorted by reactions                     |
+| `search_x`          | X/Twitter via Xquik API or Bird CLI       | Real-time announcements, expert takes, breaking news                  |
+| `search_linkedin`   | LinkedIn via DuckDuckGo + Jina Reader     | Professional discovery: find people, companies, jobs, posts, articles |
+| `search_digg`       | Curated AI discourse clusters from ~1000 high-signal X accounts via digg-pp-cli | AI trends, curated high-signal community discourse     |
+| `search_techmeme`   | Editorial tech news from live archive (2005+) via techmeme-pp-cli | Tech industry news, major announcements                |
+| `search_polymarket` | Prediction markets with real-money odds via public Gamma API | Forecasting, real-money odds and sentiment on events  |
 
 ---
 

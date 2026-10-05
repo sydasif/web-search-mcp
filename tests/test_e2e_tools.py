@@ -192,6 +192,86 @@ def test_search_wikipedia() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  10. search_digg
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_search_digg() -> None:
+    from web_search_mcp.tools.digg import digg_search_tool
+
+    result = digg_search_tool(
+        query="AI agents", max_results=3, depth="quick", response_format="json"
+    )
+    ok = isinstance(result, SearchResponse) and len(result.results) > 0
+    detail = (
+        f"clusters={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"{type(result).__name__} (needs digg-pp-cli)"
+    )
+    _check("search_digg", ok, detail, warn_if_fail=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  11. search_techmeme
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_search_techmeme() -> None:
+    from web_search_mcp.tools.techmeme import techmeme_search_tool
+
+    result = techmeme_search_tool(
+        query="Apple WWDC", max_results=3, depth="quick", response_format="json"
+    )
+    ok = isinstance(result, SearchResponse) and len(result.results) > 0
+    detail = (
+        f"records={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"{type(result).__name__} (needs techmeme-pp-cli)"
+    )
+    _check("search_techmeme", ok, detail, warn_if_fail=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  12. search_polymarket
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_search_polymarket() -> None:
+    from web_search_mcp.tools.polymarket import polymarket_search_tool
+
+    result = polymarket_search_tool(
+        query="US election", max_results=3, depth="quick", response_format="json"
+    )
+    ok = isinstance(result, SearchResponse) and len(result.results) > 0
+    detail = (
+        f"events={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"type={type(result).__name__}"
+    )
+    _check("search_polymarket", ok, detail, warn_if_fail=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  13. search_linkedin
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_search_linkedin() -> None:
+    from web_search_mcp.social.linkedin import linkedin_search_tool
+
+    result = linkedin_search_tool(
+        query="machine learning engineer", max_results=3, depth="quick", response_format="json"
+    )
+    ok = isinstance(result, SearchResponse) and len(result.results) > 0
+    detail = (
+        f"results={result.total_results}"
+        if isinstance(result, SearchResponse)
+        else f"type={type(result).__name__}"
+    )
+    _check("search_linkedin", ok, detail, warn_if_fail=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  main
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -209,10 +289,14 @@ def main() -> int:
         ("get_github_issue", test_get_github_issue),
         ("search_arxiv", test_search_arxiv),
         ("search_wikipedia", test_search_wikipedia),
+        ("search_digg", test_search_digg),
+        ("search_techmeme", test_search_techmeme),
+        ("search_polymarket", test_search_polymarket),
+        ("search_linkedin", test_search_linkedin),
     ]
 
     print("=" * 72)
-    print("  WEB SEARCH MCP — End-to-End Tool Tests")
+    print("  OmniSearch — End-to-End Tool Tests")
     print(f"  Started: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 72)
     print()

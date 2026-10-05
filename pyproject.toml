@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web_search_mcp"
-version = "0.7.0"
+version = "0.8.0"
 description = "FastMCP-based server that provides comprehensive web search functionality for LLM clients through the Model Context Protocol"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-web-search-mcp = "web_search_mcp.server:main"
+omnisearch = "web_search_mcp.server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

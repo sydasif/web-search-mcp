@@ -1,6 +1,6 @@
 ---
 name: debug
-description: Debug errors, failed commands, test failures, runtime exceptions, wrong output, flaky behavior, regressions, config/import issues, and bug-fix requests using a local-first CLI workflow with Context7, GitHub CLI, and the Web Search MCP for external evidence.
+description: Debug errors, failed commands, test failures, runtime exceptions, wrong output, flaky behavior, regressions, config/import issues, and bug-fix requests using a local-first CLI workflow with Context7, GitHub CLI, and the OmniSearch for external evidence.
 ---
 
 # Debug Code
@@ -18,9 +18,9 @@ Use the best available tool for the evidence needed. Do not block debugging just
 - **Local CLI first:** `rg`, `rg --files`, `git status`, `git diff`, focused tests, logs, dependency manifests, lockfiles, and local dependency source.
 - **Context7:** use for current, version-aware library/framework documentation and code examples when dependency behavior matters.
 - **GitHub CLI (`gh`):** use for GitHub-native evidence such as issues, PRs, checks, releases, repo metadata, source files, and API calls from the terminal.
-- **Web Search MCP:** 10 tools total — the most relevant ones for debugging are organized into two tiers below. Use the cheapest tool that answers the question.
+- **OmniSearch:** 13 tools total — the most relevant ones for debugging are organized into two tiers below, with the remainder listed under Not Used. Use the cheapest tool that answers the question.
 
-### Web Search MCP — Tool Reference (10 tools)
+### OmniSearch — Tool Reference (13 tools)
 
 #### Tier 1 — Direct Search & Retrieval (start here)
 
@@ -45,11 +45,17 @@ Use the best available tool for the evidence needed. Do not block debugging just
 
 #### Not Used
 
+| Tool                | What It Does                                                                 | Why Not Used For Debugging                                          |
+| ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `search_digg`       | Curated AI discourse clusters from ~1000 high-signal X accounts (digg-pp-cli) | High-signal AI/LLM chatter, but rarely tied to a specific bug/fix    |
+| `search_techmeme`   | Editorial tech news from live archive (techmeme-pp-cli)                       | Industry news, not issue-level troubleshooting evidence             |
+| `search_polymarket` | Prediction markets with real-money odds (public Gamma API)                    | Forecasting/sentiment, unrelated to diagnosing code failures        |
+
 ## Tool Sources
 
 - Context7 for current library/framework docs and examples. Source: https://github.com/upstash/context7
 - GitHub CLI `gh` for issues, PRs, checks, releases, source/API access. Source: https://cli.github.com/
-- Web Search MCP for web search, docs search, page extraction, and community mining (10 tools). Source: https://github.com/sydasif/web-search-mcp
+- OmniSearch for web search, docs search, page extraction, and community mining (13 tools). Source: https://github.com/sydasif/web-search-mcp
 
 ## CLI Workflow
 

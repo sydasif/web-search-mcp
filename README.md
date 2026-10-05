@@ -1,4 +1,4 @@
-# Web Search MCP
+# OmniSearch
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -75,12 +75,12 @@ Fastest way to try it out without cloning the repo. Add to your MCP client confi
 ```json
 {
   "mcpServers": {
-    "Web-Research": {
+    "OmniSearch": {
       "command": "uvx",
       "args": [
         "--from",
         "git+https://github.com/sydasif/web-search-mcp.git",
-        "web-search-mcp"
+        "omnisearch"
       ]
     }
   }
@@ -100,8 +100,8 @@ Then configure your MCP client:
 ```json
 {
   "mcpServers": {
-    "Web-Research": {
-      "command": "web-search-mcp"
+    "OmniSearch": {
+      "command": "omnisearch"
     }
   }
 }
@@ -115,7 +115,7 @@ If you want to modify the code or contribute:
 git clone https://github.com/sydasif/web-search-mcp.git
 cd web-search-mcp
 uv sync
-uv run web-search-mcp
+uv run omnisearch
 ```
 
 ### Verify It's Working
