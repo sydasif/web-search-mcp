@@ -190,8 +190,15 @@ def search_digg(
 def parse_digg_response(
     response: dict[str, Any],
     query: str = "",
+    today: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    """Parse a digg search envelope into normalized item dicts."""
+    """Parse a digg search envelope into normalized item dicts.
+
+    Args:
+        response: Raw CLI response envelope.
+        query: Optional query for relevance scoring.
+        today: Optional reference date for relative age parsing (defaults to now).
+    """
     raw = response.get("results") if isinstance(response, dict) else None
     if not isinstance(raw, list):
         return []
@@ -210,7 +217,7 @@ def parse_digg_response(
         post_count = cluster.get("postCount") or 0
         unique_authors = cluster.get("uniqueAuthors") or 0
         first_post_age = cluster.get("firstPostAge")
-        date_str = _parse_first_post_age(first_post_age)
+        date_str = _parse_first_post_age(first_post_age, today)
         if date_str is None and first_post_age:
             continue
 
@@ -312,14 +319,18 @@ def enrich_digg_clusters(
     items: list[dict[str, Any]],
     depth: Depth = "default",
 ) -> list[dict[str, Any]]:
-    """Enrich top clusters with their X posts."""
+    """Enrich top clusters with their X posts.
+
+    Returns a new list; does not mutate the input.
+    """
     enrich_limit = ENRICH_CONFIG.get(depth, ENRICH_CONFIG["default"])
-    for item in items[:enrich_limit]:
+    out = list(items)
+    for i, item in enumerate(items[:enrich_limit]):
         cluster_url_id = item.get("id")
         if cluster_url_id:
             posts = fetch_top_posts(cluster_url_id)
-            item["posts"] = posts
-    return items
+            out[i] = {**item, "posts": posts}
+    return out
 
 
 def format_digg_markdown(items: list[dict[str, Any]], query: str) -> str:
