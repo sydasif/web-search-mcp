@@ -6,7 +6,7 @@ and comment counts for Reddit post IDs. Best-effort, never raises.
 
 from __future__ import annotations
 
-import sys
+import logging
 import time
 from typing import Any
 
@@ -26,10 +26,58 @@ LISTING_DEADLINE_SECONDS = 45
 # In-run memo: base36 id -> {score, num_comments}
 _cache: dict[str, dict[str, int]] = {}
 
+logger = logging.getLogger(__name__)
+
 
 def _log(msg: str) -> None:
-    sys.stderr.write(f"[ArcticShift] {msg}\n")
-    sys.stderr.flush()
+    logger.debug("[ArcticShift] %s", msg)
+
+
+def _parse_score_rows(rows: list[Any]) -> dict[str, dict[str, int]]:
+    """Parse raw API rows into {post_id: {score, num_comments}}.
+
+    Pure: no I/O, no mutation of inputs, no global state.
+    """
+    out: dict[str, dict[str, int]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        rid = str(row.get("id") or "").removeprefix("t3_")
+        if not rid:
+            continue
+        try:
+            entry = {
+                "score": int(row.get("score") or 0),
+                "num_comments": int(row.get("num_comments") or 0),
+            }
+        except (TypeError, ValueError):
+            continue
+        out[rid] = entry
+    return out
+
+
+def _fetch_score_batch(batch: list[str]) -> list[Any] | None:
+    """Fetch one batch of scores from the Arctic-Shift API.
+
+    Returns the raw 'data' list on success, or None on any failure
+    (network, HTTP error, non-list response). Logs the specific failure.
+    """
+    try:
+        with get_json_client(timeout=TIMEOUT) as client:
+            response = client.get(
+                f"{API}?ids={','.join(batch)}",
+                headers={"User-Agent": "web-search-mcp/1.0"},
+            )
+            response.raise_for_status()
+            data = response.json()
+    except Exception as e:
+        _log(f"lookup failed ({e}); {len(batch)} ids left unscored")
+        return None
+    rows = (data or {}).get("data")
+    if not isinstance(rows, list):
+        _log(f"unexpected response (rate-limited?): {str(data)[:80]}")
+        return None
+    return rows
 
 
 def fetch_scores(post_ids: list[str]) -> dict[str, dict[str, int]]:
@@ -52,34 +100,11 @@ def fetch_scores(post_ids: list[str]) -> dict[str, dict[str, int]]:
     for n, batch in enumerate(batches):
         if n:
             time.sleep(PACE_SECONDS)
-        try:
-            with get_json_client(timeout=TIMEOUT) as client:
-                response = client.get(
-                    f"{API}?ids={','.join(batch)}",
-                    headers={"User-Agent": "web-search-mcp/1.0"},
-                )
-                response.raise_for_status()
-                data = response.json()
-        except Exception as e:
-            _log(f"lookup failed ({e}); {len(batch)} ids left unscored")
+        rows = _fetch_score_batch(batch)
+        if rows is None:
             break
-        rows = (data or {}).get("data")
-        if not isinstance(rows, list):
-            _log(f"unexpected response (rate-limited?): {str(data)[:80]}")
-            break
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            rid = str(row.get("id") or "").removeprefix("t3_")
-            if not rid:
-                continue
-            try:
-                entry = {
-                    "score": int(row.get("score") or 0),
-                    "num_comments": int(row.get("num_comments") or 0),
-                }
-            except (TypeError, ValueError):
-                continue
+        parsed = _parse_score_rows(rows)
+        for rid, entry in parsed.items():
             _cache[rid] = entry
             out[rid] = entry
     return out
