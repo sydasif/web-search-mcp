@@ -98,6 +98,33 @@ def _run_cli(cmd: list[str], timeout: int) -> dict[str, Any]:
     return {"results": _coerce_list(data)}
 
 
+def window_records(
+    records: list[dict[str, Any]],
+    from_date: str,
+    to_date: str,
+    limit: int,
+) -> tuple[list[dict[str, Any]], int]:
+    """Partition CLI records by ISO date window.
+
+    Dated records inside [from_date, to_date] are kept first; undated records
+    are kept after them; dated out-of-window records are dropped. The result
+    is capped at ``limit``. Returns (kept, dropped_count).
+    """
+    dated_in_window: list[dict[str, Any]] = []
+    undated: list[dict[str, Any]] = []
+    dropped = 0
+    for rec in records:
+        iso = _record_iso_date(rec)
+        if iso is None:
+            undated.append(rec)
+        elif from_date <= iso <= to_date:
+            dated_in_window.append(rec)
+        else:
+            dropped += 1
+    kept = (dated_in_window + undated)[:limit]
+    return kept, dropped
+
+
 def search_techmeme(
     topic: str,
     from_date: str,
@@ -115,25 +142,15 @@ def search_techmeme(
     response = _run_cli(cmd, timeout=SEARCH_TIMEOUT)
     records = response.get("results") or []
     if isinstance(records, list):
-        dated_in_window = []
-        undated = []
-        dropped = 0
-        for rec in records:
-            iso = _record_iso_date(rec)
-            if iso is None:
-                undated.append(rec)
-            elif from_date <= iso <= to_date:
-                dated_in_window.append(rec)
-            else:
-                dropped += 1
+        kept, dropped = window_records(records, from_date, to_date, limit)
         if dropped:
             _log(f"dropped {dropped} records outside {from_date}..{to_date}")
-        if records and not dated_in_window and not dropped:
+        if records and not any(_record_iso_date(r) for r in records) and not dropped:
             _log(
                 "no records carry usable dates; date windowing inactive "
                 "(old techmeme-pp-cli binary or upstream markup change)"
             )
-        response["results"] = (dated_in_window + undated)[:limit]
+        response["results"] = kept
     _log(f"found {len(response.get('results') or [])} records")
     return response
 
@@ -232,7 +249,6 @@ def techmeme_search_tool(
         )
 
     from_date, to_date = time_range_to_date_window(time_range)
-
 
     depth_limits = _ALL_DEPTH_LIMITS.get("techmeme", {"quick": 8, "default": 16, "deep": 30})
     max_results = min(max_results, depth_limits.get(depth, 16))
