@@ -1,7 +1,8 @@
-"""Shared utilities: formatting, scoring, and rate limiting."""
+"""Shared utilities: formatting, scoring, rate limiting, and date helpers."""
 
 from __future__ import annotations
 
+from .dates import time_range_to_date_window, time_range_to_dates
 from .formatting import (
     date_to_unix,
     format_error,
@@ -27,4 +28,6 @@ __all__ = [
     "token_overlap_relevance",
     "truncate_content",
     "unix_to_date",
+    "time_range_to_date_window",
+    "time_range_to_dates",
 ]

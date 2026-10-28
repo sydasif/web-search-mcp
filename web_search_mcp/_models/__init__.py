@@ -7,6 +7,7 @@ from .responses import (
     SearchResponse,
     SearchResult,
     build_search_response,
+    items_to_search_response,
 )
 from .types import FetchOutputFormat
 
@@ -18,4 +19,5 @@ __all__ = [
     "SearchResponse",
     "build_search_response",
     "SearchResult",
+    "items_to_search_response",
 ]

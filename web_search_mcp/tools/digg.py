@@ -17,9 +17,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
-from .._models import ErrorResponse, SearchResponse
+from .._models import ErrorResponse, SearchResponse, items_to_search_response
 from .._models.types import Depth
-from .._utils import format_results_markdown, token_overlap_relevance
+from .._utils import format_results_markdown, time_range_to_date_window, token_overlap_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -372,21 +372,7 @@ def digg_search_tool(
             ),
         )
 
-    from datetime import datetime, timedelta
-
-    today = datetime.now().date()
-    from_date = "2000-01-01"
-    to_date = today.isoformat()
-
-    if time_range:
-        if time_range == "d":
-            from_date = (today - timedelta(days=1)).isoformat()
-        elif time_range == "w":
-            from_date = (today - timedelta(weeks=1)).isoformat()
-        elif time_range == "m":
-            from_date = (today - timedelta(weeks=4)).isoformat()
-        elif time_range == "y":
-            from_date = (today - timedelta(weeks=52)).isoformat()
+    from_date, to_date = time_range_to_date_window(time_range)
 
     depth_limits = _ALL_DEPTH_LIMITS.get("digg", {"quick": 8, "default": 20, "deep": 40})
     max_results = min(max_results, depth_limits.get(depth, 20))
@@ -400,27 +386,18 @@ def digg_search_tool(
         if response_format == "markdown":
             return format_digg_markdown(items, query)
 
-        from .._models import SearchResult, build_search_response
-
-        results = []
-        for item in items:
-            body_parts = []
+        def build_body(item: dict[str, Any]) -> str | None:
+            parts = []
             if item.get("title"):
-                body_parts.append(item["title"])
+                parts.append(item["title"])
             if item.get("tldr"):
-                body_parts.append(item["tldr"])
+                parts.append(item["tldr"])
             if item.get("posts"):
                 posts_text = " | ".join(p.get("body", "")[:100] for p in item["posts"][:3])
-                body_parts.append(f"Posts: {posts_text}")
-            results.append(
-                SearchResult(
-                    title=item.get("title", "Digg cluster"),
-                    href=item.get("url", ""),
-                    url=item.get("url", ""),
-                    body=" ".join(body_parts) if body_parts else None,
-                )
-            )
-        return build_search_response(results, query)
+                parts.append(f"Posts: {posts_text}")
+            return " ".join(parts) if parts else None
+
+        return items_to_search_response(items, query, body_builder=build_body)
 
     except Exception as e:
         logger.exception("Digg search failed for query %r", query)

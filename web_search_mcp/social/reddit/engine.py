@@ -235,12 +235,29 @@ def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[di
         len(score_source),
     )
 
+    score_map = _build_score_map(score_source)
+    merged = _merge_posts(listing_posts, rss_posts, score_map)
+    _backfill_scores(merged)
+
+    return merged
+
+
+def _build_score_map(score_source: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Build a mapping of post_id -> {score, num_comments} from scored posts."""
     score_map: dict[str, dict[str, int]] = {}
     for p in score_source:
         pid = p.get("metadata", {}).get("post_id", "")
         if pid:
             score_map[pid] = {"score": p["score"], "num_comments": p["num_comments"]}
+    return score_map
 
+
+def _merge_posts(
+    listing_posts: list[dict[str, Any]],
+    rss_posts: list[dict[str, Any]],
+    score_map: dict[str, dict[str, int]],
+) -> list[dict[str, Any]]:
+    """Merge listing and RSS posts, applying scores from score_map to RSS posts."""
     merged: list[dict[str, Any]] = []
     seen: set[str] = set()
     for p in listing_posts:
@@ -255,8 +272,14 @@ def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[di
             _apply_scores(p, score_map[pid])
         seen.add(p["url"])
         merged.append(p)
+    return merged
 
-    # Arctic-shift backfill: fill scores for RSS-only posts that never appeared in a listing
+
+def _backfill_scores(merged: list[dict[str, Any]]) -> None:
+    """Backfill scores for RSS-only posts using arctic-shift.
+
+    Mutates posts in-place.
+    """
     need = [
         pid
         for p in merged
@@ -264,20 +287,19 @@ def _discover(topic: str, depth: Depth, subreddits: list[str] | None) -> list[di
         for pid in [models._post_id(p["url"])]
         if pid
     ]
-    if need:
-        scores = arctic_shift.fetch_scores(need)
-        filled = 0
-        for p in merged:
-            if p.get("engagement", {}).get("score"):
-                continue
-            pid = models._post_id(p["url"])
-            if pid in scores:
-                _apply_scores(p, scores[pid])
-                filled += 1
-        if filled:
-            logger.debug(f"arctic-shift backfilled {filled} post scores")
-
-    return merged
+    if not need:
+        return
+    scores = arctic_shift.fetch_scores(need)
+    filled = 0
+    for p in merged:
+        if p.get("engagement", {}).get("score"):
+            continue
+        pid = models._post_id(p["url"])
+        if pid in scores:
+            _apply_scores(p, scores[pid])
+            filled += 1
+    if filled:
+        logger.debug(f"arctic-shift backfilled {filled} post scores")
 
 
 def _enrich_one(post: dict[str, Any]) -> dict[str, Any]:

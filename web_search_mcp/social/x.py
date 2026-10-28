@@ -203,6 +203,60 @@ def _first_string(*values: Any) -> str:
             return value.strip()
     return ""
 
+def _extract_tweet_url(tweet: dict[str, Any], screen_name: str) -> str | None:
+    """Extract or construct a tweet URL from available fields."""
+    url = tweet.get("permanent_url") or tweet.get("url", "")
+    if not url and tweet.get("id") and screen_name:
+        url = f"https://x.com/{screen_name}/status/{tweet['id']}"
+    return url or None
+
+
+def _parse_tweet_date(tweet: dict[str, Any]) -> str | None:
+    """Parse tweet creation date to YYYY-MM-DD string."""
+    created_at = (
+        tweet.get("createdAt")
+        or tweet.get("created_at")
+        or tweet.get("publishedAt")
+        or tweet.get("published_at")
+        or ""
+    )
+    if not created_at:
+        return None
+    try:
+        if len(created_at) > 10 and created_at[10] == "T":
+            dt = datetime.fromisoformat(created_at)
+        else:
+            dt = datetime.strptime(created_at, "%a %b %d %H:%M:%S %z %Y")
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+
+
+def _extract_tweet_engagement(tweet: dict[str, Any]) -> dict[str, int]:
+    """Extract engagement metrics from a tweet dict."""
+    engagement = {
+        "likes": _safe_int(
+            tweet.get("likeCount") or tweet.get("like_count") or tweet.get("favorite_count"),
+        ),
+        "retweets": _safe_int(tweet.get("retweetCount") or tweet.get("retweet_count")),
+        "replies": _safe_int(tweet.get("replyCount") or tweet.get("reply_count")),
+        "quotes": _safe_int(tweet.get("quoteCount") or tweet.get("quote_count")),
+        "views": _safe_int(tweet.get("viewCount") or tweet.get("view_count")),
+        "bookmarks": _safe_int(tweet.get("bookmarkCount") or tweet.get("bookmark_count")),
+    }
+    return {k: v for k, v in engagement.items() if v is not None}
+
+
+def _extract_tweet_text(tweet: dict[str, Any]) -> str:
+    """Extract and truncate tweet text."""
+    return str(
+        tweet.get("text")
+        or tweet.get("full_text")
+        or tweet.get("fullText")
+        or tweet.get("content")
+        or "",
+    ).strip()[:500]
+
 
 def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
     """Parse a single tweet dict into a normalized item."""
@@ -218,56 +272,14 @@ def _parse_item(tweet: Any, index: int, query: str) -> TweetItem | None:
         tweet.get("author_screen_name"),
     )
 
-    # Extract URL
-    url = tweet.get("permanent_url") or tweet.get("url", "")
-    if not url and tweet.get("id") and screen_name:
-        url = f"https://x.com/{screen_name}/status/{tweet['id']}"
+    url = _extract_tweet_url(tweet, screen_name)
     if not url:
         return None
 
-    # Parse date
-    date = None
-    created_at = (
-        tweet.get("createdAt")
-        or tweet.get("created_at")
-        or tweet.get("publishedAt")
-        or tweet.get("published_at")
-        or ""
-    )
-    if created_at:
-        try:
-            if len(created_at) > 10 and created_at[10] == "T":
-                dt = datetime.fromisoformat(created_at)
-            else:
-                dt = datetime.strptime(created_at, "%a %b %d %H:%M:%S %z %Y")
-            date = dt.strftime("%Y-%m-%d")
-        except (ValueError, TypeError):
-            pass
-
-    # User info
+    date = _parse_tweet_date(tweet)
     author_handle = screen_name
-
-    # Engagement
-    engagement = {
-        "likes": _safe_int(
-            tweet.get("likeCount") or tweet.get("like_count") or tweet.get("favorite_count"),
-        ),
-        "retweets": _safe_int(tweet.get("retweetCount") or tweet.get("retweet_count")),
-        "replies": _safe_int(tweet.get("replyCount") or tweet.get("reply_count")),
-        "quotes": _safe_int(tweet.get("quoteCount") or tweet.get("quote_count")),
-        "views": _safe_int(tweet.get("viewCount") or tweet.get("view_count")),
-        "bookmarks": _safe_int(tweet.get("bookmarkCount") or tweet.get("bookmark_count")),
-    }
-    # Remove None values
-    engagement = {k: v for k, v in engagement.items() if v is not None}
-
-    text = str(
-        tweet.get("text")
-        or tweet.get("full_text")
-        or tweet.get("fullText")
-        or tweet.get("content")
-        or "",
-    ).strip()[:500]
+    engagement = _extract_tweet_engagement(tweet)
+    text = _extract_tweet_text(tweet)
 
     return cast(
         "TweetItem",

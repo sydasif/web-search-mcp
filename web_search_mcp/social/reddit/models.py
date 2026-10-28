@@ -33,6 +33,68 @@ def _post_id(url: str) -> str:
     return ref[1] if ref else ""
 
 
+def _parse_shreddit_card(tag: str, query: str) -> dict[str, Any] | None:
+    """Parse a single <shreddit-post> tag into a post dict, or None if invalid."""
+
+    # Get permalink first — needed for post ID and URL
+    permalink = extract_attr(tag, "permalink") or ""
+    if "/comments/" not in permalink:
+        return None
+
+    # Extract post ID from permalink
+    pid = _post_id(permalink)
+    if not pid:
+        return None
+
+    # Score and comment count (same attributes as other endpoints)
+    try:
+        score = int(extract_attr(tag, "score") or 0)
+    except (ValueError, TypeError):
+        score = 0
+    try:
+        num_comments = int(extract_attr(tag, "comment-count") or 0)
+    except (ValueError, TypeError):
+        num_comments = 0
+
+    # Title: SVC endpoint uses ``post-title`` instead of ``title``
+    title = extract_attr(tag, "post-title") or extract_attr(tag, "title") or ""
+
+    # Author
+    author = extract_attr(tag, "author") or "[deleted]"
+
+    # Subreddit: SVC has ``subreddit-name`` attribute
+    subreddit = extract_attr(tag, "subreddit-name") or ""
+
+    # Created timestamp (ISO-8601)
+    created = extract_attr(tag, "created-timestamp")
+
+    # Build URL
+    url = f"https://www.reddit.com{permalink}" if permalink else ""
+
+    relevance = token_overlap_relevance(query, title)
+
+    return {
+        "id": "",
+        "title": title,
+        "url": url,
+        "score": score,
+        "num_comments": num_comments,
+        "subreddit": subreddit,
+        "created_utc": iso_to_epoch(created),
+        "author": author,
+        "selftext": "",
+        "date": iso_to_date(created),
+        "engagement": {
+            "score": score,
+            "num_comments": num_comments,
+            "upvote_ratio": None,
+        },
+        "relevance": relevance,
+        "why_relevant": "Reddit listing (SVC)",
+        "metadata": {"post_id": pid},
+    }
+
+
 def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
     """Parse ``<shreddit-post>`` cards from the SVC endpoint into post dicts.
 
@@ -50,66 +112,9 @@ def parse_cards(html_text: str, query: str = "") -> list[dict[str, Any]]:
 
     for m in _SHREDDIT_POST.finditer(html_text):
         tag = m.group(0)
-
-        # Get permalink first — needed for post ID and URL
-        permalink = extract_attr(tag, "permalink") or ""
-        if "/comments/" not in permalink:
-            continue
-
-        # Extract post ID from permalink
-        pid = _post_id(permalink)
-        if not pid:
-            continue
-
-        # Score and comment count (same attributes as other endpoints)
-        try:
-            score = int(extract_attr(tag, "score") or 0)
-        except (ValueError, TypeError):
-            score = 0
-        try:
-            num_comments = int(extract_attr(tag, "comment-count") or 0)
-        except (ValueError, TypeError):
-            num_comments = 0
-
-        # Title: SVC endpoint uses ``post-title`` instead of ``title``
-        title = extract_attr(tag, "post-title") or extract_attr(tag, "title") or ""
-
-        # Author
-        author = extract_attr(tag, "author") or "[deleted]"
-
-        # Subreddit: SVC has ``subreddit-name`` attribute
-        subreddit = extract_attr(tag, "subreddit-name") or ""
-
-        # Created timestamp (ISO-8601)
-        created = extract_attr(tag, "created-timestamp")
-
-        # Build URL
-        url = f"https://www.reddit.com{permalink}" if permalink else ""
-
-        relevance = token_overlap_relevance(query, title)
-
-        posts.append(
-            {
-                "id": "",
-                "title": title,
-                "url": url,
-                "score": score,
-                "num_comments": num_comments,
-                "subreddit": subreddit,
-                "created_utc": iso_to_epoch(created),
-                "author": author,
-                "selftext": "",
-                "date": iso_to_date(created),
-                "engagement": {
-                    "score": score,
-                    "num_comments": num_comments,
-                    "upvote_ratio": None,
-                },
-                "relevance": relevance,
-                "why_relevant": "Reddit listing (SVC)",
-                "metadata": {"post_id": pid},
-            },
-        )
+        post = _parse_shreddit_card(tag, query)
+        if post:
+            posts.append(post)
 
     return posts
 

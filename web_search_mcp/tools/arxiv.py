@@ -71,24 +71,7 @@ def _search_arxiv(
 
         results = list(client.results(search))
 
-        papers: list[dict[str, Any]] = []
-        for r in results:
-            papers.append(
-                {
-                    "id": r.entry_id,
-                    "title": r.title,
-                    "authors": [a.name for a in r.authors],
-                    "summary": r.summary,
-                    "pdf_url": r.pdf_url,
-                    "published": str(r.published.date()) if r.published else "",
-                    "updated": str(r.updated.date()) if r.updated else "",
-                    "primary_category": str(r.primary_category) if r.primary_category else "",
-                    "categories": [str(c) for c in r.categories],
-                    "comment": r.comment or "",
-                    "journal_ref": r.journal_ref or "",
-                    "doi": r.doi or "",
-                }
-            )
+        papers = [_paper_to_dict(r) for r in results]
 
         return papers
     except Exception as e:
@@ -97,6 +80,24 @@ def _search_arxiv(
             error=f"arXiv search failed: {e}",
             details="Try a different query or check arXiv's status at export.arxiv.org.",
         )
+
+
+def _paper_to_dict(r: Any) -> dict[str, Any]:
+    """Convert an arxiv Result object into a normalized paper dict."""
+    return {
+        "id": r.entry_id,
+        "title": r.title,
+        "authors": [a.name for a in r.authors],
+        "summary": r.summary,
+        "pdf_url": r.pdf_url,
+        "published": str(r.published.date()) if r.published else "",
+        "updated": str(r.updated.date()) if r.updated else "",
+        "primary_category": str(r.primary_category) if r.primary_category else "",
+        "categories": [str(c) for c in r.categories],
+        "comment": r.comment or "",
+        "journal_ref": r.journal_ref or "",
+        "doi": r.doi or "",
+    }
 
 
 def _format_arxiv_markdown(papers: list[dict[str, Any]], query: str) -> str:

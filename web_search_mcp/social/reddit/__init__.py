@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
 from typing import Any
 
 from ..._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from ..._models import ErrorResponse, SearchResponse, SearchResult, build_search_response
 from ..._models.types import Depth, ResponseFormat
-from ..._utils import format_error
+from ..._utils import format_error, time_range_to_date_window
 from . import engine
 
 logger = logging.getLogger(__name__)
@@ -50,20 +49,7 @@ def reddit_search_tool(
     if not query or not query.strip():
         return format_error("Query cannot be empty")
 
-    # Map time_range to from_date / to_date
-    today = datetime.now().date()
-    from_date = "2000-01-01"
-    to_date = today.isoformat()
-
-    if time_range:
-        if time_range == "d":
-            from_date = (today - timedelta(days=1)).isoformat()
-        elif time_range == "w":
-            from_date = (today - timedelta(weeks=1)).isoformat()
-        elif time_range == "m":
-            from_date = (today - timedelta(weeks=4)).isoformat()
-        elif time_range == "y":
-            from_date = (today - timedelta(weeks=52)).isoformat()
+    from_date, to_date = time_range_to_date_window(time_range)
 
     # Respect depth limits
     depth_limits = _ALL_DEPTH_LIMITS["reddit"]

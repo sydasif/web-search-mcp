@@ -14,9 +14,9 @@ from typing import Any
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._http import get_json_client
-from .._models import ErrorResponse, SearchResponse
+from .._models import ErrorResponse, SearchResponse, items_to_search_response
 from .._models.types import Depth
-from .._utils import format_results_markdown, token_overlap_relevance
+from .._utils import format_results_markdown, time_range_to_date_window, token_overlap_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -490,21 +490,8 @@ def polymarket_search_tool(
             error="Query cannot be empty", details="Provide a non-empty search query."
         )
 
-    from datetime import datetime, timedelta
+    from_date, to_date = time_range_to_date_window(time_range)
 
-    today = datetime.now().date()
-    from_date = "2000-01-01"
-    to_date = today.isoformat()
-
-    if time_range:
-        if time_range == "d":
-            from_date = (today - timedelta(days=1)).isoformat()
-        elif time_range == "w":
-            from_date = (today - timedelta(weeks=1)).isoformat()
-        elif time_range == "m":
-            from_date = (today - timedelta(weeks=4)).isoformat()
-        elif time_range == "y":
-            from_date = (today - timedelta(weeks=52)).isoformat()
 
     result_cap = RESULT_CAP.get(depth, RESULT_CAP["default"])
     max_results = min(max_results, result_cap)
@@ -517,27 +504,18 @@ def polymarket_search_tool(
         if response_format == "markdown":
             return format_polymarket_markdown(items, query)
 
-        from .._models import SearchResult, build_search_response
-
-        results = []
-        for item in items:
-            body_parts = []
+        def build_body(item: dict[str, Any]) -> str | None:
+            parts = []
             if item.get("title"):
-                body_parts.append(item["title"])
+                parts.append(item["title"])
             if item.get("engagement", {}).get("volume"):
                 vol = item["engagement"]["volume"]
-                body_parts.append(f"Volume: ${vol:,.0f}")
+                parts.append(f"Volume: ${vol:,.0f}")
             if item.get("engagement", {}).get("outcomes"):
-                body_parts.append(f"Outcomes: {', '.join(item['engagement']['outcomes'][:3])}")
-            results.append(
-                SearchResult(
-                    title=item.get("title", "Polymarket market"),
-                    href=item.get("url", ""),
-                    url=item.get("url", ""),
-                    body=" ".join(body_parts) if body_parts else None,
-                )
-            )
-        return build_search_response(results, query)
+                parts.append(f"Outcomes: {', '.join(item['engagement']['outcomes'][:3])}")
+            return " ".join(parts) if parts else None
+
+        return items_to_search_response(items, query, body_builder=build_body)
 
     except Exception as e:
         logger.exception("Polymarket search failed for query %r", query)

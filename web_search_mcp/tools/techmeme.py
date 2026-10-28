@@ -13,9 +13,9 @@ import subprocess
 from typing import Any
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
-from .._models import ErrorResponse, SearchResponse
+from .._models import ErrorResponse, SearchResponse, items_to_search_response
 from .._models.types import Depth
-from .._utils import format_results_markdown, token_overlap_relevance
+from .._utils import format_results_markdown, time_range_to_date_window, token_overlap_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -231,21 +231,8 @@ def techmeme_search_tool(
             ),
         )
 
-    from datetime import datetime, timedelta
+    from_date, to_date = time_range_to_date_window(time_range)
 
-    today = datetime.now().date()
-    from_date = "2000-01-01"
-    to_date = today.isoformat()
-
-    if time_range:
-        if time_range == "d":
-            from_date = (today - timedelta(days=1)).isoformat()
-        elif time_range == "w":
-            from_date = (today - timedelta(weeks=1)).isoformat()
-        elif time_range == "m":
-            from_date = (today - timedelta(weeks=4)).isoformat()
-        elif time_range == "y":
-            from_date = (today - timedelta(weeks=52)).isoformat()
 
     depth_limits = _ALL_DEPTH_LIMITS.get("techmeme", {"quick": 8, "default": 16, "deep": 30})
     max_results = min(max_results, depth_limits.get(depth, 16))
@@ -258,26 +245,17 @@ def techmeme_search_tool(
         if response_format == "markdown":
             return format_techmeme_markdown(items, query)
 
-        from .._models import SearchResult, build_search_response
-
-        results = []
-        for item in items:
-            body_parts = []
+        def build_body(item: dict[str, Any]) -> str | None:
+            parts = []
             if item.get("title"):
-                body_parts.append(item["title"])
+                parts.append(item["title"])
             if item.get("source_name"):
-                body_parts.append(f"via {item['source_name']}")
+                parts.append(f"via {item['source_name']}")
             if item.get("date"):
-                body_parts.append(item["date"])
-            results.append(
-                SearchResult(
-                    title=item.get("title", "Techmeme headline"),
-                    href=item.get("url", ""),
-                    url=item.get("url", ""),
-                    body=" ".join(body_parts) if body_parts else None,
-                )
-            )
-        return build_search_response(results, query)
+                parts.append(item["date"])
+            return " ".join(parts) if parts else None
+
+        return items_to_search_response(items, query, body_builder=build_body)
 
     except Exception as e:
         logger.exception("Techmeme search failed for query %r", query)

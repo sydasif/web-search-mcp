@@ -63,8 +63,73 @@ def _title_matches_query(title: str, query: str) -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# Search
+# Search (pure)
 # ─────────────────────────────────────────────────────────────
+
+
+def _build_search_params(
+    query: str,
+    from_date: str | None = None,
+    to_date: str | None = None,
+    count: int = 30,
+) -> dict[str, str]:
+    """Build the Algolia search request params from a query and date window."""
+    core = _flatten_query(query)
+    params: dict[str, str] = {
+        "query": core,
+        "tags": "story",
+        "hitsPerPage": str(count),
+    }
+    if from_date and to_date:
+        from_ts = date_to_unix(from_date)
+        to_ts = date_to_unix(to_date) + 86400
+        params["numericFilters"] = f"created_at_i>{from_ts},created_at_i<{to_ts},points>2"
+
+    tokens = core.split()
+    if len(tokens) > 1:
+        params["optionalWords"] = " ".join(tokens[1:])
+    return params
+
+
+def _normalize_search_hit(
+    hit: dict[str, Any],
+    query: str,
+    rank: int,
+) -> dict[str, Any] | None:
+    """Normalize one Algolia hit into an HN item dict.
+
+    Returns ``None`` when the title does not match the query so the caller can
+    drop it. *rank* is the hit's position in the raw response (pre-filter).
+    """
+    object_id = hit.get("objectID", "")
+    title = hit.get("title", "")
+    if query and not _title_matches_query(title, query):
+        return None
+    points = hit.get("points") or 0
+    num_comments = hit.get("num_comments") or 0
+    created_at_i = hit.get("created_at_i")
+    return {
+        "id": object_id,
+        "title": title,
+        "url": hit.get("url") or "",
+        "hn_url": f"https://news.ycombinator.com/item?id={object_id}",
+        "author": hit.get("author", ""),
+        "date": unix_to_date(created_at_i) if created_at_i else None,
+        "engagement": {"points": points, "comments": num_comments},
+        "relevance": compute_relevance(query, title, rank, points, engagement_weight=40.0),
+        "why_relevant": f"HN: {title[:60]}",
+    }
+
+
+def _normalize_search_hits(query: str, hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Filter, normalize, and rank a list of Algolia hits by relevance."""
+    items: list[dict[str, Any]] = []
+    for rank, hit in enumerate(hits):
+        item = _normalize_search_hit(hit, query, rank)
+        if item is not None:
+            items.append(item)
+    items.sort(key=lambda x: x.get("relevance", 0), reverse=True)
+    return items
 
 
 def search_hackernews(
@@ -86,22 +151,8 @@ def search_hackernews(
 
     """
     count = DEPTH_LIMITS.get(depth, DEPTH_LIMITS["default"])
-    core = _flatten_query(query)
-    logger.info("HN searching for '%s' (count=%d)", core, count)
-
-    params: dict[str, str] = {
-        "query": core,
-        "tags": "story",
-        "hitsPerPage": str(count),
-    }
-    if from_date and to_date:
-        from_ts = date_to_unix(from_date)
-        to_ts = date_to_unix(to_date) + 86400
-        params["numericFilters"] = f"created_at_i>{from_ts},created_at_i<{to_ts},points>2"
-
-    tokens = core.split()
-    if len(tokens) > 1:
-        params["optionalWords"] = " ".join(tokens[1:])
+    params = _build_search_params(query, from_date, to_date, count=count)
+    logger.info("HN searching for '%s' (count=%d)", params["query"], count)
 
     url = f"{ALGOLIA_SEARCH_URL}?{urlencode(params)}"
 
@@ -117,41 +168,37 @@ def search_hackernews(
     hits = data.get("hits", [])
     logger.info("HN found %d stories", len(hits))
 
-    items: list[dict] = []
-    for i, hit in enumerate(hits):
-        object_id = hit.get("objectID", "")
-        points = hit.get("points") or 0
-        num_comments = hit.get("num_comments") or 0
-        created_at_i = hit.get("created_at_i")
-        date_str = unix_to_date(created_at_i) if created_at_i else None
-        article_url = hit.get("url") or ""
-        hn_url = f"https://news.ycombinator.com/item?id={object_id}"
-        title = hit.get("title", "")
-
-        if query and not _title_matches_query(title, query):
-            continue
-
-        items.append(
-            {
-                "id": object_id,
-                "title": title,
-                "url": article_url,
-                "hn_url": hn_url,
-                "author": hit.get("author", ""),
-                "date": date_str,
-                "engagement": {"points": points, "comments": num_comments},
-                "relevance": compute_relevance(query, title, i, points, engagement_weight=40.0),
-                "why_relevant": f"HN: {title[:60]}",
-            },
-        )
-
-    items.sort(key=lambda x: x.get("relevance", 0), reverse=True)
-    return items
+    return _normalize_search_hits(query, hits)
 
 
 # ─────────────────────────────────────────────────────────────
 # Comment enrichment
 # ─────────────────────────────────────────────────────────────
+
+
+def _extract_comments(children: list[dict[str, Any]], max_comments: int = 5) -> dict[str, Any]:
+    """Reduce raw Algolia story children to top comments + one-line insights.
+
+    Filters to real comments (non-empty text and author), ranks by points, and
+    returns the top *max_comments* with HTML-stripped excerpts plus a distilled
+    first-sentence insight for each.
+    """
+    real_comments = [c for c in children if c.get("text") and c.get("author")]
+    real_comments.sort(key=lambda c: c.get("points") or 0, reverse=True)
+
+    comments: list[dict[str, Any]] = []
+    insights: list[str] = []
+    for c in real_comments[:max_comments]:
+        text = _strip_html(c.get("text", ""))
+        excerpt = text[:300] + "..." if len(text) > 300 else text
+        comments.append(
+            {"author": c.get("author", ""), "text": excerpt, "points": c.get("points") or 0},
+        )
+        first_sentence = text.split(". ")[0].split("\n")[0][:200]
+        if first_sentence:
+            insights.append(first_sentence)
+
+    return {"comments": comments, "comment_insights": insights}
 
 
 def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict[str, Any]:
@@ -166,23 +213,7 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict[str, Any
         logger.warning("HN comment fetch failed for %s: %s", object_id, e)
         return {"comments": [], "comment_insights": []}
 
-    children = data.get("children", [])
-    real_comments = [c for c in children if c.get("text") and c.get("author")]
-    real_comments.sort(key=lambda c: c.get("points") or 0, reverse=True)
-
-    comments = []
-    insights: list[str] = []
-    for c in real_comments[:max_comments]:
-        text = _strip_html(c.get("text", ""))
-        excerpt = text[:300] + "..." if len(text) > 300 else text
-        points = c.get("points") or 0
-        author = c.get("author", "")
-        comments.append({"author": author, "text": excerpt, "points": points})
-        first_sentence = text.split(". ")[0].split("\n")[0][:200]
-        if first_sentence:
-            insights.append(first_sentence)
-
-    return {"comments": comments, "comment_insights": insights}
+    return _extract_comments(data.get("children", []), max_comments)
 
 
 def enrich_top_stories(
