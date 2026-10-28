@@ -128,6 +128,14 @@ search_web(query="current weather in Tokyo")
 
 ---
 
+### Option D: Omp Plugin Install
+
+Install as an omp plugin for quick access from any project:
+
+```bash
+omp plugin marketplace add sydasif/web-search-mcp
+omp plugin install --scope user web-search@sydasif-web-search-mcp
+```
 ## 🔐 Configuration & Authentication
 
 Most tools work **out of the box with zero configuration**. The following environment variables are only needed for premium or authenticated features.
