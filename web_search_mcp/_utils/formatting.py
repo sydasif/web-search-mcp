@@ -112,8 +112,11 @@ def unix_to_date(ts: int) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).strftime("%Y-%m-%d")
 
 
-def iso_utc_to_date(created_utc: float) -> str | None:
-    """Convert a UTC epoch (e.g. Reddit created_utc) to YYYY-MM-DD, or None."""
+def iso_utc_to_date(created_utc: Any) -> str | None:
+    """Convert a UTC epoch (e.g. Reddit created_utc) to YYYY-MM-DD, or None on bad input."""
     if not created_utc:
         return None
-    return datetime.fromtimestamp(created_utc, tz=UTC).date().isoformat()
+    try:
+        return datetime.fromtimestamp(created_utc, tz=UTC).date().isoformat()
+    except (TypeError, ValueError, OSError):
+        return None

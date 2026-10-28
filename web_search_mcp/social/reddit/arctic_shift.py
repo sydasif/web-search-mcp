@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import sys
 import time
-from datetime import UTC, datetime
 from typing import Any
 
+from ..._config import DEPTH_LIMITS
 from ..._http import get_json_client
+from ..._utils import iso_utc_to_date
 
 API = "https://arctic-shift.photon-reddit.com/api/posts/ids"
 SEARCH_API = "https://arctic-shift.photon-reddit.com/api/posts/search"
@@ -19,7 +20,6 @@ BATCH = 50  # ids per request
 TIMEOUT = 15
 MAX_BATCHES = 3  # cap total requests per run
 PACE_SECONDS = 0.4  # gap between batches
-LISTING_DEPTH_LIMITS = {"quick": 10, "default": 25, "deep": 50}
 LISTING_SUPPLEMENT_MULTIPLIER = 2
 LISTING_DEADLINE_SECONDS = 45
 
@@ -30,14 +30,6 @@ _cache: dict[str, dict[str, int]] = {}
 def _log(msg: str) -> None:
     sys.stderr.write(f"[ArcticShift] {msg}\n")
     sys.stderr.flush()
-
-
-def _epoch_to_date(value: Any) -> str | None:
-    """Epoch seconds -> YYYY-MM-DD (UTC), or None on garbage."""
-    try:
-        return datetime.fromtimestamp(int(value), tz=UTC).date().isoformat()
-    except (TypeError, ValueError, OSError):
-        return None
 
 
 def fetch_scores(post_ids: list[str]) -> dict[str, dict[str, int]]:
@@ -122,7 +114,7 @@ def _normalize_listing_row(row: dict[str, Any], query: str = "") -> dict[str, An
         "created_utc": row.get("created_utc"),
         "author": author,
         "selftext": row.get("selftext") or "",
-        "date": _epoch_to_date(row.get("created_utc")),
+        "date": iso_utc_to_date(row.get("created_utc")),
         "engagement": {"score": score, "num_comments": num_comments, "upvote_ratio": None},
         "relevance": round(token_overlap_relevance(query, title), 3) if query else 0.0,
         "why_relevant": "Reddit listing (arctic-shift)",
@@ -148,7 +140,7 @@ def fetch_listings(
     """
     if not subreddits:
         return []
-    base = limit or LISTING_DEPTH_LIMITS.get(depth, LISTING_DEPTH_LIMITS["default"])
+    base = limit or DEPTH_LIMITS["reddit"].get(depth, DEPTH_LIMITS["reddit"]["default"])
     n = base * LISTING_SUPPLEMENT_MULTIPLIER if sorts and len(sorts) > 1 else base
     out: list[dict[str, Any]] = []
     deadline = time.time() + LISTING_DEADLINE_SECONDS
