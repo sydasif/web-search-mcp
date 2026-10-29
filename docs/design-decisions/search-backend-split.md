@@ -1,8 +1,8 @@
 # Unified `search_web` with provider selection (DDG + Exa)
 
-**Date**: 2025-09-01
+**Date**: 2026-09-01
 **Status**: Accepted — no code change
-**Refs**: [`server.py:56-157`](../web_search_mcp/server.py), [`search/ddg.py`](../web_search_mcp/search/ddg.py), [`search/exa.py`](../web_search_mcp/search/exa.py)
+**Refs**: [`server.py:62-135`](../web_search_mcp/server.py), [`search/ddg.py`](../web_search_mcp/search/ddg.py), [`search/exa.py`](../web_search_mcp/search/exa.py)
 
 ## Problem
 
@@ -58,8 +58,7 @@ Current call sites for the Exa search function:
 
 | File | Line | Context |
 |------|------|---------|
-| `server.py` | 127 | `search_web` auto-fallback path |
-| `search/ddg.py` | 53, 204 | `exa_fetch` used as page-fetch fallback in `fetch_page` |
+| `server.py` | 132 | `search_web` auto-fallback path |
 
 `exa_search` is only called from `search_web`. Splitting would add minimal new code but remove the single point of fallback orchestration.
 

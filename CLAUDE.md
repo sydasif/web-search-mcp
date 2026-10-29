@@ -36,13 +36,13 @@ The project is a **FastMCP** server that exposes a suite of web search and data 
 - **Registry (`server.py`)**: The central point where `FastMCP` is initialized and tools are decorated with `@mcp.tool`. It handles the mapping between MCP tool definitions and the underlying Python implementations.
 - **Implementation Layers**:
   - `search/`: Implements core web search engines (e.g., DuckDuckGo, Exa).
-  - `social/`: Integrates with community platforms (GitHub, Reddit, Hacker News, X).
-  - `tools/`: Contains specialized utilities (arXiv, Wikipedia).
+  - `social/`: Integrates with community platforms (GitHub, Reddit, Hacker News, X, LinkedIn).
+  - `tools/`: Contains specialized utilities (arXiv, Wikipedia, Digg, Techmeme, Polymarket).
 - **Internal Infrastructure (`_` prefixed folders)**:
   - `_http/`: Centralized HTTP client logic to ensure consistent timeouts, headers, error handling, and SSRF protection (blocks private/internal IP addresses).
   - `_models/`: Shared Pydantic models for requests and responses to ensure type safety across the server.
   - `_config/`: Manages settings, environment variables, and global rate limits. See `limits.py` for hard-coded result depth constraints (e.g., `quick`, `default`, `deep`) used by social tools.
-  - `_utils/`: Low-level helpers for markdown formatting and result scoring.
+  - `_utils/`: Low-level helpers for markdown formatting, result scoring, and date-window utilities.
 
 ### Project Layout
 
@@ -55,11 +55,23 @@ web_search_mcp/
 ├── social/            # Community platform integrations
 │   ├── github.py      # GitHub Search API + gh CLI issue rendering
 │   ├── hackernews.py  # Algolia HN API + comment enrichment
-│   ├── reddit.py      # RSS + Shreddit keyless pipeline
+│   ├── linkedin/      # LinkedIn search via DDG + Jina Reader
+│   │   ├── __init__.py    # LinkedIn search tool registration
+│   │   └── client.py      # DDG search + Jina Reader enrichment
+│   ├── reddit/        # RSS + Shreddit keyless pipeline
+│   │   ├── client.py      # HTTP client with RSS parsing
+│   │   ├── parsers.py     # RSS/HTML parsers
+│   │   ├── models.py      # Shreddit card parsing
+│   │   ├── engine.py      # Search pipeline + arctic-shift backfill
+│   │   ├── arctic_shift.py # Arctic-Shift score enrichment
+│   │   └── _utils.py      # Shared HTML/regex helpers
 │   └── x.py           # X/Twitter search via Xquik API or vendored Bird CLI
 ├── tools/             # Specialized reference utilities
 │   ├── arxiv.py       # arXiv paper search
-│   └── wikipedia.py   # Wikipedia MediaWiki API
+│   ├── wikipedia.py   # Wikipedia MediaWiki API
+│   ├── digg.py        # Digg AI 1000 clusters via digg-pp-cli
+│   ├── techmeme.py    # Techmeme tech news via techmeme-pp-cli
+│   └── polymarket.py  # Polymarket prediction markets via Gamma API
 ├── _config/           # Settings, env vars, rate limits, depth tiers
 │   ├── settings.py    # pydantic-settings (EXA_API_KEY, SEARCH_MCP_ prefix)
 │   └── limits.py      # Per-platform quick/default/deep limits, timeouts
@@ -70,6 +82,7 @@ web_search_mcp/
 │   ├── responses.py   # ErrorResponse, SearchResponse, PageResponse
 │   └── types.py       # Depth, ResponseFormat, SearchType, FetchOutputFormat
 ├── _utils/            # Shared helpers
+│   ├── dates.py       # Time-range and date-window utilities
 │   ├── formatting.py  # Markdown formatters, date/epoch utils
 │   ├── rate_limiter.py # Token-bucket rate limiter
 │   └── scoring.py     # Relevance scoring

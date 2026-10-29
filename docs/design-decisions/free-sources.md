@@ -1,6 +1,6 @@
 # Free Sources Integration (Digg, Techmeme, Polymarket, Arctic-Shift)
 
-**Date**: 2025-10-04
+**Date**: 2026-10-04
 **Status**: Accepted — implemented
 **Refs**: [`tools/digg.py`](../web_search_mcp/tools/digg.py), [`tools/techmeme.py`](../web_search_mcp/tools/techmeme.py), [`tools/polymarket.py`](../web_search_mcp/tools/polymarket.py), [`social/reddit/arctic_shift.py`](../web_search_mcp/social/reddit/arctic_shift.py)
 

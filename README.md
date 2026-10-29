@@ -150,11 +150,11 @@ Most tools work **out of the box with zero configuration**. The following enviro
 | `CT0`                         | X/Twitter search via Bird CLI (required)                              | Session cookie from x.com (see below)                       |
 | `XQUIK_API_KEY`               | X/Twitter search via Xquik API (alternative to cookies)               | Sign up at [xquik.ai](https://xquik.ai)                     |
 | `SEARCH_MCP_SEARXNG_URL`      | Optional SearXNG instance for keyless web search fallback             | Your SearXNG instance URL                                   |
-| `SEARCH_MCP_CORPUS_DIRS`      | Local document directories for private search (colon-separated paths) | Paths to your `.md`/`.txt`/`.pdf` directories               |
+| `SEARCH_MCP_CORPUS_DIRS`      | Local document directories for private search (colon-separated paths) — *planned* | Paths to your `.md`/`.txt`/`.pdf` directories               |
 | `SEARCH_MCP_DEFAULT_SOURCES`  | Fixed default source set (comma-separated, e.g. `reddit,x,github`)    | Source names from available sources                         |
 | `SEARCH_MCP_INCLUDE_SOURCES`  | Opt-in additive sources (e.g. `perplexity,linkedin`)                  | Source names                                                |
 | `SEARCH_MCP_EXCLUDE_SOURCES`  | Hard-exclude sources (e.g. `x,reddit`)                                | Source names                                                |
-| `SEARCH_MCP_VERIFY_FRESHNESS` | Enable default fact-checking for Polymarket odds, GitHub stars, etc.  | `true` or `false`                                           |
+| `SEARCH_MCP_VERIFY_FRESHNESS` | Enable default fact-checking for Polymarket odds, GitHub stars, etc. — *planned*  | `true` or `false`                                           |
 
 ### Setting Up GitHub Authentication
 
@@ -304,10 +304,13 @@ web_search_mcp/
 │   ├── linkedin/          # LinkedIn search via DDG + Jina Reader
 │   │   ├── __init__.py    # LinkedIn search tool registration
 │   │   └── client.py      # DDG search + Jina Reader enrichment
-│   ├── reddit/            # RSS + Shreddit keyless pipeline
+│   ├── reddit/        # RSS + Shreddit keyless pipeline
 │   │   ├── client.py      # HTTP client with RSS parsing
 │   │   ├── parsers.py     # RSS/HTML parsers
-│   │   └── shreddit.py    # Shreddit comment enrichment
+│   │   ├── models.py      # Shreddit card parsing
+│   │   ├── engine.py      # Search pipeline + arctic-shift backfill
+│   │   ├── arctic_shift.py # Arctic-Shift score enrichment
+│   │   └── _utils.py      # Shared HTML/regex helpers
 │   └── x.py               # X/Twitter search via Xquik API or vendored Bird CLI
 ├── tools/                 # Specialized reference utilities
 │   ├── arxiv.py           # arXiv paper search (Lucene field prefixes)
@@ -325,6 +328,7 @@ web_search_mcp/
 │   ├── responses.py       # ErrorResponse, SearchResponse, PageResponse
 │   └── types.py           # Depth, ResponseFormat, SearchType, FetchOutputFormat
 ├── _utils/                # Shared helpers
+│   ├── dates.py           # Time-range and date-window utilities
 │   ├── formatting.py      # Markdown formatters, date/epoch utils
 │   ├── rate_limiter.py    # Token-bucket rate limiter
 │   └── scoring.py         # Relevance scoring
@@ -375,7 +379,7 @@ uv run pytest --cov=web_search_mcp
 | **Auth errors on a tool**              | Env var not set in the server's shell | Export the variable in the same shell where the MCP server process runs |
 | **GitHub returns empty results**       | Not authenticated                     | Run `gh auth login` or set `GITHUB_TOKEN`                               |
 | **`search_x` returns 401**             | Expired X session cookies             | Re-extract `auth_token` and `ct0` from x.com                            |
-| **`fetch_page` blocked by Cloudflare** | Bot detection                         | Try `backend="curl"` parameter                                          |
+| **`fetch_page` blocked by Cloudflare** | Bot detection                         | Exa fallback is automatic; ensure `EXA_API_KEY` is set for server-side rendering |
 | **`search_arxiv` returns 503**         | Upstream arXiv maintenance            | Wait a few minutes and retry                                            |
 | **Tool says "Query cannot be empty"**  | Missing or blank query                | Provide a non-empty search query                                        |
 
