@@ -14,6 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Format**: `uv run ruff format .`
 - **Type check**: `uv run mypy .`
 
+### Version / Release
+
+- **Bump version**: update `pyproject.toml`, `web_search_mcp/__init__.py`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` to same version
+- **After version bump**: run `uv sync` to update lockfile and rebuild package
+- **Plugin auto-updates** on reload when version changes
+
 ### Testing
 
 - **Run all tests**: `uv run pytest`
