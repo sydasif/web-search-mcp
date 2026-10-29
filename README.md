@@ -122,20 +122,28 @@ uv run omnisearch
 
 Once the server is running, try a simple search:
 
-```
+```text
 search_web(query="current weather in Tokyo")
 ```
 
 ---
 
-### Option D: Omp Plugin Install
+### Option D: Plugin Install
 
-Install as an omp plugin for quick access from any project:
+Install as a plugin for quick access from any project:
+
+```bash
+claude plugin marketplace add sydasif/web-search-mcp
+claude plugin install --scope user web-search@sydasif-web-search-mcp
+```
+
+#### OMP Plugin Install
 
 ```bash
 omp plugin marketplace add sydasif/web-search-mcp
 omp plugin install --scope user web-search@sydasif-web-search-mcp
 ```
+
 ## 🔐 Configuration & Authentication
 
 Most tools work **out of the box with zero configuration**. The following environment variables are only needed for premium or authenticated features.
