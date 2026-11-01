@@ -23,7 +23,7 @@ This skill uses the `OmniSearch` MCP server. Search, dedup, clustering, and stat
 
 **The MCP gives you:**
 
-- Search and retrieval across 13 tools covering web, social, academic, developer, and niche free-source platforms
+- Search and retrieval across 14 tools covering web, social, academic, developer, and niche free-source platforms
 - Clean extracted content from URLs
 - Rich engagement data (upvotes, comments, views) from community platforms
 
@@ -39,7 +39,7 @@ This skill uses the `OmniSearch` MCP server. Search, dedup, clustering, and stat
 
 ---
 
-## OmniSearch — Tool Reference (13 tools)
+## OmniSearch — Tool Reference (14 tools)
 
 ### Tier 1 — Broad Discovery & Reference
 
@@ -64,6 +64,7 @@ This skill uses the `OmniSearch` MCP server. Search, dedup, clustering, and stat
 | `search_digg`       | Curated AI discourse clusters from ~1000 high-signal X accounts via digg-pp-cli | AI trends, curated high-signal community discourse     |
 | `search_techmeme`   | Editorial tech news from live archive (2005+) via techmeme-pp-cli | Tech industry news, major announcements                |
 | `search_polymarket` | Prediction markets with real-money odds via public Gamma API | Forecasting, real-money odds and sentiment on events  |
+| `rerank_results`    | Rerank candidate texts against a query (token_overlap / flashrank / hybrid) | Prioritize search snippets for LLM context, deduplicate near-dups |
 
 ---
 

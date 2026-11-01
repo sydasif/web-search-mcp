@@ -42,6 +42,7 @@ The server provides a diverse suite of tools categorized by their primary use ca
 | ------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | `search_arxiv`     | Specialized search for academic papers with Lucene field prefixes (`au:`, `ti:`, `cat:`, `abs:`). | Research papers, citations, literature reviews    |
 | `search_wikipedia` | Factual summaries and background research via the MediaWiki API.                                  | Factual summaries, background research, citations |
+| `rerank_results`   | Rerank candidate texts against a query by relevance. Three backends: `token_overlap` (default, zero-dep), `flashrank` (neural ONNX cross-encoder), `hybrid` (blend). Supports metadata boosts (engagement/freshness/authority), deduplication, and chunk diversity. | Post-search relevance refinement, LLM context prioritization |
 
 ---
 
@@ -61,6 +62,14 @@ The server provides a diverse suite of tools categorized by their primary use ca
 | **`digg-pp-cli`**     | Digg AI 1000 curated clusters (free, no auth)                            | `npx -y @mvanhorn/printing-press-library install digg --cli-only`          |
 | **`techmeme-pp-cli`** | Techmeme tech news archive search (free, no auth)                        | `npx -y @mvanhorn/printing-press-library install techmeme --cli-only`      |
 | **`pdftotext`**       | Local corpus PDF extraction (optional, for future `--corpus` flag)       | `brew install poppler` / `apt install poppler-utils`                       |
+
+### Optional Python Extras
+
+| Extra          | Install Command                                | Enables                                              |
+| -------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| `flashrank`    | `uv pip install 'web_search_mcp[flashrank]'`   | Neural reranking backend (~23MB ONNX, CPU, no torch) |
+| `transformers` | `uv pip install 'web_search_mcp[transformers]'`| sentence-transformers backend (requires torch)       |
+| `eval`         | `uv pip install 'web_search_mcp[eval]'`        | BM25/sklearn evaluation utilities                    |
 
 ---
 
@@ -296,6 +305,28 @@ search_polymarket(query="Fed rate cut")
 search_polymarket(query="AI breakthrough", depth="deep")  # expanded query search
 ```
 
+### Result Refinement
+```python
+# Rerank search snippets to top 3 most relevant (default: token_overlap, zero-dep)
+rerank_results(
+    query="how to cancel asyncio tasks",
+    documents=["snippet1...", "snippet2...", "snippet3..."],
+    top_n=3,
+)
+
+# Neural reranking with FlashRank (uv pip install 'web_search_mcp[flashrank]')
+rerank_results(query="python async", documents=["..."], backend="flashrank")
+
+# Hybrid scoring with metadata boosts and deduplication
+rerank_results(
+    query="kubernetes networking",
+    documents=["..."],
+    backend="hybrid",
+    documents_meta=[{"engagement": 500, "freshness_days": 3, "authority": 0.9, "parent_id": "doc1"}],
+    top_n=5,
+)
+```
+
 ---
 
 ## 🏗️ Project Structure
@@ -325,7 +356,8 @@ web_search_mcp/
 │   ├── wikipedia.py       # Wikipedia MediaWiki API
 │   ├── digg.py            # Digg AI 1000 clusters via digg-pp-cli
 │   ├── techmeme.py        # Techmeme tech news via techmeme-pp-cli
-│   └── polymarket.py      # Polymarket prediction markets via Gamma API
+│   ├── polymarket.py      # Polymarket prediction markets via Gamma API
+│   └── rerank.py          # Rerank documents against a query (token_overlap / flashrank / hybrid)
 ├── _config/               # Settings, env vars, rate limits, depth tiers
 │   ├── settings.py        # pydantic-settings (EXA_API_KEY, SEARCH_MCP_ prefix)
 │   └── limits.py          # Per-platform quick/default/deep limits, timeouts
@@ -359,6 +391,7 @@ When adding a new tool:
 ## 📐 Design Decisions
 
 - [**search-backend-split**](docs/design-decisions/search-backend-split.md) — Why `search_web` unifies DuckDuckGo and Exa behind a single `provider` parameter instead of exposing two separate tools.
+- [**rerank-tool**](docs/design-decisions/rerank-tool.md) — Why `rerank_results` uses three scoring backends (token_overlap/flashrank/hybrid) with metadata boosts, dedup, and chunk diversity.
 
 ---
 

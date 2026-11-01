@@ -37,7 +37,7 @@ The project is a **FastMCP** server that exposes a suite of web search and data 
 - **Implementation Layers**:
   - `search/`: Implements core web search engines (e.g., DuckDuckGo, Exa).
   - `social/`: Integrates with community platforms (GitHub, Reddit, Hacker News, X, LinkedIn).
-  - `tools/`: Contains specialized utilities (arXiv, Wikipedia, Digg, Techmeme, Polymarket).
+  - `tools/`: Contains specialized utilities (arXiv, Wikipedia, Digg, Techmeme, Polymarket, Rerank).
 - **Internal Infrastructure (`_` prefixed folders)**:
   - `_http/`: Centralized HTTP client logic to ensure consistent timeouts, headers, error handling, and SSRF protection (blocks private/internal IP addresses).
   - `_models/`: Shared Pydantic models for requests and responses to ensure type safety across the server.
@@ -71,7 +71,8 @@ web_search_mcp/
 │   ├── wikipedia.py   # Wikipedia MediaWiki API
 │   ├── digg.py        # Digg AI 1000 clusters via digg-pp-cli
 │   ├── techmeme.py    # Techmeme tech news via techmeme-pp-cli
-│   └── polymarket.py  # Polymarket prediction markets via Gamma API
+│   ├── polymarket.py  # Polymarket prediction markets via Gamma API
+│   └── rerank.py      # Rerank documents against a query (token_overlap / flashrank / hybrid)
 ├── _config/           # Settings, env vars, rate limits, depth tiers
 │   ├── settings.py    # pydantic-settings (EXA_API_KEY, SEARCH_MCP_ prefix)
 │   └── limits.py      # Per-platform quick/default/deep limits, timeouts

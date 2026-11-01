@@ -41,6 +41,7 @@ from .tools.arxiv import SortCriterion
 from .tools.arxiv import arxiv_search_tool as _arxiv_search_tool
 from .tools.digg import digg_search_tool as _digg_search_tool
 from .tools.polymarket import polymarket_search_tool as _polymarket_search_tool
+from .tools.rerank import rerank_documents as _rerank_documents
 from .tools.techmeme import techmeme_search_tool as _techmeme_search_tool
 from .tools.wikipedia import wikipedia_search_tool as _wikipedia_search_tool
 
@@ -892,6 +893,57 @@ def search_polymarket(
         depth=depth,
         response_format=response_format,
     )
+# ─────────────────────────────────────────────────────────────
+# Rerank tool — score and sort candidate texts against a query
+# Best for: post-search relevance refinement, LLM context prioritization
+# ─────────────────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="rerank_results",
+    annotations={
+        "title": "Rerank candidate texts against a query",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+def rerank_results(
+    query: str,
+    documents: list[str],
+    top_n: int | None = None,
+) -> str | list[dict[str, Any]] | ErrorResponse:
+    """Rerank a list of candidate texts/documents against a query by relevance.
+
+    Uses token overlap scoring with length normalization to rank documents.
+    Returns sorted results with relevance scores and original indices.
+
+    Args:
+        query: The search query to rank against
+        documents: List of document strings to rank
+        top_n: Optional limit on number of results to return
+
+    Returns:
+        List of dicts with keys: "document" (str), "score" (float), "index" (int)
+        where index is the original position in the input list.
+        Sorted descending by score.
+
+    Examples:
+        - Rerank search snippets: query="python async",
+          documents=["python asyncio guide", "rust async", "python sync"]
+        - Top-3 rerank: top_n=3
+
+    Error Handling:
+        - Empty documents: Returns empty list
+        - Empty query: Returns all scores as 0.0
+        - top_n <= 0: Returns empty list
+
+    """
+    try:
+        return _rerank_documents(query=query, documents=documents, top_n=top_n)
+    except Exception as e:
+        return format_error(f"Rerank failed: {e}")
 
 
 def main() -> None:
