@@ -1,16 +1,16 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "name": "sydasif-web-search-mcp",
-  "version": "0.9.0",
-  "description": "Web search, content extraction, and research tools for Claude Code",
-  "owner": {
-    "name": "Syed Asif"
-  },
-  "plugins": [
-    {
-      "name": "web-search",
-      "description": "Web search, content extraction, and research tools. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and more — all from your Claude session.",
-      "source": "./"
-    }
-  ]
+    "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+    "name": "sydasif-web-search-mcp",
+    "version": "0.9.1",
+    "description": "Web search, content extraction, and research tools for Claude Code",
+    "owner": {
+        "name": "Syed Asif"
+    },
+    "plugins": [
+        {
+            "name": "web-search",
+            "description": "Web search, content extraction, and research tools. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and more — all from your Claude session.",
+            "source": "./"
+        }
+    ]
 }

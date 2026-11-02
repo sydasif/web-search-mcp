@@ -1,12 +1,16 @@
 {
-  "name": "web-search",
-  "version": "0.9.0",
-  "description": "Web search, content extraction, and research tools for Claude Code. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and more — all from your Claude session.",
-  "author": {
-    "name": "Syed Asif",
-    "email": "sydasif78@gmail.com"
-  },
-  "repository": "https://github.com/sydasif/web-search-mcp.git",
-  "homepage": "https://github.com/sydasif/web-search-mcp",
-  "skills": ["./skills/research", "./skills/debug"]
+    "name": "web-search",
+    "version": "0.9.1",
+    "description": "Web search, content extraction, and research tools for Claude Code. Search the web, Reddit, Hacker News, GitHub, X/Twitter, Wikipedia, arXiv, and more — all from your Claude session.",
+    "author": {
+        "name": "Syed Asif",
+        "email": "sydasif78@gmail.com"
+    },
+    "repository": "https://github.com/sydasif/web-search-mcp.git",
+    "homepage": "https://github.com/sydasif/web-search-mcp",
+    "skills": [
+        "./skills/research",
+        "./skills/debug",
+        "./skills/review-plan"
+    ]
 }
