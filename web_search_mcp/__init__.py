@@ -1,3 +1,3 @@
 """web-search-mcp: Web search, content extraction, and research tools."""
 
-__version__ = "0.9.1"
+__version__ = "0.9.2"
