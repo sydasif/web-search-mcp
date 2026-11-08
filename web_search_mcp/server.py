@@ -751,9 +751,6 @@ def search_digg(
         depth: Search depth — controls result limits and post enrichment
         response_format: Output format ('json' or 'markdown')
 
-    Returns:
-        str: Markdown-formatted clusters with TLDRs and top X posts
-        ErrorResponse: Error response if applicable
 
     Examples:
         - "AI agents" — find curated clusters about AI agents
@@ -814,9 +811,6 @@ def search_techmeme(
         depth: Search depth — controls result limits
         response_format: Output format ('json' or 'markdown')
 
-    Returns:
-        str: Markdown-formatted tech headlines with sources
-        ErrorResponse: Error response if applicable
 
     Examples:
         - "Apple WWDC" — find Techmeme coverage of Apple events

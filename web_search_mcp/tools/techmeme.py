@@ -14,7 +14,7 @@ from typing import Any
 
 from .._config import DEPTH_LIMITS as _ALL_DEPTH_LIMITS
 from .._models import ErrorResponse, SearchResponse, items_to_search_response
-from .._models.types import Depth
+from .._models.types import Depth, ResponseFormat
 from .._utils import format_results_markdown, time_range_to_date_window, token_overlap_relevance
 
 logger = logging.getLogger(__name__)
@@ -227,7 +227,7 @@ def techmeme_search_tool(
     max_results: int = 16,
     time_range: str | None = None,
     depth: Depth = "default",
-    response_format: str = "markdown",
+    response_format: ResponseFormat = "markdown",
 ) -> str | SearchResponse | ErrorResponse:
     """Search Techmeme — free, no API key needed.
 
